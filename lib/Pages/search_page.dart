@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/book_model.dart';
-import '../google_books_service.dart';
+import '../services/google_books_service.dart';
 import 'book_detail_page.dart';
 
 class BookSearchDelegate extends SearchDelegate {

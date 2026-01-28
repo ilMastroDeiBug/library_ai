@@ -5,11 +5,14 @@ import '../models/book_model.dart';
 class GoogleBooksService {
   static const String _baseUrl = 'https://www.googleapis.com/books/v1/volumes';
 
-  // Funzione per cercare libri per categoria (es. "fantasy", "science fiction")
+  // INCOLLA QUI LA TUA CHIAVE API
+  static const String _apiKey = "AIzaSyCTtFz_xjeahtxCeQYhCrOHRFguCT_mDJY";
+
+  // Funzione per cercare libri per categoria
   Future<List<Book>> fetchBooksByCategory(String category) async {
-    // Costruiamo l'URL: cerchiamo per "subject" (genere)
+    // Aggiungiamo &key=$_apiKey alla fine
     final url = Uri.parse(
-      '$_baseUrl?q=subject:$category&maxResults=40&langRestrict=it',
+      '$_baseUrl?q=$category&maxResults=20&langRestrict=it&orderBy=relevance&key=$_apiKey',
     );
 
     try {
@@ -18,29 +21,26 @@ class GoogleBooksService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> items = data['items'] ?? [];
-
-        // Trasforma ogni elemento della lista JSON in un oggetto Book
         return items.map((json) => Book.fromJson(json)).toList();
       } else {
-        throw Exception('Errore nel caricamento dei libri');
+        // Se vedi 429 qui, vuol dire che anche con la chiave stai esagerando, ma è difficile.
+        print("Errore API Status: ${response.statusCode}");
+        return [];
       }
     } catch (e) {
       print("Errore API Google Books: $e");
-      return []; // Se fallisce, restituisce una lista vuota per non rompere l'app
+      return [];
     }
   }
 
-  // Funzione di ricerca specifica (Titolo, Autore, ISBN)
+  // Funzione di ricerca specifica
   Future<List<Book>> searchBooks(String query) async {
     if (query.isEmpty) return [];
 
-    // Convertiamo gli spazi in '+' per l'URL
     final sanitizedQuery = query.replaceAll(' ', '+');
-
-    // Usiamo 'q=$sanitizedQuery' generico: Google è abbastanza intelligente
-    // da capire se è un titolo, un autore o un ISBN da solo.
+    // Aggiungiamo &key=$_apiKey anche qui
     final url = Uri.parse(
-      '$_baseUrl?q=$sanitizedQuery&maxResults=40&langRestrict=it',
+      '$_baseUrl?q=$sanitizedQuery&maxResults=20&langRestrict=it&key=$_apiKey',
     );
 
     try {
@@ -51,6 +51,7 @@ class GoogleBooksService {
         final List<dynamic> items = data['items'] ?? [];
         return items.map((json) => Book.fromJson(json)).toList();
       } else {
+        print("Errore API Ricerca Status: ${response.statusCode}");
         return [];
       }
     } catch (e) {

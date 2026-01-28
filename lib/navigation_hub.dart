@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:library_ai/Pages/explore_page.dart';
-import 'package:library_ai/Pages/library_page.dart';
+// IMPORTANTE: Se questi import danno errore, cancellali e falli rifare a VS Code (Ctrl + .)
+import 'models/app_mode.dart';
 import 'pages/home_page.dart';
+import 'pages/library_page.dart';
+import 'pages/explore_page.dart';
+import 'pages/side_menu.dart';
 
 class NavigationHub extends StatefulWidget {
   const NavigationHub({super.key});
@@ -11,80 +14,150 @@ class NavigationHub extends StatefulWidget {
 }
 
 class _NavigationHubState extends State<NavigationHub> {
-  int _selectedIndex = 0; // Meglio partire dalla Home (indice 0)
+  // Questa chiave serve ad aprire il menu dalle altre pagine
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Lista delle pagine
-  final List<Widget> _pages = [
-    const HomePage(), // 0
-    const LibraryPage(), // 1
-    const ExplorePage(), // 2
-    const Center(
-      child: Text("AI Summary Studio", style: TextStyle(color: Colors.white)),
-    ), // 3
-  ];
+  int _selectedIndex = 0;
+  AppMode _currentMode = AppMode.books;
+  bool _isSocialActive = false;
 
-  void _onItemTapped(int index) {
+  void _changeMode(AppMode newMode) {
     setState(() {
-      _selectedIndex = index;
+      _currentMode = newMode;
+      _isSocialActive = false;
+      _selectedIndex = 0;
+    });
+  }
+
+  void _toggleSocial() {
+    setState(() {
+      _isSocialActive = true;
+      _selectedIndex = 0;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Definizione delle pagine principali
+    final List<Widget> mediaPages = [
+      // 1. HOME PAGE
+      HomePage(
+        mode: _currentMode,
+        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      // 2. LIBRARY PAGE
+      LibraryPage(
+        mode: _currentMode,
+        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      // 3. EXPLORE PAGE
+      ExplorePage(
+        mode: _currentMode,
+        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      // 4. AI STUDIO (Placeholder)
+      const Center(
+        child: Text("Studio AI", style: TextStyle(color: Colors.white)),
+      ),
+    ];
+
+    // Pagine Social (Placeholder)
+    final List<Widget> socialPages = [
+      const Center(
+        child: Text("Feed Social", style: TextStyle(color: Colors.white)),
+      ),
+      const Center(
+        child: Text("Amici", style: TextStyle(color: Colors.white)),
+      ),
+      const Center(
+        child: Text("Messaggi", style: TextStyle(color: Colors.white)),
+      ),
+      const Center(
+        child: Text("Profilo Social", style: TextStyle(color: Colors.white)),
+      ),
+    ];
+
     return Scaffold(
-      // Sfondo generale scuro per evitare flash bianchi durante le transizioni
-      backgroundColor: const Color(0xFF232526),
+      key: _scaffoldKey, // Assegniamo la chiave allo Scaffold padre
+      backgroundColor: const Color(0xFF121212),
 
-      body: _pages[_selectedIndex],
+      // Il menu laterale
+      drawer: SideMenu(
+        currentMode: _currentMode,
+        isSocialActive: _isSocialActive,
+        onModeChanged: _changeMode,
+        onSocialTap: _toggleSocial,
+      ),
 
+      // Il corpo della pagina
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _isSocialActive ? socialPages : mediaPages,
+      ),
+
+      // La barra in basso
       bottomNavigationBar: Container(
-        // Aggiungiamo un bordo superiore sottile per staccare la barra dal contenuto
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
         ),
         child: BottomNavigationBar(
-          // --- STILE DARK ---
-          backgroundColor: const Color(0xFF232526), // Sfondo scuro
-          elevation: 0, // Rimuoviamo l'ombra di default (usiamo il bordo sopra)
-          type: BottomNavigationBarType
-              .fixed, // Necessario quando hai 4+ icone per non farle "ballare"
-          // --- COLORI ---
+          backgroundColor: const Color(0xFF121212),
+          type: BottomNavigationBarType.fixed,
           currentIndex: _selectedIndex,
-          selectedItemColor: Colors.cyanAccent, // Icona attiva (Neon)
-          unselectedItemColor: Colors.grey, // Icona inattiva (Spenta)
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
-
-          onTap: _onItemTapped,
-
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home), // Icona piena quando attiva
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.menu_book_outlined),
-              activeIcon: Icon(Icons.menu_book),
-              label: 'Libreria',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore_outlined),
-              activeIcon: Icon(Icons.explore),
-              label: 'Esplora',
-            ),
-            // Ho aggiunto il quarto bottone per l'AI
-            BottomNavigationBarItem(
-              icon: Icon(Icons.auto_awesome_outlined),
-              activeIcon: Icon(Icons.auto_awesome),
-              label: 'Studio AI',
-            ),
-          ],
+          elevation: 0,
+          selectedItemColor: _isSocialActive
+              ? Colors.purpleAccent
+              : (_currentMode == AppMode.books
+                    ? Colors.cyanAccent
+                    : Colors.orangeAccent),
+          unselectedItemColor: Colors.grey,
+          onTap: (index) => setState(() => _selectedIndex = index),
+          items: _isSocialActive ? _socialItems() : _mediaItems(),
         ),
       ),
     );
+  }
+
+  List<BottomNavigationBarItem> _mediaItems() {
+    return [
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.home_outlined),
+        label: 'Home',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(
+          _currentMode == AppMode.books
+              ? Icons.menu_book_outlined
+              : Icons.movie_outlined,
+        ),
+        label: _currentMode == AppMode.books ? 'Libreria' : 'Watchlist',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.explore_outlined),
+        label: 'Esplora',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.auto_awesome_outlined),
+        label: 'AI',
+      ),
+    ];
+  }
+
+  List<BottomNavigationBarItem> _socialItems() {
+    return [
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.dynamic_feed),
+        label: 'Feed',
+      ),
+      const BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Amici'),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.chat_bubble_outline),
+        label: 'Messaggi',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.account_circle_outlined),
+        label: 'Profilo',
+      ),
+    ];
   }
 }

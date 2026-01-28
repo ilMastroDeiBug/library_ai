@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/book_model.dart'; // Assicurati di avere il modello Book
-import '../models/book_card.dart'; // La card che abbiamo già creato
-import '../models/book_section.dart'; // Le sezioni di Google
-import 'search_page.dart'; // La pagina di ricerca
+import '../models/book_model.dart';
+import '../models/book_card.dart';
+import '../models/book_section.dart';
+import '../models/app_mode.dart';
+import 'search_page.dart';
+// NOTA: Nessun import di SideMenu qui.
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  final AppMode mode;
+  final VoidCallback onOpenDrawer; // Il telecomando per il menu
 
-  // --- POPUP INSERIMENTO MANUALE (Invariato) ---
+  const HomePage({super.key, required this.mode, required this.onOpenDrawer});
+
+  // --- POPUP AGGIUNTA MANUALE ---
   void _showAddBookSheet(BuildContext context) {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController authorController = TextEditingController();
@@ -18,7 +23,7 @@ class HomePage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF232526),
+      backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
       ),
@@ -51,6 +56,9 @@ class HomePage extends StatelessWidget {
                 backgroundColor: Colors.cyanAccent,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () async {
                 if (titleController.text.isNotEmpty && user != null) {
@@ -67,7 +75,10 @@ class HomePage extends StatelessWidget {
                   if (context.mounted) Navigator.pop(context);
                 }
               },
-              child: const Text("Salva nella Libreria"),
+              child: const Text(
+                "Salva nella Libreria",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -83,7 +94,7 @@ class HomePage extends StatelessWidget {
         labelText: label,
         labelStyle: const TextStyle(color: Colors.grey),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.black.withOpacity(0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -100,17 +111,32 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddBookSheet(context),
-        backgroundColor: Colors.cyanAccent,
-        child: const Icon(Icons.add, color: Colors.black),
+
+      // NOTA: NIENTE DRAWER QUI. USIAMO QUELLO DEL PADRE.
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
+          onPressed:
+              onOpenDrawer, // <--- Cliccando qui, apre il menu del NavigationHub
+        ),
       ),
+
+      floatingActionButton: mode == AppMode.books
+          ? FloatingActionButton(
+              onPressed: () => _showAddBookSheet(context),
+              backgroundColor: Colors.cyanAccent,
+              child: const Icon(Icons.add, color: Colors.black),
+            )
+          : null,
+
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF232526), Color(0xFF414345)],
+            colors: [Color(0xFF121212), Color(0xFF2C2C2C)],
           ),
         ),
         child: SafeArea(
@@ -119,8 +145,6 @@ class HomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
-
                 // --- 1. SEARCH BAR ---
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -133,19 +157,26 @@ class HomePage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 15),
                       height: 50,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withOpacity(0.05),
                         ),
                       ),
                       child: Row(
-                        children: const [
-                          Icon(Icons.search, color: Colors.cyanAccent),
-                          SizedBox(width: 10),
+                        children: [
+                          Icon(
+                            Icons.search,
+                            color: mode == AppMode.books
+                                ? Colors.cyanAccent
+                                : Colors.orangeAccent,
+                          ),
+                          const SizedBox(width: 10),
                           Text(
-                            "Cerca titolo, autore, ISBN...",
-                            style: TextStyle(color: Colors.grey),
+                            mode == AppMode.books
+                                ? "Cerca titolo, autore..."
+                                : "Cerca film, attori...",
+                            style: const TextStyle(color: Colors.white38),
                           ),
                         ],
                       ),
@@ -155,114 +186,11 @@ class HomePage extends StatelessWidget {
 
                 const SizedBox(height: 30),
 
-                // --- 2. AI HERO BANNER (La tua Prima Sezione) ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    width: double.infinity,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Colors.deepPurpleAccent, Colors.purple],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.purple.withOpacity(0.4),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          right: -20,
-                          bottom: -20,
-                          child: Icon(
-                            Icons.auto_stories,
-                            size: 150,
-                            color: Colors.white.withOpacity(0.1),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black26,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  "CONSIGLIATO DALL'AI",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                "L'Arte della Guerra",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Text(
-                                "Sun Tzu",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // --- 3. I TUOI LIBRI IN CORSO (Seconda Sezione Richiesta) ---
-                // Nota: Per ora mostriamo i libri 'toread' come "In Programma"
-                // finché non creiamo lo status 'reading'.
-                const UserBooksSection(
-                  title: "🔥 La tua Coda di Lettura",
-                  status: "toread",
-                ),
-
-                const SizedBox(height: 20),
-
-                // --- 4. CATALOGO GOOGLE (Scalabile) ---
-                // Qui lasciamo solo le categorie principali, le altre andranno in Esplora
-                const BookSection(
-                  title: "📖 Grandi Classici",
-                  categoryQuery: "classics",
-                ),
-                const SizedBox(height: 10),
-                const BookSection(
-                  title: "🐉 Fantasy & Avventura",
-                  categoryQuery: "fantasy",
-                ),
-                const SizedBox(height: 10),
-                const BookSection(
-                  title: "🧠 Crescita Personale",
-                  categoryQuery: "self-help",
-                ),
+                // --- 2. CONTENUTO DINAMICO ---
+                if (mode == AppMode.books)
+                  _buildBooksContent()
+                else
+                  _buildMoviesPlaceholder(),
 
                 const SizedBox(height: 80),
               ],
@@ -272,10 +200,151 @@ class HomePage extends StatelessWidget {
       ),
     );
   }
+
+  // --- CONTENUTO LIBRI ---
+  Widget _buildBooksContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // AI HERO BANNER
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            width: double.infinity,
+            height: 180,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Colors.deepPurpleAccent, Colors.purple],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.purple.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -20,
+                  bottom: -20,
+                  child: Icon(
+                    Icons.auto_stories,
+                    size: 150,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black38,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          "CONSIGLIATO DALL'AI",
+                          style: TextStyle(
+                            color: Colors.cyanAccent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "L'Arte della Guerra",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Text(
+                        "Sun Tzu",
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 30),
+
+        // I TUOI LIBRI (Codice Completo)
+        const UserBooksSection(
+          title: "🔥 La tua Coda di Lettura",
+          status: "toread",
+        ),
+
+        const SizedBox(height: 20),
+
+        // CATALOGHI
+        const BookSection(
+          title: "📖 Grandi Classici",
+          categoryQuery: "classics",
+        ),
+        const SizedBox(height: 10),
+        const BookSection(
+          title: "🐉 Fantasy & Avventura",
+          categoryQuery: "fantasy",
+        ),
+        const SizedBox(height: 10),
+        const BookSection(
+          title: "🧠 Crescita Personale",
+          categoryQuery: "self-help",
+        ),
+      ],
+    );
+  }
+
+  // --- PLACEHOLDER CINEMA ---
+  Widget _buildMoviesPlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 50),
+          Icon(
+            Icons.movie_filter_rounded,
+            size: 80,
+            color: Colors.white.withOpacity(0.1),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            "Sezione Cinema in Arrivo",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "Stiamo cablando i servizi TMDB...",
+            style: TextStyle(color: Colors.white.withOpacity(0.5)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// --- NUOVO COMPONENTE: UserBooksSection ---
-// Questo widget è intelligente: invece di chiamare Google, chiama il TUO Firestore.
+// --- USER BOOKS SECTION (Con Logica Firestore) ---
 class UserBooksSection extends StatelessWidget {
   final String title;
   final String status;
@@ -307,25 +376,22 @@ class UserBooksSection extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              // Icona freccia per dire "vai alla libreria"
-              const Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
+              const Icon(Icons.arrow_forward, color: Colors.white54, size: 16),
             ],
           ),
         ),
-
         SizedBox(
-          height: 200, // Altezza leggermente ridotta rispetto a Google
+          height: 200,
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('books')
                 .where('userId', isEqualTo: user.uid)
                 .where('status', isEqualTo: status)
                 .orderBy('timestamp', descending: true)
-                .limit(5) // Mostriamo solo i primi 5 recenti nella home
+                .limit(5)
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                // Se non hai libri salvati, mostriamo un invito
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   width: double.infinity,
@@ -343,9 +409,7 @@ class UserBooksSection extends StatelessWidget {
                   ),
                 );
               }
-
               final docs = snapshot.data!.docs;
-
               return ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
@@ -360,10 +424,8 @@ class UserBooksSection extends StatelessWidget {
                     thumbnailUrl: data['thumbnailUrl'] ?? '',
                     description: data['description'] ?? '',
                   );
-
-                  // Usiamo BookCard ma ridimensionata leggermente
                   return Transform.scale(
-                    scale: 0.9,
+                    scale: 0.95,
                     alignment: Alignment.topLeft,
                     child: BookCard(book: book),
                   );

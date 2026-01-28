@@ -1,57 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/book_card.dart';
 import '../models/book_model.dart';
-// import '../pages/add_book_page.dart'; // Scommenta quando avrai la pagina
+// NOTA: side_menu rimosso perché non lo usiamo qui dentro
+import '../pages/settings_page.dart';
+import '../models/app_mode.dart'; // <--- Enum necessario
 
 class LibraryPage extends StatelessWidget {
-  const LibraryPage({super.key});
+  final AppMode mode;
+  final VoidCallback onOpenDrawer; // <--- IL TELECOMANDO
 
-  Future<void> _signOut() async {
-    try {
-      await GoogleSignIn().signOut();
-    } catch (e) {
-      print("Errore logout Google: $e");
-    }
-    await FirebaseAuth.instance.signOut();
-  }
+  const LibraryPage({
+    super.key,
+    required this.mode,
+    required this.onOpenDrawer, // <--- OBBLIGATORIO
+  });
 
-  // --- LOGICA DI ELIMINAZIONE ---
+  // --- LOGICA DI ELIMINAZIONE (TUA LOGICA ORIGINALE) ---
   Future<void> _deleteBook(BuildContext context, String bookId) async {
     try {
-      // 1. Elimina da Firestore
       await FirebaseFirestore.instance.collection('books').doc(bookId).delete();
-
-      // 2. Chiudi il dialog
-      Navigator.of(context).pop();
-
-      // 3. Mostra conferma
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Libro eliminato per sempre."),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Libro eliminato per sempre."),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Errore: $e")));
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Errore: $e")));
+      }
     }
   }
 
-  // --- DIALOG DI CONFERMA (Stile Dark/Glass) ---
   void _showDeleteDialog(BuildContext context, String bookId, String title) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF16213E), // Blu scuro profondo
+        backgroundColor: const Color(0xFF1E1E1E),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: Colors.white.withOpacity(0.1)),
@@ -99,37 +96,50 @@ class LibraryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    // Logica per decidere se mostrare libri o film (placeholder per ora)
+    final isBooks = mode == AppMode.books;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: const Color(
+        0xFF121212,
+      ), // Sfondo Grigio scuro (Quasi nero)
+      // --- ATTENZIONE: NIENTE DRAWER QUI! ---
+      // Il drawer è gestito dal padre (NavigationHub)
 
-      // FAB (Aggiungi)
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.cyanAccent.withOpacity(0.4),
-              blurRadius: 20,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          backgroundColor: Colors.cyanAccent,
-          foregroundColor: Colors.black,
-          elevation: 0,
-          onPressed: () {
-            // TODO: Link alla pagina AddBookPage
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Presto potrai aggiungere libri!")),
-            );
-          },
-          child: const Icon(Icons.add, size: 30),
-        ),
-      ),
+      // FAB (Mostrato solo se siamo nei Libri)
+      floatingActionButton: isBooks
+          ? Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.1), // Ombra più sottile
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: FloatingActionButton(
+                backgroundColor:
+                    Colors.white, // FAB Bianco per contrasto massimo
+                foregroundColor: Colors.black,
+                elevation: 0,
+                onPressed: () {
+                  // Qui puoi mostrare un messaggio o navigare alla pagina di aggiunta
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Usa il tasto + nella Home per aggiungere libri!",
+                      ),
+                    ),
+                  );
+                },
+                child: const Icon(Icons.add, size: 30),
+              ),
+            )
+          : null,
 
-      // BODY CON NESTED SCROLL
+      // BODY CON TAB CONTROLLER
       body: DefaultTabController(
         length: 2,
         child: NestedScrollView(
@@ -139,14 +149,26 @@ class LibraryPage extends StatelessWidget {
                 expandedHeight: 340,
                 floating: false,
                 pinned: true,
-                backgroundColor: const Color(0xFF1A1A2E),
+                backgroundColor: const Color(0xFF121212),
+
+                // --- 2. TASTO MENU FORZATO BIANCO (CON TELECOMANDO) ---
+                leading: IconButton(
+                  icon: const Icon(
+                    Icons.menu_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  onPressed: onOpenDrawer, // <--- USA IL TELECOMANDO
+                ),
+
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0xFF0F3460), Color(0xFF1A1A2E)],
+                        // Gradiente Grigio Sofisticato
+                        colors: [Color(0xFF2C2C2C), Color(0xFF121212)],
                       ),
                     ),
                     child: SafeArea(
@@ -161,40 +183,46 @@ class LibraryPage extends StatelessWidget {
                               children: [
                                 Row(
                                   children: [
-                                    Hero(
-                                      tag: 'profile_pic',
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.cyanAccent,
-                                            width: 2,
+                                    // --- 3. IMMAGINE PROFILO CLICCABILE ---
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const SettingsPage(),
                                           ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.cyanAccent
-                                                  .withOpacity(0.3),
-                                              blurRadius: 10,
+                                        );
+                                      },
+                                      child: Hero(
+                                        tag: 'profile_pic',
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white24,
+                                              width: 2,
                                             ),
-                                          ],
-                                        ),
-                                        child: CircleAvatar(
-                                          radius: 22,
-                                          backgroundColor: Colors.black,
-                                          backgroundImage:
-                                              user?.photoURL != null
-                                              ? NetworkImage(user!.photoURL!)
-                                              : null,
-                                          child: user?.photoURL == null
-                                              ? const Icon(
-                                                  Icons.person,
-                                                  color: Colors.white,
-                                                )
-                                              : null,
+                                          ),
+                                          child: CircleAvatar(
+                                            radius: 22,
+                                            backgroundColor: Colors.grey[800],
+                                            backgroundImage:
+                                                user?.photoURL != null
+                                                ? NetworkImage(user!.photoURL!)
+                                                : null,
+                                            child: user?.photoURL == null
+                                                ? const Icon(
+                                                    Icons.person,
+                                                    color: Colors.white,
+                                                  )
+                                                : null,
+                                          ),
                                         ),
                                       ),
                                     ),
+
                                     const SizedBox(width: 15),
                                     Column(
                                       crossAxisAlignment:
@@ -219,39 +247,33 @@ class LibraryPage extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.logout_rounded,
-                                    color: Colors.white54,
-                                  ),
-                                  onPressed: _signOut,
-                                ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 25),
 
-                          // 2. Search
+                          // 2. Search Bar
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 20),
                             padding: const EdgeInsets.symmetric(horizontal: 15),
                             height: 50,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
+                              color: const Color(
+                                0xFF1E1E1E,
+                              ), // Grigio leggermente più chiaro
                               borderRadius: BorderRadius.circular(15),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.1),
+                                color: Colors.white.withOpacity(0.05),
                               ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.search,
-                                  color: Colors.cyanAccent,
-                                ),
+                                const Icon(Icons.search, color: Colors.white54),
                                 const SizedBox(width: 10),
                                 Text(
-                                  "Cerca nella tua libreria...",
+                                  isBooks
+                                      ? "Cerca libreria..."
+                                      : "Cerca watchlist...",
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.4),
                                   ),
@@ -272,7 +294,11 @@ class LibraryPage extends StatelessWidget {
                                   Icons.bookmark_border,
                                 ),
                                 const SizedBox(width: 15),
-                                _buildStatCard("Letti", "read", Icons.done_all),
+                                _buildStatCard(
+                                  isBooks ? "Letti" : "Visti",
+                                  "read",
+                                  Icons.done_all,
+                                ),
                               ],
                             ),
                           ),
@@ -286,25 +312,25 @@ class LibraryPage extends StatelessWidget {
                   child: Container(
                     height: 60,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A2E),
+                      color: const Color(0xFF121212),
                       border: Border(
                         bottom: BorderSide(
                           color: Colors.white.withOpacity(0.05),
                         ),
                       ),
                     ),
-                    child: const TabBar(
-                      indicatorColor: Colors.cyanAccent,
+                    child: TabBar(
+                      indicatorColor: Colors.white, // Indicatore bianco
                       indicatorWeight: 3,
-                      labelColor: Colors.cyanAccent,
+                      labelColor: Colors.white,
                       unselectedLabelColor: Colors.white38,
-                      labelStyle: TextStyle(
+                      labelStyle: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                       tabs: [
-                        Tab(text: "DA LEGGERE"),
-                        Tab(text: "COMPLETATI"),
+                        const Tab(text: "DA LEGGERE"),
+                        Tab(text: isBooks ? "COMPLETATI" : "VISTI"),
                       ],
                     ),
                   ),
@@ -314,7 +340,7 @@ class LibraryPage extends StatelessWidget {
           },
           body: TabBarView(
             children: [
-              _buildBookGrid(context, status: "toread"), // Passiamo il context
+              _buildBookGrid(context, status: "toread"),
               _buildBookGrid(context, status: "read"),
             ],
           ),
@@ -338,7 +364,7 @@ class LibraryPage extends StatelessWidget {
           return Container(
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: const Color(0xFF1E1E1E), // Card Grigia
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withOpacity(0.05)),
             ),
@@ -348,7 +374,7 @@ class LibraryPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(icon, color: Colors.cyanAccent, size: 20),
+                    Icon(icon, color: Colors.white70, size: 20),
                     Text(
                       count,
                       style: const TextStyle(
@@ -375,14 +401,35 @@ class LibraryPage extends StatelessWidget {
     );
   }
 
-  // --- GRIGLIA AGGIORNATA ---
   Widget _buildBookGrid(BuildContext context, {required String status}) {
     final user = FirebaseAuth.instance.currentUser;
+    final isBooks = mode == AppMode.books;
+
+    // Se siamo in modalità FILM, mostriamo un placeholder (per ora)
+    if (!isBooks) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.movie_creation_outlined,
+              size: 60,
+              color: Colors.white.withOpacity(0.2),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "Watchlist in arrivo...",
+              style: TextStyle(color: Colors.white.withOpacity(0.5)),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (user == null) return const Center(child: CircularProgressIndicator());
 
     return Container(
-      color: const Color(0xFF1A1A2E),
+      color: const Color(0xFF121212), // Sfondo griglia grigio scuro
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('books')
@@ -393,7 +440,7 @@ class LibraryPage extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.cyanAccent),
+              child: CircularProgressIndicator(color: Colors.white),
             );
           }
 
@@ -436,7 +483,7 @@ class LibraryPage extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
-              final bookId = docs[index].id; // Ci serve l'ID per cancellare!
+              final bookId = docs[index].id;
 
               final book = Book(
                 id: bookId,
@@ -446,12 +493,9 @@ class LibraryPage extends StatelessWidget {
                 description: data['description'] ?? '',
               );
 
-              // *** QUI AGGIUNGIAMO IL RILEVATORE DI GESTI ***
               return InkWell(
                 borderRadius: BorderRadius.circular(15),
                 onLongPress: () {
-                  // Vibrazione leggera (opzionale, richiede pacchetto services)
-                  // HapticFeedback.mediumImpact();
                   _showDeleteDialog(context, bookId, book.title);
                 },
                 child: BookCard(book: book),

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/book_model.dart';
-// Importa la pagina di dettaglio (che creeremo tra un secondo)
 import '../pages/book_detail_page.dart';
 
 class BookCard extends StatelessWidget {
-  final Book book; // Ora riceviamo un oggetto Libro vero!
+  final Book book;
 
   const BookCard({super.key, required this.book});
 
@@ -12,23 +11,25 @@ class BookCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigazione alla pagina di dettaglio
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => BookDetailPage(book: book)),
         );
       },
       child: Container(
-        width: 120, // Larghezza fissa per coerenza nella lista orizzontale
-        margin: const EdgeInsets.only(right: 15), // Spazio tra le card
+        width: 120,
+        margin: const EdgeInsets.only(right: 15),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFF1E1E1E), // SFONDO CARD SCURO
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.05),
+          ), // Bordo sottile per stacco
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 5,
-              offset: const Offset(0, 3),
+              color: Colors.black.withOpacity(0.3), // Ombra più scura
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -45,7 +46,7 @@ class BookCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         width: double.infinity,
                         errorBuilder: (context, error, stackTrace) =>
-                            _buildPlaceholder(), // Se l'immagine non carica
+                            _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
               ),
@@ -56,20 +57,25 @@ class BookCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Titolo
                     Text(
                       book.title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: Colors.blueGrey[900],
+                        color: Colors.white, // BIANCO
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
+                    // Autore
                     Text(
                       book.author,
-                      style: const TextStyle(color: Colors.grey, fontSize: 10),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5), // GRIGIO CHIARO
+                        fontSize: 10,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -85,8 +91,10 @@ class BookCard extends StatelessWidget {
 
   Widget _buildPlaceholder() {
     return Container(
-      color: Colors.grey[300],
-      child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+      color: Colors.grey[800], // Placeholder scuro
+      child: const Center(
+        child: Icon(Icons.broken_image, color: Colors.white24),
+      ),
     );
   }
 }

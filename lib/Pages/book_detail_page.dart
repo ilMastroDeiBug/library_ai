@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/book_model.dart';
-import '../ai_service.dart';
+import '../services/ai_service.dart';
 
 class BookDetailPage extends StatefulWidget {
   final Book book;
@@ -18,7 +18,43 @@ class _BookDetailPageState extends State<BookDetailPage> {
   bool _isAnalyzing = false;
   Map<String, dynamic>? _aiResult;
 
-  // --- ANALISI AI ---
+  // --- TEST DI CONNESSIONE (MVP) ---
+  Future<void> _runConnectionTest() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Test connessione in corso..."),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    // Chiama la funzione pingAI del service
+    final result = await _aiService.pingAI();
+
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Text(
+            "Risultato Test",
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Text(result, style: const TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                "OK",
+                style: TextStyle(color: Colors.cyanAccent),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // --- ANALISI REALE ---
   Future<void> _analyzeBook(Book liveBook) async {
     setState(() => _isAnalyzing = true);
 
@@ -40,29 +76,26 @@ class _BookDetailPageState extends State<BookDetailPage> {
     }
   }
 
-  // --- TOGGLE STATUS (SALVATAGGIO SICURO) ---
+  // --- TOGGLE STATUS (Firebase) ---
   Future<void> _toggleReadStatus(Book liveBook, String currentStatus) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Se è 'read' diventa 'toread', altrimenti diventa 'read'
     final newStatus = currentStatus == 'read' ? 'toread' : 'read';
 
     try {
-      // USIAMO .set CON MERGE: Crea il libro se non esiste, lo aggiorna se esiste.
-      await FirebaseFirestore.instance.collection('books').doc(liveBook.id).set(
-        {
-          'userId': user.uid,
-          'title': liveBook.title,
-          'author': liveBook.author,
-          'description': liveBook.description,
-          'thumbnailUrl': liveBook.thumbnailUrl,
-          'status': newStatus,
-          'timestamp':
-              FieldValue.serverTimestamp(), // Aggiorna l'orario per l'ordinamento
-        },
-        SetOptions(merge: true),
-      ); // <--- LA CHIAVE È QUI: merge true non sovrascrive tutto se esiste già
+      await FirebaseFirestore.instance
+          .collection('books')
+          .doc(liveBook.id)
+          .set({
+            'userId': user.uid,
+            'title': liveBook.title,
+            'author': liveBook.author,
+            'description': liveBook.description,
+            'thumbnailUrl': liveBook.thumbnailUrl,
+            'status': newStatus,
+            'timestamp': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -96,11 +129,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
           .doc(widget.book.id)
           .snapshots(),
       builder: (context, snapshot) {
-        // --- LOGICA DATI VIVI ---
         Book liveBook = widget.book;
-        String currentStatus = 'toread'; // Default se il libro non è nel DB
+        String currentStatus = 'toread';
 
-        // Se il libro ESISTE nel DB, prendiamo i dati reali
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
           currentStatus = data['status'] ?? 'toread';
@@ -113,7 +144,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
             description: data['description'] ?? widget.book.description,
           );
         }
-        // Se NON ESISTE (es. arrivi dalla ricerca), usiamo i dati di widget.book e status 'toread'
 
         final isRead = currentStatus == 'read';
 
@@ -143,10 +173,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF1A1A2E),
-                  Color(0xFF0F3460),
-                ], // Deep Blue Theme
+                colors: [Color(0xFF2C2C2C), Color(0xFF121212)],
               ),
             ),
             child: SingleChildScrollView(
@@ -248,7 +275,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           borderRadius: BorderRadius.circular(15),
                         ),
                       ),
-                      // Passiamo liveBook e currentStatus alla funzione
                       onPressed: () =>
                           _toggleReadStatus(liveBook, currentStatus),
                       icon: Icon(
@@ -257,7 +283,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       label: Text(
                         isRead
                             ? "COMPLETATO (Torna indietro)"
-                            : "SEGNA COME LETTO", // Se non esiste, cliccando qui lo crea come letto
+                            : "SEGNA COME LETTO",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -266,8 +292,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     ),
                   ),
 
-                  // Se il libro non è ancora letto, mostriamo anche l'opzione "Aggiungi a Da Leggere"
-                  // opzionale, per chiarezza UI se uno vuole solo salvarlo senza leggerlo subito
                   if (!isRead) ...[
                     const SizedBox(height: 15),
                     SizedBox(
@@ -283,7 +307,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                             borderRadius: BorderRadius.circular(15),
                           ),
                         ),
-                        // Anche questo salva il libro, ma con status 'toread' esplicitamente
                         onPressed: () => _toggleReadStatus(liveBook, 'read'),
                         icon: const Icon(Icons.bookmark_add_outlined),
                         label: const Text("AGGIUNGI A 'DA LEGGERE'"),
@@ -296,10 +319,30 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   // --- PULSANTE AI ---
                   _buildAIButton(liveBook),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 15),
+
+                  // --- TASTO MVP: ROSSO E VISIBILE ---
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent.withOpacity(
+                          0.2,
+                        ), // Rosso sfondo
+                        foregroundColor: Colors.redAccent, // Rosso testo
+                        side: const BorderSide(
+                          color: Colors.redAccent,
+                        ), // Bordo Rosso
+                      ),
+                      onPressed: _runConnectionTest,
+                      child: const Text("TEST CONNESSIONE (MVP) - CLICCA QUI"),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
 
                   // --- RISULTATO AI ---
-                  if (_aiResult != null) _buildAIResultCard(),
+                  _buildAIResultCard(),
 
                   // --- DESCRIZIONE ---
                   const Text(
@@ -371,7 +414,16 @@ class _BookDetailPageState extends State<BookDetailPage> {
   }
 
   Widget _buildAIResultCard() {
+    if (_aiResult == null) return const SizedBox.shrink();
+
     final int score = _aiResult!['compatibility'] ?? 0;
+    final String reason =
+        _aiResult!['reason'] ?? "Nessuna motivazione fornita.";
+    final List<dynamic> takeaways =
+        _aiResult!['key_takeaways'] ?? ["Dati non disponibili"];
+    final String actionPlan =
+        _aiResult!['action_plan'] ?? "Nessun piano d'azione.";
+
     Color scoreColor = score > 75
         ? Colors.greenAccent
         : (score > 40 ? Colors.orangeAccent : Colors.redAccent);
@@ -380,9 +432,16 @@ class _BookDetailPageState extends State<BookDetailPage> {
       margin: const EdgeInsets.only(bottom: 30),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: scoreColor.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: scoreColor.withOpacity(0.1),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,6 +454,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
                 ),
               ),
               Container(
@@ -419,32 +479,85 @@ class _BookDetailPageState extends State<BookDetailPage> {
           ),
           const SizedBox(height: 15),
           Text(
-            _aiResult!['reason'] ?? "Nessun motivo specificato.",
+            reason,
             style: const TextStyle(
               color: Colors.white70,
               fontStyle: FontStyle.italic,
+              fontSize: 14,
             ),
           ),
           const SizedBox(height: 15),
           const Divider(color: Colors.white10),
           const SizedBox(height: 10),
-          ...(_aiResult!['key_takeaways'] as List<dynamic>).map(
+
+          // Mappatura takeaways
+          ...takeaways.map(
             (t) => Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.arrow_right, color: Colors.cyanAccent),
+                  const Icon(Icons.bolt, color: Colors.cyanAccent, size: 18),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       t.toString(),
-                      style: const TextStyle(color: Colors.white70),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
+
+          const SizedBox(height: 15),
+
+          // Action Plan Box
+          if (actionPlan.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.cyanAccent.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.cyanAccent.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.rocket_launch,
+                    color: Colors.cyanAccent,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "MISSIONE:",
+                          style: TextStyle(
+                            color: Colors.cyanAccent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          actionPlan,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

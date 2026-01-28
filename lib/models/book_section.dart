@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/book_model.dart';
-import 'package:library_ai/google_books_service.dart';
+// FIX IMPORT: Usiamo il percorso relativo per sicurezza massima
+import '../services/google_books_service.dart';
 import 'book_card.dart';
 
 class BookSection extends StatefulWidget {
   final String title;
-  final String categoryQuery; // Es. "fantasy", "horror"
+  final String categoryQuery;
 
   const BookSection({
     super.key,
@@ -23,7 +24,7 @@ class _BookSectionState extends State<BookSection> {
   @override
   void initState() {
     super.initState();
-    // Appena nasce il widget, lanciamo la richiesta a Google
+    // Carichiamo i libri all'avvio del widget
     _booksFuture = GoogleBooksService().fetchBooksByCategory(
       widget.categoryQuery,
     );
@@ -37,19 +38,30 @@ class _BookSectionState extends State<BookSection> {
         // Titolo Sezione
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Text(
-            widget.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              // Icona freccia decorativa
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: Colors.white.withOpacity(0.3),
+              ),
+            ],
           ),
         ),
 
-        // Lista Orizzontale Asincrona
+        // Lista Orizzontale
         SizedBox(
-          height: 260,
+          height: 220, // Altezza ottimizzata per la card
           child: FutureBuilder<List<Book>>(
             future: _booksFuture,
             builder: (context, snapshot) {
@@ -58,14 +70,18 @@ class _BookSectionState extends State<BookSection> {
                   child: CircularProgressIndicator(color: Colors.cyanAccent),
                 );
               } else if (snapshot.hasError) {
-                return const Center(
-                  child: Text("Errore", style: TextStyle(color: Colors.red)),
+                // Mostra l'errore a video se c'è
+                return Center(
+                  child: Text(
+                    "Errore: ${snapshot.error}",
+                    style: TextStyle(color: Colors.red.withOpacity(0.7)),
+                  ),
                 );
               } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    "Nessun libro trovato",
-                    style: TextStyle(color: Colors.grey),
+                    "Nessun libro trovato per '${widget.categoryQuery}'",
+                    style: TextStyle(color: Colors.white.withOpacity(0.3)),
                   ),
                 );
               }
