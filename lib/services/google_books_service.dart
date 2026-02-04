@@ -8,11 +8,11 @@ class GoogleBooksService {
   // INCOLLA QUI LA TUA CHIAVE API
   static const String _apiKey = "AIzaSyCTtFz_xjeahtxCeQYhCrOHRFguCT_mDJY";
 
-  // Funzione per cercare libri per categoria
+  // --- FUNZIONE FILTRO ELITE ---
   Future<List<Book>> fetchBooksByCategory(String category) async {
-    // Aggiungiamo &key=$_apiKey alla fine
+    // 1. CHIEDIAMO IL MASSIMO (40) PER AVERE PIÙ SCELTA
     final url = Uri.parse(
-      '$_baseUrl?q=$category&maxResults=20&langRestrict=it&orderBy=relevance&key=$_apiKey',
+      '$_baseUrl?q=subject:$category&maxResults=40&langRestrict=it&orderBy=relevance&key=$_apiKey',
     );
 
     try {
@@ -21,9 +21,30 @@ class GoogleBooksService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> items = data['items'] ?? [];
-        return items.map((json) => Book.fromJson(json)).toList();
+
+        // Convertiamo tutto in oggetti Book
+        List<Book> allBooks = items.map((json) => Book.fromJson(json)).toList();
+
+        // 2. FILTRAGGIO (Buttiamo la spazzatura)
+        var eliteBooks = allBooks.where((book) {
+          // Deve avere un voto medio valido
+          bool hasRating = book.averageRating != null;
+          // Deve avere almeno qualche voto (es. > 0) per essere credibile
+          bool hasVotes = (book.ratingsCount ?? 0) > 0;
+          // Deve avere la copertina
+          bool hasImage = book.thumbnailUrl.isNotEmpty;
+
+          return hasRating && hasVotes && hasImage;
+        }).toList();
+
+        // 3. ORDINAMENTO (Dal voto più alto al più basso)
+        eliteBooks.sort((a, b) {
+          return b.averageRating!.compareTo(a.averageRating!);
+        });
+
+        // 4. SELEZIONE (Prendiamo i migliori 15)
+        return eliteBooks.take(15).toList();
       } else {
-        // Se vedi 429 qui, vuol dire che anche con la chiave stai esagerando, ma è difficile.
         print("Errore API Status: ${response.statusCode}");
         return [];
       }
@@ -33,12 +54,11 @@ class GoogleBooksService {
     }
   }
 
-  // Funzione di ricerca specifica
+  // Funzione di ricerca specifica (Questa la lasciamo standard, l'utente sa cosa cerca)
   Future<List<Book>> searchBooks(String query) async {
     if (query.isEmpty) return [];
 
     final sanitizedQuery = query.replaceAll(' ', '+');
-    // Aggiungiamo &key=$_apiKey anche qui
     final url = Uri.parse(
       '$_baseUrl?q=$sanitizedQuery&maxResults=20&langRestrict=it&key=$_apiKey',
     );

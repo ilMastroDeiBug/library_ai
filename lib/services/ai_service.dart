@@ -1,82 +1,94 @@
 import 'dart:convert';
-import 'package:google_generative_ai/google_generative_ai.dart';
-// import '../secrets.dart'; // Scommenta se usi il file secrets, altrimenti usa la stringa sotto
+import 'package:http/http.dart' as http;
 
 class AIService {
-  late final GenerativeModel _model;
+  // --- INCOLLA QUI LA TUA CHIAVE (gsk_...) ---
+  static const String _apiKey =
+      "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";
 
-  AIService() {
-    // Usiamo gemini-1.5-flash: veloce e gratuito
-    _model = GenerativeModel(
-      model: 'gemini-1.5-flash',
-      // Incolla qui la tua chiave (o usa Secrets.geminiApiKey)
-      apiKey: "AIzaSyB1ZIVjRZemKHbY-9noiiGAJKDM5uKrBbI",
-    );
-  }
+  static const String _baseUrl =
+      "https://api.groq.com/openai/v1/chat/completions";
 
-  // --- FUNZIONE MVP (DIAGNOSTICA) ---
+  // --- FUNZIONE PING (Test Connessione) ---
   Future<String> pingAI() async {
     try {
-      print("AI_DEBUG: Ping in corso...");
-      final response = await _model.generateContent([
-        Content.text("Rispondi solo con la parola: 'CONNESSO'"),
-      ]);
-      print("AI_DEBUG: Risposta -> ${response.text}");
-      return response.text?.trim() ?? "Nessuna risposta";
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode({
+          // MODELLO AGGIORNATO (Veloce)
+          "model": "llama-3.1-8b-instant",
+          "messages": [
+            {"role": "user", "content": "Dimmi solo: CONNESSO"},
+          ],
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['choices'][0]['message']['content'];
+      } else {
+        return "Errore HTTP: ${response.statusCode}\n${response.body}";
+      }
     } catch (e) {
-      print("AI_DEBUG: Errore Ping -> $e");
-      return "ERRORE: $e";
+      return "Errore di Connessione: $e";
     }
   }
 
-  // --- FUNZIONE PRINCIPALE (ANALISI) ---
-  Future<Map<String, dynamic>> analyzeBook({
+  // --- FUNZIONE ANALISI (TESTO PURO) ---
+  Future<String> analyzeBook({
     required String title,
     required String author,
     required String userProfile,
   }) async {
-    final prompt =
+    final systemPrompt =
+        "Sei un mentore esperto per un giovane 'Architect' ambizioso (Dev Full Stack, MMA). Sii diretto, cinico e pratico.";
+
+    final userMessage =
         '''
-      Agisci come un mentore esperto per un giovane "Architect" ambizioso.
       PROFILO UTENTE: $userProfile
-      LIBRO DA ANALIZZARE: "$title" di $author
+      LIBRO: "$title" di $author
       
-      COMPITO:
-      Analizza questo libro e spiega perché è utile (o inutile) per il profilo dell'utente.
-      Sii cinico, diretto e tecnico.
+      Analizzalo per me.
+      Voglio sapere:
+      1. Compatibilità % (Stima onesta)
+      2. Perché mi serve (o perché fa schifo)
+      3. Un'azione pratica da applicare subito.
       
-      FORMATO RISPOSTA (Obbligatorio JSON):
-      Restituisci esclusivamente un oggetto JSON. Non aggiungere commenti o introduzioni.
-      {
-        "compatibility": (intero 0-100),
-        "reason": (stringa breve),
-        "key_takeaways": (lista di 3 stringhe),
-        "action_plan": (stringa)
-      }
+      Usa delle emoji per separare i punti. Sii breve.
     ''';
 
     try {
-      final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
-      String text = response.text ?? "{}";
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode({
+          // MODELLO AGGIORNATO (Intelligente)
+          "model": "llama-3.3-70b-versatile",
+          "messages": [
+            {"role": "system", "content": systemPrompt},
+            {"role": "user", "content": userMessage},
+          ],
+          "temperature": 0.7,
+          "max_tokens": 600,
+        }),
+      );
 
-      // LOGICA DI PULIZIA JSON ROBUSTA
-      // Cerca la prima parentesi graffa e l'ultima per estrarre solo il JSON
-      if (text.contains("{")) {
-        int startIndex = text.indexOf("{");
-        int endIndex = text.lastIndexOf("}") + 1;
-        text = text.substring(startIndex, endIndex);
+      if (response.statusCode == 200) {
+        // UTF8 per gli accenti
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data['choices'][0]['message']['content'];
+      } else {
+        return "Errore dal cervello AI: ${response.statusCode} - ${response.body}";
       }
-
-      return json.decode(text.trim());
     } catch (e) {
-      print("AI_ERROR: $e");
-      return {
-        "compatibility": 0,
-        "reason": "Errore nel parsing della risposta AI o connessione assente.",
-        "key_takeaways": ["Controlla i log", "Verifica API Key", "Riprova"],
-        "action_plan": "Esegui il Test di Connessione.",
-      };
+      return "Impossibile raggiungere l'AI: $e";
     }
   }
 }

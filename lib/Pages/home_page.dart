@@ -125,6 +125,7 @@ class HomePage extends StatelessWidget {
 
       floatingActionButton: mode == AppMode.books
           ? FloatingActionButton(
+              heroTag: 'fab_home',
               onPressed: () => _showAddBookSheet(context),
               backgroundColor: Colors.cyanAccent,
               child: const Icon(Icons.add, color: Colors.black),
@@ -202,11 +203,12 @@ class HomePage extends StatelessWidget {
   }
 
   // --- CONTENUTO LIBRI ---
+  // --- CONTENUTO LIBRI ---
   Widget _buildBooksContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // AI HERO BANNER
+        // 1. AI HERO BANNER (Invariato)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Container(
@@ -285,7 +287,7 @@ class HomePage extends StatelessWidget {
 
         const SizedBox(height: 30),
 
-        // I TUOI LIBRI (Codice Completo)
+        // 2. I TUOI LIBRI (Invariato)
         const UserBooksSection(
           title: "🔥 La tua Coda di Lettura",
           status: "toread",
@@ -293,17 +295,37 @@ class HomePage extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // CATALOGHI
+        // --- NUOVE CATEGORIE AGGIUNTE ---
+
+        // Usiamo "fiction" generico ma grazie al tuo filtro usciranno i più votati = Bestsellers
         const BookSection(
-          title: "📖 Grandi Classici",
-          categoryQuery: "classics",
+          title: "🏆 Bestsellers del Momento",
+          categoryQuery: "fiction",
         ),
         const SizedBox(height: 10),
+
+        const BookSection(
+          title: "🕵️ Gialli & Misteri",
+          categoryQuery: "mystery",
+        ),
+        const SizedBox(height: 10),
+
+        const BookSection(
+          title: "🔪 Thriller Adrenalinici",
+          categoryQuery: "thriller",
+        ),
+        const SizedBox(height: 10),
+
+        const BookSection(title: "💘 Romance & Love", categoryQuery: "romance"),
+        const SizedBox(height: 10),
+
+        // Le vecchie categorie (sempre valide)
         const BookSection(
           title: "🐉 Fantasy & Avventura",
           categoryQuery: "fantasy",
         ),
         const SizedBox(height: 10),
+
         const BookSection(
           title: "🧠 Crescita Personale",
           categoryQuery: "self-help",

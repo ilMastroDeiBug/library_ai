@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:library_ai/Pages/login_page.dart';
-import 'services/firebase_options.dart';
+import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:library_ai/AccountSetup/profile_setup.dart';
 import 'package:library_ai/navigation_hub.dart';

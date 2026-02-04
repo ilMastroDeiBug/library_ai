@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -33,10 +30,7 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -63,6 +57,30 @@ class DefaultFirebaseOptions {
     messagingSenderId: '474613371614',
     projectId: 'library-ai-73515',
     storageBucket: 'library-ai-73515.firebasestorage.app',
+    androidClientId:
+        '474613371614-aqjse77sgugok48f0g6rqtoj32e6vi80.apps.googleusercontent.com',
+    iosClientId:
+        '474613371614-cvei7voiqso5tv5ql9itco75aqvaeb0h.apps.googleusercontent.com',
     iosBundleId: 'com.example.libraryAi',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBim2jYqfd28JDl1NZ_pYrnzlwu-YV8qw0',
+    appId: '1:474613371614:web:583bfcb61cadbd03d5e84f',
+    messagingSenderId: '474613371614',
+    projectId: 'library-ai-73515',
+    authDomain: 'library-ai-73515.firebaseapp.com',
+    storageBucket: 'library-ai-73515.firebasestorage.app',
+    measurementId: 'G-C2KHF4BF2C',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBim2jYqfd28JDl1NZ_pYrnzlwu-YV8qw0',
+    appId: '1:474613371614:web:f54f49f287ac31b8d5e84f',
+    messagingSenderId: '474613371614',
+    projectId: 'library-ai-73515',
+    authDomain: 'library-ai-73515.firebaseapp.com',
+    storageBucket: 'library-ai-73515.firebasestorage.app',
+    measurementId: 'G-WF6T24XFF7',
   );
 }

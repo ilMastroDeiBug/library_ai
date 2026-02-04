@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/book_model.dart';
 import '../services/ai_service.dart';
+import '../Pages/reviews_page.dart';
 
 class BookDetailPage extends StatefulWidget {
   final Book book;
@@ -16,20 +17,41 @@ class BookDetailPage extends StatefulWidget {
 class _BookDetailPageState extends State<BookDetailPage> {
   final AIService _aiService = AIService();
   bool _isAnalyzing = false;
-  Map<String, dynamic>? _aiResult;
 
-  // --- TEST DI CONNESSIONE (MVP) ---
+  // --- LOGICA VISIVA STELLE (Full, Half, Empty) ---
+  // Questo metodo calcola matematicamente quali icone mostrare
+  Widget _buildStarRating(double rating) {
+    List<Widget> stars = [];
+    for (int i = 1; i <= 5; i++) {
+      if (rating >= i) {
+        // Stella Piena
+        stars.add(const Icon(Icons.star, color: Colors.amber, size: 16));
+      } else if (rating >= i - 0.5) {
+        // Mezza Stella
+        stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 16));
+      } else {
+        // Stella Vuota
+        stars.add(
+          Icon(
+            Icons.star_border,
+            color: Colors.white.withOpacity(0.3),
+            size: 16,
+          ),
+        );
+      }
+    }
+    return Row(mainAxisSize: MainAxisSize.min, children: stars);
+  }
+
+  // --- TEST CONNESSIONE (MVP) ---
   Future<void> _runConnectionTest() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Test connessione in corso..."),
+        content: Text("Test connessione AI in corso..."),
         duration: Duration(seconds: 1),
       ),
     );
-
-    // Chiama la funzione pingAI del service
     final result = await _aiService.pingAI();
-
     if (mounted) {
       showDialog(
         context: context,
@@ -43,10 +65,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                "OK",
-                style: TextStyle(color: Colors.cyanAccent),
-              ),
+              child: const Text("OK"),
             ),
           ],
         ),
@@ -54,33 +73,32 @@ class _BookDetailPageState extends State<BookDetailPage> {
     }
   }
 
-  // --- ANALISI REALE ---
-  Future<void> _analyzeBook(Book liveBook) async {
+  // --- ANALISI CON SALVATAGGIO ---
+  Future<void> _analyzeAndSaveBook(Book liveBook) async {
     setState(() => _isAnalyzing = true);
+    // Nota: Qui potresti voler rendere dinamico il profilo utente in futuro
+    const userProfile = "Sono un ragazzo di 16 anni, ambizioso...";
 
-    const userProfile =
-        "Sono un ragazzo di 16 anni, ambizioso, studio sviluppo Full Stack, "
-        "pratico MMA, ho una mentalità da Architect e voglio ottimizzare la mia crescita.";
-
-    final result = await _aiService.analyzeBook(
+    final resultText = await _aiService.analyzeBook(
       title: liveBook.title,
       author: liveBook.author,
       userProfile: userProfile,
     );
-
-    if (mounted) {
-      setState(() {
-        _aiResult = result;
-        _isAnalyzing = false;
-      });
+    try {
+      await FirebaseFirestore.instance.collection('books').doc(liveBook.id).set(
+        {'aiAnalysis': resultText},
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      print("Errore salvataggio analisi: $e");
     }
+    if (mounted) setState(() => _isAnalyzing = false);
   }
 
-  // --- TOGGLE STATUS (Firebase) ---
+  // --- TOGGLE STATUS ---
   Future<void> _toggleReadStatus(Book liveBook, String currentStatus) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-
     final newStatus = currentStatus == 'read' ? 'toread' : 'read';
 
     try {
@@ -93,6 +111,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
             'author': liveBook.author,
             'description': liveBook.description,
             'thumbnailUrl': liveBook.thumbnailUrl,
+            'pageCount': liveBook.pageCount,
+            'averageRating': liveBook.averageRating,
+            'ratingsCount': liveBook.ratingsCount,
             'status': newStatus,
             'timestamp': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
@@ -102,22 +123,18 @@ class _BookDetailPageState extends State<BookDetailPage> {
           SnackBar(
             content: Text(
               newStatus == 'read'
-                  ? "Libro completato! Salvato in libreria."
-                  : "Libro spostato in 'Da Leggere'.",
+                  ? "Salvato in libreria."
+                  : "Spostato in 'Da Leggere'.",
             ),
             backgroundColor: newStatus == 'read'
                 ? Colors.green
                 : Colors.orangeAccent,
-            behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 1),
           ),
         );
       }
     } catch (e) {
-      print("Errore aggiornamento status: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Errore: $e")));
+      print("Errore status: $e");
     }
   }
 
@@ -131,10 +148,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
       builder: (context, snapshot) {
         Book liveBook = widget.book;
         String currentStatus = 'toread';
+        String? storedAnalysis;
 
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
           currentStatus = data['status'] ?? 'toread';
+          storedAnalysis = data['aiAnalysis'];
 
           liveBook = Book(
             id: widget.book.id,
@@ -142,9 +161,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
             author: data['author'] ?? widget.book.author,
             thumbnailUrl: data['thumbnailUrl'] ?? widget.book.thumbnailUrl,
             description: data['description'] ?? widget.book.description,
+            pageCount: data['pageCount'] ?? widget.book.pageCount,
+            averageRating: data['averageRating'] ?? widget.book.averageRating,
+            ratingsCount: data['ratingsCount'] ?? widget.book.ratingsCount,
           );
         }
-
         final isRead = currentStatus == 'read';
 
         return Scaffold(
@@ -204,45 +225,20 @@ class _BookDetailPageState extends State<BookDetailPage> {
                             fit: BoxFit.cover,
                           ),
                         ),
-                        child: Stack(
-                          children: [
-                            if (isRead)
-                              Positioned(
-                                top: 10,
-                                right: 10,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 30),
 
-                  // --- TITOLO E AUTORE ---
+                  // --- TITOLO & AUTORE ---
                   Text(
                     liveBook.title,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
-                      height: 1.2,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 10),
                   Center(
@@ -255,9 +251,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 25),
 
-                  // --- PULSANTE TOGGLE STATUS ---
+                  // --- INFO BOX (Pagine & Recensioni Visive) ---
+                  _buildInfoRow(context, liveBook),
+
+                  const SizedBox(height: 25),
+
+                  // --- TASTI STATUS ---
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -267,10 +268,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                             ? const Color(0xFF1B5E20)
                             : Colors.cyanAccent,
                         foregroundColor: isRead ? Colors.white : Colors.black,
-                        elevation: 10,
-                        shadowColor: isRead
-                            ? Colors.greenAccent.withOpacity(0.4)
-                            : Colors.cyanAccent.withOpacity(0.4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),
@@ -281,70 +278,89 @@ class _BookDetailPageState extends State<BookDetailPage> {
                         isRead ? Icons.undo : Icons.check_circle_outline,
                       ),
                       label: Text(
-                        isRead
-                            ? "COMPLETATO (Torna indietro)"
-                            : "SEGNA COME LETTO",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                        isRead ? "COMPLETATO" : "SEGNA COME LETTO",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
 
-                  if (!isRead) ...[
+                  const SizedBox(height: 20),
+
+                  // --- AI LOGIC ---
+                  if (storedAnalysis == null) _buildAIButton(liveBook),
+                  if (storedAnalysis == null) ...[
                     const SizedBox(height: 15),
                     SizedBox(
                       width: double.infinity,
-                      height: 55,
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white70,
-                          side: BorderSide(
-                            color: Colors.white.withOpacity(0.2),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent.withOpacity(0.1),
+                          foregroundColor: Colors.redAccent,
+                          side: const BorderSide(
+                            color: Colors.redAccent,
+                            width: 0.5,
                           ),
                         ),
-                        onPressed: () => _toggleReadStatus(liveBook, 'read'),
-                        icon: const Icon(Icons.bookmark_add_outlined),
-                        label: const Text("AGGIUNGI A 'DA LEGGERE'"),
+                        onPressed: _runConnectionTest,
+                        child: const Text("TEST CONNESSIONE (MVP)"),
                       ),
                     ),
                   ],
 
                   const SizedBox(height: 20),
 
-                  // --- PULSANTE AI ---
-                  _buildAIButton(liveBook),
-
-                  const SizedBox(height: 15),
-
-                  // --- TASTO MVP: ROSSO E VISIBILE ---
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent.withOpacity(
-                          0.2,
-                        ), // Rosso sfondo
-                        foregroundColor: Colors.redAccent, // Rosso testo
-                        side: const BorderSide(
-                          color: Colors.redAccent,
-                        ), // Bordo Rosso
+                  // --- BOX RISULTATO ---
+                  if (storedAnalysis != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.cyanAccent.withOpacity(0.5),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.cyanAccent.withOpacity(0.1),
+                            blurRadius: 20,
+                          ),
+                        ],
                       ),
-                      onPressed: _runConnectionTest,
-                      child: const Text("TEST CONNESSIONE (MVP) - CLICCA QUI"),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.psychology, color: Colors.cyanAccent),
+                              SizedBox(width: 10),
+                              Text(
+                                "VERDETTO DELL'ARCHITETTO",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(color: Colors.white24, height: 30),
+                          Text(
+                            storedAnalysis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              height: 1.6,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
 
-                  // --- RISULTATO AI ---
-                  _buildAIResultCard(),
-
-                  // --- DESCRIZIONE ---
+                  // --- SINOSSI ---
                   const Text(
                     "SINOSSI",
                     style: TextStyle(
@@ -357,12 +373,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   Text(
                     liveBook.description.isNotEmpty
                         ? liveBook.description
-                        : "Nessuna descrizione disponibile.",
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
+                        : "Nessuna descrizione.",
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                 ],
               ),
@@ -370,6 +382,121 @@ class _BookDetailPageState extends State<BookDetailPage> {
           ),
         );
       },
+    );
+  }
+
+  // --- WIDGET RIGA INFO (AGGIORNATO CON STELLE VISIVE) ---
+  Widget _buildInfoRow(BuildContext context, Book book) {
+    final double rating = book.averageRating?.toDouble() ?? 0.0;
+    final int count = book.ratingsCount ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(15),
+        // Aggiungiamo un bordo sottile per definire meglio l'area
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      // IntrinsicHeight serve a far sì che il divisore verticale
+      // prenda l'altezza del contenuto più alto (le due colonne)
+      child: IntrinsicHeight(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // 1. Pagine
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "LUNGHEZZA",
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.menu_book_rounded,
+                      color: Colors.white70,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      book.pageCount != null ? "${book.pageCount}" : "-",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            // Divisore verticale
+            Container(width: 1, color: Colors.white12),
+
+            // 2. Recensioni (Cliccabile & Visiva)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReviewsPage(book: book),
+                  ),
+                );
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "VALUTAZIONE",
+                    style: TextStyle(
+                      color: Colors.white38,
+                      fontSize: 10,
+                      letterSpacing: 1,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Render Visivo delle Stelle
+                  Row(
+                    children: [
+                      _buildStarRating(rating), // Chiama il metodo creato sopra
+                      const SizedBox(width: 8),
+                      Text(
+                        rating > 0 ? rating.toStringAsFixed(1) : "N/D",
+                        style: const TextStyle(
+                          color: Colors.amber,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  // Contatore recensioni piccolo
+                  Text(
+                    "$count recensioni",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 10,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -391,7 +518,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
             borderRadius: BorderRadius.circular(15),
           ),
         ),
-        onPressed: _isAnalyzing ? null : () => _analyzeBook(liveBook),
+        onPressed: _isAnalyzing ? null : () => _analyzeAndSaveBook(liveBook),
         icon: _isAnalyzing
             ? const SizedBox(
                 width: 20,
@@ -403,162 +530,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
               )
             : const Icon(Icons.psychology, color: Colors.white),
         label: Text(
-          _isAnalyzing ? "INTERROGANDO GEMINI..." : "ANALISI COMPATIBILITÀ AI",
+          _isAnalyzing ? "STO PENSANDO..." : "RICHIEDI ANALISI AI",
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildAIResultCard() {
-    if (_aiResult == null) return const SizedBox.shrink();
-
-    final int score = _aiResult!['compatibility'] ?? 0;
-    final String reason =
-        _aiResult!['reason'] ?? "Nessuna motivazione fornita.";
-    final List<dynamic> takeaways =
-        _aiResult!['key_takeaways'] ?? ["Dati non disponibili"];
-    final String actionPlan =
-        _aiResult!['action_plan'] ?? "Nessun piano d'azione.";
-
-    Color scoreColor = score > 75
-        ? Colors.greenAccent
-        : (score > 40 ? Colors.orangeAccent : Colors.redAccent);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 30),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scoreColor.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: scoreColor.withOpacity(0.1),
-            blurRadius: 20,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "VERDETTO ARCHITECT",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: scoreColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: scoreColor),
-                ),
-                child: Text(
-                  "$score%",
-                  style: TextStyle(
-                    color: scoreColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          Text(
-            reason,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontStyle: FontStyle.italic,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 15),
-          const Divider(color: Colors.white10),
-          const SizedBox(height: 10),
-
-          // Mappatura takeaways
-          ...takeaways.map(
-            (t) => Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.bolt, color: Colors.cyanAccent, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      t.toString(),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 15),
-
-          // Action Plan Box
-          if (actionPlan.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.cyanAccent.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.cyanAccent.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.rocket_launch,
-                    color: Colors.cyanAccent,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "MISSIONE:",
-                          style: TextStyle(
-                            color: Colors.cyanAccent,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          actionPlan,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
       ),
     );
   }

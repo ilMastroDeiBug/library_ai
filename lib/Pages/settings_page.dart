@@ -424,7 +424,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required Function(bool) onChanged,
   }) {
     return SwitchListTile(
-      activeColor: Colors.cyanAccent,
+      activeThumbColor: Colors.cyanAccent,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
       title: Text(title, style: const TextStyle(color: Colors.white)),
       subtitle: Text(

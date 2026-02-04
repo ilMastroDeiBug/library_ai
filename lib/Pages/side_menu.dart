@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../pages/settings_page.dart';
-import '../models/app_mode.dart'; // <--- Assicurati che questo file esista
+import '../models/app_mode.dart';
 
 class SideMenu extends StatelessWidget {
-  // 1. I PARAMETRI CHE IL NAVIGATION HUB TI PASSA
   final AppMode currentMode;
   final bool isSocialActive;
   final Function(AppMode) onModeChanged;
   final VoidCallback onSocialTap;
 
-  // 2. IL COSTRUTTORE CHE LI RICEVE
   const SideMenu({
     super.key,
     required this.currentMode,
@@ -23,180 +21,303 @@ class SideMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
+    // Colori principali
+    const bgStart = Color(0xFF1E1E1E);
+    const bgEnd = Color(0xFF0F0F0F);
+
     return Drawer(
-      backgroundColor: const Color(0xFF1E1E1E), // Grigio Menu
-      child: Column(
-        children: [
-          // HEADER PROFILO (Settings Shortcut)
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            },
-            child: UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF2C2C2C), Color(0xFF121212)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+      // Sfondo con Gradiente Sottile
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [bgStart, bgEnd],
+          ),
+        ),
+        child: Column(
+          children: [
+            // 1. HEADER PERSONALIZZATO
+            _buildCustomHeader(context, user),
+
+            const SizedBox(height: 20),
+
+            // 2. LISTA MENU (Scrollabile)
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  _buildSectionLabel("ESPLORA"),
+
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.auto_stories_rounded,
+                    text: "Libreria Libri",
+                    isSelected: !isSocialActive && currentMode == AppMode.books,
+                    activeColor: Colors.cyanAccent,
+                    onTap: () {
+                      onModeChanged(AppMode.books);
+                      Navigator.pop(context);
+                    },
+                  ),
+
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.movie_filter_rounded,
+                    text: "Cinema & TV",
+                    isSelected:
+                        !isSocialActive && currentMode == AppMode.movies,
+                    activeColor: Colors.orangeAccent,
+                    onTap: () {
+                      onModeChanged(AppMode.movies);
+                      Navigator.pop(context);
+                    },
+                  ),
+
+                  const SizedBox(height: 25),
+                  _buildSectionLabel("COMMUNITY"),
+
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.public,
+                    text: "Social Network",
+                    isSelected: isSocialActive,
+                    activeColor: Colors.purpleAccent,
+                    onTap: () {
+                      onSocialTap();
+                      Navigator.pop(context);
+                    },
+                  ),
+
+                  const SizedBox(height: 25),
+                  const Divider(color: Colors.white10, height: 1),
+                  const SizedBox(height: 25),
+
+                  _buildSectionLabel("ALTRO"),
+
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.settings_rounded,
+                    text: "Impostazioni",
+                    isSelected:
+                        false, // Le impostazioni non sono una "modalità" persistente
+                    activeColor: Colors.white,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.grey[800],
+            ),
+
+            // 3. FOOTER (LOGOUT)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+              child: _buildLogoutButton(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET HEADER CUSTOM ---
+  Widget _buildCustomHeader(BuildContext context, User? user) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
+        border: const Border(bottom: BorderSide(color: Colors.white10)),
+      ),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SettingsPage()),
+          );
+        },
+        child: Row(
+          children: [
+            // Avatar con Glow Effect
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.cyanAccent.withOpacity(0.2),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 28,
+                backgroundColor: const Color(0xFF2C2C2C),
                 backgroundImage: user?.photoURL != null
                     ? NetworkImage(user!.photoURL!)
                     : null,
                 child: user?.photoURL == null
-                    ? const Icon(Icons.person, color: Colors.white)
+                    ? const Icon(Icons.person, color: Colors.white70)
                     : null,
               ),
-              accountName: Row(
+            ),
+            const SizedBox(width: 15),
+            // Testi
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     user?.displayName ?? "Architect",
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
                       color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 5),
-                  const Icon(
-                    Icons.settings_outlined,
-                    color: Colors.white38,
-                    size: 14,
+                  const SizedBox(height: 4),
+                  Text(
+                    user?.email ?? "",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
-              accountEmail: Text(
-                user?.email ?? "",
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
             ),
-          ),
-
-          // SEZIONE CONTENUTI
-          _buildSectionLabel("CONTENUTI"),
-
-          _buildDrawerItem(
-            context,
-            icon: Icons.auto_stories,
-            text: "Libreria Libri",
-            // Logica colore: Attivo solo se NON social e MODO = libri
-            color: (!isSocialActive && currentMode == AppMode.books)
-                ? Colors.cyanAccent
-                : Colors.white,
-            onTap: () {
-              onModeChanged(AppMode.books);
-              Navigator.pop(context);
-            },
-          ),
-
-          _buildDrawerItem(
-            context,
-            icon: Icons.movie_filter_rounded,
-            text: "Cinema & Serie TV",
-            // Logica colore: Attivo solo se NON social e MODO = film
-            color: (!isSocialActive && currentMode == AppMode.movies)
-                ? Colors.orangeAccent
-                : Colors.white,
-            onTap: () {
-              onModeChanged(AppMode.movies);
-              Navigator.pop(context);
-            },
-          ),
-
-          const SizedBox(height: 10),
-
-          // SEZIONE SOCIAL
-          _buildSectionLabel("COMMUNITY"),
-          _buildDrawerItem(
-            context,
-            icon: Icons.people_alt_rounded,
-            text: "Social Network",
-            // Logica colore: Attivo se SOCIAL è true
-            color: isSocialActive ? Colors.purpleAccent : Colors.white,
-            onTap: () {
-              onSocialTap();
-              Navigator.pop(context); // Chiudiamo il drawer dopo il click
-            },
-          ),
-
-          const Divider(color: Colors.white10, height: 40),
-
-          // IMPOSTAZIONI
-          _buildDrawerItem(
-            context,
-            icon: Icons.settings,
-            text: "Impostazioni",
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            },
-          ),
-
-          const Spacer(),
-
-          // LOGOUT
-          _buildDrawerItem(
-            context,
-            icon: Icons.logout_rounded,
-            text: "Esci",
-            color: Colors.redAccent.withOpacity(0.8),
-            onTap: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionLabel(String label) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.2),
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+            // Icona freccia discreta
+            Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.3)),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDrawerItem(
+  // --- WIDGET LABEL SEZIONE ---
+  Widget _buildSectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 10),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.4),
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET MENU ITEM (STILE CAPSULA) ---
+  Widget _buildMenuItem(
     BuildContext context, {
     required IconData icon,
     required String text,
+    required bool isSelected,
+    required Color activeColor,
     required VoidCallback onTap,
-    Color color = Colors.white,
   }) {
-    return ListTile(
-      leading: Icon(icon, color: color, size: 22),
-      title: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 15,
-          fontWeight: color != Colors.white
-              ? FontWeight.bold
-              : FontWeight.normal,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? activeColor.withOpacity(0.15)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: isSelected
+                  ? Border.all(color: activeColor.withOpacity(0.3))
+                  : Border.all(color: Colors.transparent),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? activeColor : Colors.white54,
+                  size: 22,
+                ),
+                const SizedBox(width: 15),
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.white70,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 15,
+                  ),
+                ),
+                const Spacer(),
+                if (isSelected)
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: activeColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: activeColor.withOpacity(0.6),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
-      onTap: onTap,
-      dense: true,
-      visualDensity: VisualDensity.compact,
-      hoverColor: Colors.white.withOpacity(0.05),
+    );
+  }
+
+  // --- TASTO LOGOUT ---
+  Widget _buildLogoutButton() {
+    return InkWell(
+      onTap: () async {
+        await FirebaseAuth.instance.signOut();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.redAccent.withOpacity(0.2)),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+            SizedBox(width: 10),
+            Text(
+              "Disconnetti",
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

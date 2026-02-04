@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/book_model.dart';
 import '../pages/book_detail_page.dart';
+// IMPORTANTE: Importa il widget che abbiamo creato al punto 1
+import '../models/star_rating.dart';
 
 class BookCard extends StatelessWidget {
   final Book book;
@@ -17,17 +19,15 @@ class BookCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 120,
+        width: 120, // Larghezza fissa della card
         margin: const EdgeInsets.only(right: 15),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E), // SFONDO CARD SCURO
+          color: const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.05),
-          ), // Bordo sottile per stacco
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3), // Ombra più scura
+              color: Colors.black.withOpacity(0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -63,7 +63,7 @@ class BookCard extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: Colors.white, // BIANCO
+                        color: Colors.white,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -73,12 +73,54 @@ class BookCard extends StatelessWidget {
                     Text(
                       book.author,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.5), // GRIGIO CHIARO
+                        color: Colors.white.withOpacity(0.5),
                         fontSize: 10,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+
+                    // --- 3. STELLINE DI PRECISIONE (MODIFICATO) ---
+                    if (book.averageRating != null) ...[
+                      const SizedBox(height: 8), // Spazio extra
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // A. IL NUMERO (Es. 4.5)
+                          Text(
+                            book.averageRating.toString(),
+                            style: const TextStyle(
+                              color: Colors.white, // Numero Bianco
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+
+                          // B. LE STELLE (Gialle e Grigie)
+                          StarRating(
+                            rating: book.averageRating?.toDouble() ?? 0.0,
+                            size: 10, // Stelle piccole ed eleganti
+                            color: Colors.amber,
+                          ),
+
+                          const SizedBox(width: 4),
+
+                          // C. IL CONTEGGIO (Es. (120))
+                          Expanded(
+                            // Per evitare overflow se il numero è lungo
+                            child: Text(
+                              "(${book.ratingsCount ?? 0})",
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.4),
+                                fontSize: 9,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -91,7 +133,7 @@ class BookCard extends StatelessWidget {
 
   Widget _buildPlaceholder() {
     return Container(
-      color: Colors.grey[800], // Placeholder scuro
+      color: Colors.grey[800],
       child: const Center(
         child: Icon(Icons.broken_image, color: Colors.white24),
       ),
