@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// Importiamo il NOSTRO servizio, non Firebase direttamente.
+import '../services/pages_services/create_account_service.dart';
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
@@ -12,8 +13,23 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Istanziamo il servizio (come se fosse una Dependency Injection manuale)
+  final CreateAccountService _authService = CreateAccountService();
+
   Future<void> _register() async {
+    // Validazione basilare UI (puoi spostarla anche nel service se vuoi essere estremo)
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Compila tutti i campi"),
+          backgroundColor: Colors.redAccent.shade700,
+        ),
+      );
+      return;
+    }
+
     try {
+      // 1. Mostra Loading
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -21,17 +37,34 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
           child: CircularProgressIndicator(color: Colors.cyanAccent),
         ),
       );
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+
+      // 2. CHIAMA IL SERVIZIO (Backend Logic)
+      await _authService.registerUser(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      if (mounted) Navigator.pop(context); // Chiudi dialog
-      if (mounted) Navigator.pop(context); // Chiudi pagina
-    } on FirebaseAuthException catch (e) {
-      if (mounted) Navigator.pop(context);
+
+      // 3. Gestione Successo UI
+      if (mounted) Navigator.pop(context); // Chiudi dialog loading
+      if (mounted) Navigator.pop(context); // Chiudi pagina e torna al login
+
+      // Opzionale: Mostra successo
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Account creato con successo!")),
+        );
+      }
+    } catch (e) {
+      // 4. Gestione Errore UI
+      if (mounted) {
+        Navigator.pop(context); // Chiudi dialog loading in caso di errore
+      }
+
+      // 'e' qui è l'Exception pulita lanciata dal nostro Service
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message ?? "Errore sconosciuto"),
+          // Togliamo "Exception: " dalla stringa se presente, per pulizia
+          content: Text(e.toString().replaceAll("Exception: ", "")),
           backgroundColor: Colors.redAccent.shade700,
           behavior: SnackBarBehavior.floating,
         ),

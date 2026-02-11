@@ -347,9 +347,7 @@ class LibraryPage extends StatelessWidget {
                       ),
                     ),
                     child: TabBar(
-                      overlayColor: MaterialStateProperty.all(
-                        Colors.transparent,
-                      ),
+                      overlayColor: WidgetStateProperty.all(Colors.transparent),
                       indicatorColor: Colors.white,
                       indicatorWeight: 2,
                       indicatorSize: TabBarIndicatorSize

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart'; // Serve solo per il tipo User in alcuni casi
-import '../services/user_services.dart'; // Importa il Service
+import '../services/utility_services/user_services.dart'; // Importa il Service
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});

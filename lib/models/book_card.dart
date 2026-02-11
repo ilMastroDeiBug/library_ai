@@ -88,7 +88,7 @@ class BookCard extends StatelessWidget {
                         children: [
                           // A. IL NUMERO (Es. 4.5)
                           Text(
-                            book.averageRating.toString(),
+                            book.averageRating?.toStringAsFixed(1) ?? "N/D",
                             style: const TextStyle(
                               color: Colors.white, // Numero Bianco
                               fontSize: 11,

@@ -1,25 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/book_model.dart';
-import '../models/book_card.dart';
-import '../models/book_section.dart';
 import '../models/app_mode.dart';
 import 'search_page.dart';
-// NOTA: Nessun import di SideMenu qui.
+// Import Widget Modulari
+import '../models/add_book_sheet.dart';
+import '../models/user_books_section.dart';
+import '../models/book_section.dart'; // Questo è il widget che usa OpenLibraryService
 
 class HomePage extends StatelessWidget {
   final AppMode mode;
-  final VoidCallback onOpenDrawer; // Il telecomando per il menu
+  final VoidCallback onOpenDrawer;
 
   const HomePage({super.key, required this.mode, required this.onOpenDrawer});
 
-  // --- POPUP AGGIUNTA MANUALE ---
-  void _showAddBookSheet(BuildContext context) {
-    final TextEditingController titleController = TextEditingController();
-    final TextEditingController authorController = TextEditingController();
-    final user = FirebaseAuth.instance.currentUser;
-
+  void _showAddSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -27,83 +20,7 @@ class HomePage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          left: 24,
-          right: 24,
-          top: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Nuova Avventura (Manuale)",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildInput(titleController, "Titolo del libro"),
-            const SizedBox(height: 15),
-            _buildInput(authorController, "Autore"),
-            const SizedBox(height: 25),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyanAccent,
-                foregroundColor: Colors.black,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () async {
-                if (titleController.text.isNotEmpty && user != null) {
-                  await FirebaseFirestore.instance.collection('books').add({
-                    'title': titleController.text,
-                    'author': authorController.text,
-                    'userId': user.uid,
-                    'status': 'toread',
-                    'category': 'Generico',
-                    'thumbnailUrl': '',
-                    'description': 'Aggiunto manualmente',
-                    'timestamp': FieldValue.serverTimestamp(),
-                  });
-                  if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text(
-                "Salva nella Libreria",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInput(TextEditingController controller, String label) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        filled: true,
-        fillColor: Colors.black.withOpacity(0.3),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.cyanAccent),
-        ),
-      ),
+      builder: (context) => const AddBookSheet(),
     );
   }
 
@@ -111,27 +28,22 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-
-      // NOTA: NIENTE DRAWER QUI. USIAMO QUELLO DEL PADRE.
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
-          onPressed:
-              onOpenDrawer, // <--- Cliccando qui, apre il menu del NavigationHub
+          onPressed: onOpenDrawer,
         ),
       ),
-
       floatingActionButton: mode == AppMode.books
           ? FloatingActionButton(
               heroTag: 'fab_home',
-              onPressed: () => _showAddBookSheet(context),
+              onPressed: () => _showAddSheet(context),
               backgroundColor: Colors.cyanAccent,
               child: const Icon(Icons.add, color: Colors.black),
             )
           : null,
-
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -146,52 +58,94 @@ class HomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- 1. SEARCH BAR ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: GestureDetector(
-                    onTap: () => showSearch(
-                      context: context,
-                      delegate: BookSearchDelegate(),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.search,
-                            color: mode == AppMode.books
-                                ? Colors.cyanAccent
-                                : Colors.orangeAccent,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            mode == AppMode.books
-                                ? "Cerca titolo, autore..."
-                                : "Cerca film, attori...",
-                            style: const TextStyle(color: Colors.white38),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
+                // 1. SEARCH BAR
+                _buildSearchBar(context),
                 const SizedBox(height: 30),
 
-                // --- 2. CONTENUTO DINAMICO ---
-                if (mode == AppMode.books)
-                  _buildBooksContent()
-                else
+                // 2. CONTENUTO
+                if (mode == AppMode.books) ...[
+                  // Banner AI
+                  _buildAIBannerPlaceholder(),
+                  const SizedBox(height: 30),
+
+                  // I TUOI LIBRI (La tua coda personale)
+                  UserBooksSection(
+                    title: "🔥 La tua Coda di Lettura",
+                    status: "toread",
+                  ),
+                  const SizedBox(height: 20),
+
+                  // --- INIZIO CATALOGO ESPANSO ---
+
+                  // 1. I Grandi Classici e Bestsellers (Generalista)
+                  const BookSection(
+                    title: "🏆 Bestsellers & Classici",
+                    categoryQuery:
+                        "fiction", // 'fiction' su OpenLib tira fuori i grandi romanzi
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 2. Romance (Include il 'Romance' richiesto)
+                  const BookSection(
+                    title: "💘 Romance & Love Stories",
+                    categoryQuery: "romance",
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 3. Thriller e Azione
+                  const BookSection(
+                    title: "🔪 Thriller & Suspense",
+                    categoryQuery: "thriller",
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 4. Fantasy
+                  const BookSection(
+                    title: "🐉 Fantasy",
+                    categoryQuery: "fantasy",
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 5. Sci-Fi
+                  const BookSection(
+                    title: "🚀 Sci-Fi & Cyberpunk",
+                    categoryQuery: "science_fiction",
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 6. Avventura e Azione
+                  const BookSection(
+                    title: "Avventura",
+                    categoryQuery: "adventure",
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 7. Horror
+                  const BookSection(title: "Horror", categoryQuery: "horror"),
+                  const SizedBox(height: 10),
+
+                  // 8. Gialli / Mistery
+                  const BookSection(
+                    title: "Gialli & Mistery",
+                    categoryQuery: "mystery",
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 9. Storici
+                  const BookSection(
+                    title: "🏛️ Romanzi Storici",
+                    categoryQuery: "historical_fiction",
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 10. Crescita Personale
+                  const BookSection(
+                    title: "🧠 Mindset & Crescita",
+                    categoryQuery: "self_help",
+                  ),
+                ] else ...[
                   _buildMoviesPlaceholder(),
+                ],
 
                 const SizedBox(height: 80),
               ],
@@ -202,261 +156,68 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // --- CONTENUTO LIBRI ---
-  // --- CONTENUTO LIBRI ---
-  Widget _buildBooksContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 1. AI HERO BANNER (Invariato)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            width: double.infinity,
-            height: 180,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Colors.deepPurpleAccent, Colors.purple],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.purple.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -20,
-                  bottom: -20,
-                  child: Icon(
-                    Icons.auto_stories,
-                    size: 150,
-                    color: Colors.white.withOpacity(0.1),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black38,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          "CONSIGLIATO DALL'AI",
-                          style: TextStyle(
-                            color: Colors.cyanAccent,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "L'Arte della Guerra",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Text(
-                        "Sun Tzu",
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildSearchBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GestureDetector(
+        onTap: () =>
+            showSearch(context: context, delegate: BookSearchDelegate()),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
-        ),
-
-        const SizedBox(height: 30),
-
-        // 2. I TUOI LIBRI (Invariato)
-        const UserBooksSection(
-          title: "🔥 La tua Coda di Lettura",
-          status: "toread",
-        ),
-
-        const SizedBox(height: 20),
-
-        // --- NUOVE CATEGORIE AGGIUNTE ---
-
-        // Usiamo "fiction" generico ma grazie al tuo filtro usciranno i più votati = Bestsellers
-        const BookSection(
-          title: "🏆 Bestsellers del Momento",
-          categoryQuery: "fiction",
-        ),
-        const SizedBox(height: 10),
-
-        const BookSection(
-          title: "🕵️ Gialli & Misteri",
-          categoryQuery: "mystery",
-        ),
-        const SizedBox(height: 10),
-
-        const BookSection(
-          title: "🔪 Thriller Adrenalinici",
-          categoryQuery: "thriller",
-        ),
-        const SizedBox(height: 10),
-
-        const BookSection(title: "💘 Romance & Love", categoryQuery: "romance"),
-        const SizedBox(height: 10),
-
-        // Le vecchie categorie (sempre valide)
-        const BookSection(
-          title: "🐉 Fantasy & Avventura",
-          categoryQuery: "fantasy",
-        ),
-        const SizedBox(height: 10),
-
-        const BookSection(
-          title: "🧠 Crescita Personale",
-          categoryQuery: "self-help",
-        ),
-      ],
-    );
-  }
-
-  // --- PLACEHOLDER CINEMA ---
-  Widget _buildMoviesPlaceholder() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 50),
-          Icon(
-            Icons.movie_filter_rounded,
-            size: 80,
-            color: Colors.white.withOpacity(0.1),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            "Sezione Cinema in Arrivo",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "Stiamo cablando i servizi TMDB...",
-            style: TextStyle(color: Colors.white.withOpacity(0.5)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- USER BOOKS SECTION (Con Logica Firestore) ---
-class UserBooksSection extends StatelessWidget {
-  final String title;
-  final String status;
-
-  const UserBooksSection({
-    super.key,
-    required this.title,
-    required this.status,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return const SizedBox();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+              Icon(
+                Icons.search,
+                color: mode == AppMode.books
+                    ? Colors.cyanAccent
+                    : Colors.orangeAccent,
               ),
-              const Icon(Icons.arrow_forward, color: Colors.white54, size: 16),
+              const SizedBox(width: 10),
+              Text(
+                mode == AppMode.books
+                    ? "Cerca titolo, autore..."
+                    : "Cerca film, attori...",
+                style: const TextStyle(color: Colors.white38),
+              ),
             ],
           ),
         ),
-        SizedBox(
-          height: 200,
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('books')
-                .where('userId', isEqualTo: user.uid)
-                .where('status', isEqualTo: status)
-                .orderBy('timestamp', descending: true)
-                .limit(5)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: Center(
-                    child: Text(
-                      "Nessun libro in lista.\nCerca e aggiungi il primo!",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[500]),
-                    ),
-                  ),
-                );
-              }
-              final docs = snapshot.data!.docs;
-              return ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(left: 20),
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  final book = Book(
-                    id: docs[index].id,
-                    title: data['title'] ?? '',
-                    author: data['author'] ?? '',
-                    thumbnailUrl: data['thumbnailUrl'] ?? '',
-                    description: data['description'] ?? '',
-                  );
-                  return Transform.scale(
-                    scale: 0.95,
-                    alignment: Alignment.topLeft,
-                    child: BookCard(book: book),
-                  );
-                },
-              );
-            },
-          ),
+      ),
+    );
+  }
+
+  // Placeholder per il banner AI (copia qui il codice del container viola se non lo estrai)
+  Widget _buildAIBannerPlaceholder() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        height: 180,
+        decoration: BoxDecoration(
+          color: Colors.deepPurple,
+          borderRadius: BorderRadius.circular(20),
         ),
-      ],
+        child: const Center(
+          child: Text("Banner AI", style: TextStyle(color: Colors.white)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoviesPlaceholder() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(40.0),
+        child: Text(
+          "Cinema in arrivo...",
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
     );
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../AccountSetup/create_account.dart';
-import '../AccountSetup/login_email.dart';
+import '../AccountSetupPages/create_account_page.dart';
+import '../AccountSetupPages/login_email_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});

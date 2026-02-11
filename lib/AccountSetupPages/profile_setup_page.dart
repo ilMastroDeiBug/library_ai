@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// Importiamo il Service
+import '../services/pages_services/profile_creation_service.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -11,12 +12,61 @@ class ProfileSetupPage extends StatefulWidget {
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final _usernameController = TextEditingController();
 
+  // Stato UI
+  bool _isLoading = false;
+
+  // Istanza Service
+  final ProfileService _profileService = ProfileService();
+
   Future<void> _saveProfile() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null && _usernameController.text.isNotEmpty) {
-      await user.updateDisplayName(_usernameController.text);
-      await user.reload();
-      setState(() {});
+    // Validazione UI veloce
+    if (_usernameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Inserisci un nome valido."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Chiamata al Service
+      await _profileService.updateDisplayName(_usernameController.text.trim());
+
+      // Successo
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            // SPOSTIAMO LO STILE QUI DENTRO
+            content: Text(
+              "Benvenuto a bordo, Architect.",
+              style: TextStyle(
+                color: Colors.black, // Nero su Ciano si legge bene
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            backgroundColor: Colors.cyanAccent,
+          ),
+        );
+
+        // QUI DOVRESTI NAVIGARE ALLA HOME
+        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+      }
+    } catch (e) {
+      // Errore
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -111,29 +161,36 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 ),
                 const SizedBox(height: 40),
 
+                // Button con Loading State
                 SizedBox(
                   width: double.infinity,
                   height: 55,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.cyanAccent,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 10,
-                      shadowColor: Colors.cyanAccent.withOpacity(0.4),
-                    ),
-                    onPressed: _saveProfile,
-                    child: const Text(
-                      'INIZIA AVVENTURA',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.cyanAccent,
+                          ),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.cyanAccent,
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 10,
+                            shadowColor: Colors.cyanAccent.withOpacity(0.4),
+                          ),
+                          onPressed: _saveProfile,
+                          child: const Text(
+                            'INIZIA AVVENTURA',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ),
                 ),
               ],
             ),
