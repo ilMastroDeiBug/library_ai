@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '/services/utility_services/ai_service.dart';
+import '/services/utility_services/ai_service.dart'; // Assicurati che il path sia corretto
 
 class BookDetailService {
   final AIService _aiService = AIService();
@@ -9,8 +9,7 @@ class BookDetailService {
   Future<String> toggleReadStatus({
     required String bookId,
     required String currentStatus,
-    required Map<String, dynamic>
-    bookData, // Passiamo i dati per salvarli se non esistono
+    required Map<String, dynamic> bookData,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception("Utente non loggato");
@@ -25,6 +24,7 @@ class BookDetailService {
       'timestamp': FieldValue.serverTimestamp(),
     };
 
+    // Usiamo l'ID del libro (che abbiamo sanitizzato nel service di ricerca)
     await FirebaseFirestore.instance
         .collection('books')
         .doc(bookId)
@@ -39,15 +39,17 @@ class BookDetailService {
     required String title,
     required String author,
   }) async {
-    // Profilo utente (In futuro potresti passarlo come parametro o leggerlo dal DB utente)
+    // Profilo utente (In futuro lo leggeremo dalle impostazioni)
     const userProfile =
-        "Sono un ragazzo di 16 anni, ambizioso, sviluppatore...";
+        "Sono un ragazzo di 16 anni, ambizioso, sviluppatore Full Stack e praticante di MMA.";
 
-    // 1. Chiamata AI
-    final resultText = await _aiService.analyzeBook(
+    // 1. Chiamata AI (AGGIORNATA)
+    // Usiamo analyzeMedia specificando che è un libro
+    final resultText = await _aiService.analyzeMedia(
       title: title,
-      author: author,
+      type: 'book', // <--- Parametro cruciale
       userProfile: userProfile,
+      creator: author, // Passiamo l'autore
     );
 
     // 2. Salvataggio su Firestore

@@ -1,26 +1,33 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:library_ai/models/book_model.dart';
+import '../../models/book_widgets/book_model.dart';
 
 class OpenLibraryService {
   static const String _baseUrl = 'https://openlibrary.org/search.json';
   static const String _coverBaseUrl = 'https://covers.openlibrary.org/b/id';
 
-  /// Cerca libri per categoria o query libera
-  Future<List<Book>> fetchBooks(String query) async {
+  /// Cerca libri con supporto per Ordinamento
+  /// [sortBy]: 'relevance', 'new', 'old', 'rating_desc' (Client side)
+  Future<List<Book>> fetchBooks(
+    String query, {
+    String sortBy = 'relevance',
+  }) async {
     final sanitizedQuery = query.replaceAll(' ', '+');
 
-    // Ordina per rilevanza (default) e limita a 25 per non sovraccaricare
+    // Costruiamo l'URL base
+    // Nota: 'sort' parameter di OpenLib supporta 'new', 'old', 'random'.
+    String apiSortParam = '';
+    if (sortBy == 'new') apiSortParam = '&sort=new';
+    if (sortBy == 'old') apiSortParam = '&sort=old';
+
+    // Richiediamo più campi per poter ordinare lato client se necessario
     final url = Uri.parse(
-      '$_baseUrl?q=$sanitizedQuery&limit=25&fields=key,title,author_name,cover_i,ratings_average,ratings_count,number_of_pages_median,first_sentence,subject',
+      '$_baseUrl?q=$sanitizedQuery$apiSortParam&limit=25&fields=key,title,author_name,cover_i,ratings_average,ratings_count,number_of_pages_median,first_sentence,subject',
     );
 
     try {
-      // --- REGOLA ETICA: USER-AGENT ---
-      // Identifichiamo la tua app per non essere bloccati
       final headers = {
-        'User-Agent':
-            'MyLibraryApp/1.0 (tuaemail@example.com)', // Metti la tua mail vera o finta, basta che ci sia
+        'User-Agent': 'CultureVault/1.0 (dev@culturevault.app)',
         'Accept': 'application/json',
       };
 
@@ -30,18 +37,40 @@ class OpenLibraryService {
         final data = json.decode(response.body);
         final List<dynamic> docs = data['docs'] ?? [];
 
-        // Mappiamo e filtriamo
-        return docs.map((json) => _mapOpenLibraryToBook(json)).where((book) {
-          // FILTRO QUALITÀ "ARCHITECT":
-          // 1. Deve avere la copertina
-          // 2. Il titolo non deve essere troppo generico (es. "Works")
-          // 3. Scartiamo se ha 0 voti (spesso sono edizioni fantasma)
-          return book.thumbnailUrl.isNotEmpty &&
-              !book.title.toLowerCase().contains("collection") &&
-              (book.ratingsCount ?? 0) > 0;
-        }).toList();
+        // 1. Mappatura
+        List<Book> books = docs
+            .map((json) => _mapOpenLibraryToBook(json))
+            .where(
+              (book) =>
+                  // Filtri Qualità Architect
+                  book.thumbnailUrl.isNotEmpty &&
+                  !book.title.toLowerCase().contains("collection") &&
+                  (book.ratingsCount ?? 0) > 0,
+            )
+            .toList();
+
+        // 2. Sorting Lato Client (Dove l'API fallisce o non supporta)
+        if (sortBy == 'rating_desc') {
+          // Ordina per voto medio decrescente
+          books.sort((a, b) {
+            // Null safety check: if null, treat as 0.0
+            final double ratingA = (a.averageRating ?? 0).toDouble();
+            final double ratingB = (b.averageRating ?? 0).toDouble();
+            return ratingB.compareTo(ratingA); // Decrescente (B compareTo A)
+          });
+        } else if (sortBy == 'reviews_desc') {
+          // Ordina per numero recensioni decrescente
+          books.sort((a, b) {
+            // Null safety check: if null, treat as 0
+            final int countA = a.ratingsCount ?? 0;
+            final int countB = b.ratingsCount ?? 0;
+            return countB.compareTo(countA); // Decrescente
+          });
+        }
+
+        return books;
       } else {
-        print("Errore OpenLibrary: ${response.statusCode}");
+        // Gestione errore (opzionale: loggare lo status code)
         return [];
       }
     } catch (e) {
@@ -50,27 +79,24 @@ class OpenLibraryService {
     }
   }
 
+  // --- MAPPATURA ---
   Book _mapOpenLibraryToBook(Map<String, dynamic> json) {
-    // Gestione Copertina Alta Qualità
     String coverUrl = "";
     if (json['cover_i'] != null) {
       coverUrl = '$_coverBaseUrl/${json['cover_i']}-L.jpg';
     }
 
-    // Gestione Autore
     String author = "Autore Sconosciuto";
     if (json['author_name'] != null &&
         (json['author_name'] as List).isNotEmpty) {
       author = json['author_name'][0];
     }
 
-    // Gestione Descrizione
     String description = "";
     if (json['first_sentence'] != null &&
         (json['first_sentence'] as List).isNotEmpty) {
       description = json['first_sentence'][0];
     } else {
-      // Fallback: se non c'è la prima frase, usiamo i soggetti come descrizione
       if (json['subject'] != null) {
         description =
             "Argomenti: ${(json['subject'] as List).take(3).join(", ")}...";
@@ -78,16 +104,19 @@ class OpenLibraryService {
         description = "Nessuna descrizione disponibile.";
       }
     }
+
     final rawId = json['key'] ?? DateTime.now().toString();
+    // Sanitize ID per Firestore (rimuovi slash che creano sottocollezioni)
     final safeId = rawId.toString().replaceAll('/', '_');
 
     return Book(
-      id: safeId, // <--- Usiamo l'ID sicuro
+      id: safeId,
       title: json['title'] ?? "Senza Titolo",
       author: author,
       description: description,
       thumbnailUrl: coverUrl,
       pageCount: json['number_of_pages_median'],
+      // Parsing sicuro per double e int
       averageRating: (json['ratings_average'] as num?)?.toDouble() ?? 0.0,
       ratingsCount: json['ratings_count'] ?? 0,
     );

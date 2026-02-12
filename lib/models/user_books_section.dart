@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/utility_services/user_books_service.dart';
-import '../../models/book_model.dart';
-import '../../models/book_card.dart'; // Assicurati che l'import sia giusto
+import '/models/book_widgets/book_model.dart';
+import '/models/book_widgets/book_card.dart'; // Assicurati che l'import sia giusto
 
 class UserBooksSection extends StatelessWidget {
   final String title;

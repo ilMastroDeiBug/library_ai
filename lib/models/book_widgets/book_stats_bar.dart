@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../models/book_model.dart';
+import '/models/book_widgets/book_model.dart';
 import '../../pages/reviews_page.dart';
-import '../models/star_rating.dart'; // IMPORTA IL TUO WIDGET STELLE
+import 'star_rating.dart'; // IMPORTA IL TUO WIDGET STELLE
 
 class BookStatsBar extends StatelessWidget {
   final Book book;

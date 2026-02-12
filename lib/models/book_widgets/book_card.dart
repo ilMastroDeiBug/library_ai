@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/book_model.dart';
-import '../pages/book_detail_page.dart';
+import '/models/book_widgets/book_model.dart';
+import '/pages/book_detail_page.dart';
 // IMPORTANTE: Importa il widget che abbiamo creato al punto 1
-import '../models/star_rating.dart';
+import 'star_rating.dart';
 
 class BookCard extends StatelessWidget {
   final Book book;

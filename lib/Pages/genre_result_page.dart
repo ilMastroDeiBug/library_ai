@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/book_model.dart';
+import '/models/book_widgets/book_model.dart';
 import '../services/utility_services/google_books_service.dart';
-import '../models/book_card.dart';
+import '/models/book_widgets/book_card.dart';
 
 class GenreResultPage extends StatefulWidget {
   final String categoryName; // Es. "Horror" (per l'utente)

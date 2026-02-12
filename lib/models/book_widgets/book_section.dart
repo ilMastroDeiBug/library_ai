@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/book_model.dart';
+import '/models/book_widgets/book_model.dart';
 // Importiamo il TUO Service specifico
 import 'package:library_ai/services/utility_services/open_library_service.dart';
 import 'book_card.dart';

@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart'; // Serve solo per il tipo User in alcuni casi
-import '../services/utility_services/user_services.dart'; // Importa il Service
+import 'package:flutter/material.dart';
+import '../services/utility_services/user_services.dart';
+// Import Widget Modulari
+import '/models/settings_widgets/settings_header.dart';
+import '/models/settings_widgets/settings_tile.dart';
+import '/models/settings_widgets/settings_switch_tile.dart';
+import '/models/settings_widgets/edit_profile_dialogs.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -9,13 +14,15 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // Istanziamo il service
   final UserService _userService = UserService();
 
-  // Stato locale UI
+  // Stato Locale (Solo UI)
   bool _isPublicProfile = true;
   bool _notificationsEnabled = false;
   String _bio = "Caricamento bio...";
+
+  // COLORE DEL BRAND
+  static const Color _brandColor = Colors.orangeAccent;
 
   @override
   void initState() {
@@ -23,7 +30,6 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadData();
   }
 
-  // Funzione wrapper per caricare i dati dal service
   Future<void> _loadData() async {
     final data = await _userService.getUserData();
     if (mounted && data != null) {
@@ -34,111 +40,18 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  // --- DIALOGHI UI (View Logic) ---
-
-  Future<void> _showNameDialog() async {
-    final TextEditingController controller = TextEditingController(
-      text: _userService.currentUser?.displayName,
-    );
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text(
-          "Modifica Nome",
-          style: TextStyle(color: Colors.white),
-        ),
-        content: TextField(
-          controller: controller,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: "Inserisci nuovo nome",
-            hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.cyanAccent),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "ANNULLA",
-              style: TextStyle(color: Colors.white54),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.cyanAccent,
-              foregroundColor: Colors.black,
-            ),
-            onPressed: () async {
-              if (controller.text.trim().isNotEmpty) {
-                await _userService.updateName(
-                  controller.text.trim(),
-                ); // CHIAMA IL SERVICE
-                setState(() {}); // Aggiorna UI per mostrare il nuovo nome
-                if (context.mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text("SALVA"),
-          ),
-        ],
-      ),
-    );
+  Future<void> _handleUpdateName(String newName) async {
+    await _userService.updateName(newName);
+    setState(() {});
   }
 
-  Future<void> _showBioDialog() async {
-    final TextEditingController controller = TextEditingController(
-      text: _bio == "Nessuna biografia." ? "" : _bio,
-    );
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text("La tua Bio", style: TextStyle(color: Colors.white)),
-        content: TextField(
-          controller: controller,
-          style: const TextStyle(color: Colors.white),
-          maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: "Scrivi qualcosa...",
-            hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.cyanAccent),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "ANNULLA",
-              style: TextStyle(color: Colors.white54),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.cyanAccent,
-              foregroundColor: Colors.black,
-            ),
-            onPressed: () async {
-              await _userService.updateBio(
-                controller.text.trim(),
-              ); // CHIAMA IL SERVICE
-              setState(() => _bio = controller.text.trim());
-              if (context.mounted) Navigator.pop(context);
-            },
-            child: const Text("SALVA"),
-          ),
-        ],
-      ),
-    );
+  Future<void> _handleUpdateBio(String newBio) async {
+    await _userService.updateBio(newBio);
+    setState(() => _bio = newBio);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Nota: usiamo il getter del service per l'utente corrente
     final user = _userService.currentUser;
 
     return Scaffold(
@@ -160,164 +73,85 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           _buildSectionHeader("PROFILO"),
 
-          // HEADER PROFILO
-          GestureDetector(
-            onTap: () {
+          // 1. HEADER
+          SettingsHeader(
+            user: user,
+            bio: _bio,
+            onPhotoTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text("Upload foto in arrivo con Firebase Storage!"),
                 ),
               );
             },
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
-              ),
-              child: Row(
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.grey[800],
-                        backgroundImage: user?.photoURL != null
-                            ? NetworkImage(user!.photoURL!)
-                            : null,
-                        child: user?.photoURL == null
-                            ? const Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: 30,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.cyanAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            size: 12,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user?.displayName ?? "Utente",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          _bio,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
 
           const SizedBox(height: 20),
 
+          // 2. MODIFICA DATI
           _buildSectionHeader("MODIFICA DATI"),
-          _buildSettingsTile(
+          SettingsTile(
             icon: Icons.edit,
             title: "Nome Visualizzato",
             subtitle: user?.displayName ?? "Tocca per impostare",
-            onTap: _showNameDialog, // Apre il dialog
+            onTap: () => EditProfileDialogs.showNameDialog(
+              context,
+              user?.displayName,
+              _handleUpdateName,
+            ),
           ),
-          _buildSettingsTile(
+          SettingsTile(
             icon: Icons.text_snippet,
             title: "Biografia",
             subtitle: _bio.isEmpty ? "Raccontaci di te" : _bio,
-            onTap: _showBioDialog, // Apre il dialog
+            onTap: () => EditProfileDialogs.showBioDialog(
+              context,
+              _bio,
+              _handleUpdateBio,
+            ),
           ),
-          _buildSettingsTile(
+          SettingsTile(
             icon: Icons.email_outlined,
             title: "Email",
             subtitle: user?.email ?? "Nessuna email",
-            onTap: null,
+            onTap: null, // Read-only
           ),
 
           const SizedBox(height: 20),
 
+          // 3. PRIVACY & SICUREZZA
           _buildSectionHeader("PRIVACY & SICUREZZA"),
-          _buildSwitchTile(
+          SettingsSwitchTile(
             title: "Profilo Pubblico",
             subtitle: "Permetti agli altri di vedere la tua libreria",
             value: _isPublicProfile,
             onChanged: (val) async {
               setState(() => _isPublicProfile = val);
-              await _userService.updatePrivacyProfile(val); // CHIAMA IL SERVICE
+              await _userService.updatePrivacyProfile(val);
             },
           ),
-
-          // --- LOGICA CAMBIA PASSWORD ---
-          _buildSettingsTile(
+          SettingsTile(
             icon: Icons.lock_reset,
             title: "Cambia Password",
             onTap: () async {
               try {
-                // Chiamiamo il service intelligente
                 await _userService.sendPasswordReset();
-
-                // Se non lancia errori, mostriamo successo
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
+                    const SnackBar(
+                      content: Text(
                         "📧 Email per il reset inviata! Controlla la posta.",
                       ),
-                      backgroundColor: Colors.green, // Verde per successo
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      backgroundColor: Colors.green, // Verde per successo ok
                     ),
                   );
                 }
               } catch (e) {
-                // Pulizia messaggio errore
-                final errorMessage = e.toString().replaceAll("Exception: ", "");
-
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        errorMessage,
-                      ), // Messaggio preciso (es. "Accedi con Google...")
-                      backgroundColor: Colors.redAccent, // Rosso per errore
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      content: Text(e.toString().replaceAll("Exception: ", "")),
+                      backgroundColor: Colors.redAccent,
                     ),
                   );
                 }
@@ -327,25 +161,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 20),
 
+          // 4. PREFERENZE
           _buildSectionHeader("PREFERENZE APP"),
-          _buildSwitchTile(
+          SettingsSwitchTile(
             title: "Notifiche Push",
             subtitle: "Ricevi aggiornamenti e promemoria",
             value: _notificationsEnabled,
-            onChanged: (val) {
-              setState(() => _notificationsEnabled = val);
-            },
+            onChanged: (val) => setState(() => _notificationsEnabled = val),
           ),
-          _buildSettingsTile(
+          SettingsTile(
             icon: Icons.info_outline,
             title: "Informazioni App",
-            subtitle: "Versione 1.0.0 Alpha",
+            subtitle: "Versione 1.0.0 Beta",
             onTap: () {},
           ),
 
           const SizedBox(height: 40),
 
-          // --- DANGER ZONE ---
+          // 5. DANGER ZONE
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: ElevatedButton(
@@ -374,65 +207,19 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // --- WIDGET HELPER ---
+  // TITOLI SEZIONI (COLORE UNIFORMATO)
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
       child: Text(
         title,
         style: TextStyle(
-          color: Colors.cyanAccent.withOpacity(0.8),
+          color: _brandColor.withOpacity(0.8), // Giallognolo/Arancio
           fontSize: 12,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.5,
         ),
       ),
-    );
-  }
-
-  Widget _buildSettingsTile({
-    IconData? icon,
-    required String title,
-    String? subtitle,
-    VoidCallback? onTap,
-  }) {
-    return ListTile(
-      leading: icon != null ? Icon(icon, color: Colors.white70) : null,
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      subtitle: subtitle != null
-          ? Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 12,
-              ),
-            )
-          : null,
-      trailing: onTap != null
-          ? const Icon(Icons.chevron_right, color: Colors.white54)
-          : null,
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required Function(bool) onChanged,
-  }) {
-    return SwitchListTile(
-      activeThumbColor: Colors.cyanAccent,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
-      ),
-      value: value,
-      onChanged: onChanged,
     );
   }
 }

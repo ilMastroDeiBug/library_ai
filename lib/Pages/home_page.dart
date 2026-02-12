@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import '../models/app_mode.dart';
 import 'search_page.dart';
 // Import Widget Modulari
-import '../models/add_book_sheet.dart';
+import '/models/book_widgets/add_book_sheet.dart';
 import '../models/user_books_section.dart';
-import '../models/book_section.dart'; // Questo è il widget che usa OpenLibraryService
+// Importa il Builder
+import '../models/home_widgets/home_content_builders.dart';
 
 class HomePage extends StatelessWidget {
   final AppMode mode;
   final VoidCallback onOpenDrawer;
+
+  static const Color _brandColor = Colors.orangeAccent;
 
   const HomePage({super.key, required this.mode, required this.onOpenDrawer});
 
@@ -32,7 +35,12 @@ class HomePage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
+          // QUI CAMBIA IL COLORE: da white a _brandColor (o Colors.orangeAccent)
+          icon: const Icon(
+            Icons.menu_rounded,
+            color: Colors.orangeAccent, // <--- Modifica applicata qui
+            size: 28,
+          ),
           onPressed: onOpenDrawer,
         ),
       ),
@@ -40,7 +48,7 @@ class HomePage extends StatelessWidget {
           ? FloatingActionButton(
               heroTag: 'fab_home',
               onPressed: () => _showAddSheet(context),
-              backgroundColor: Colors.cyanAccent,
+              backgroundColor: _brandColor,
               child: const Icon(Icons.add, color: Colors.black),
             )
           : null,
@@ -49,7 +57,7 @@ class HomePage extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF121212), Color(0xFF2C2C2C)],
+            colors: [Color(0xFF121212), Color(0xFF1E1E1E)],
           ),
         ),
         child: SafeArea(
@@ -62,89 +70,33 @@ class HomePage extends StatelessWidget {
                 _buildSearchBar(context),
                 const SizedBox(height: 30),
 
-                // 2. CONTENUTO
+                // 2. CONTENUTO DINAMICO
                 if (mode == AppMode.books) ...[
-                  // Banner AI
+                  // --- LIBRI ---
                   _buildAIBannerPlaceholder(),
                   const SizedBox(height: 30),
 
-                  // I TUOI LIBRI (La tua coda personale)
+                  // Sezione Utente
                   UserBooksSection(
-                    title: "🔥 La tua Coda di Lettura",
+                    title: "La tua Coda di Lettura",
                     status: "toread",
                   ),
-                  const SizedBox(height: 20),
 
-                  // --- INIZIO CATALOGO ESPANSO ---
-
-                  // 1. I Grandi Classici e Bestsellers (Generalista)
-                  const BookSection(
-                    title: "🏆 Bestsellers & Classici",
-                    categoryQuery:
-                        "fiction", // 'fiction' su OpenLib tira fuori i grandi romanzi
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 2. Romance (Include il 'Romance' richiesto)
-                  const BookSection(
-                    title: "💘 Romance & Love Stories",
-                    categoryQuery: "romance",
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 3. Thriller e Azione
-                  const BookSection(
-                    title: "🔪 Thriller & Suspense",
-                    categoryQuery: "thriller",
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 4. Fantasy
-                  const BookSection(
-                    title: "🐉 Fantasy",
-                    categoryQuery: "fantasy",
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 5. Sci-Fi
-                  const BookSection(
-                    title: "🚀 Sci-Fi & Cyberpunk",
-                    categoryQuery: "science_fiction",
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 6. Avventura e Azione
-                  const BookSection(
-                    title: "Avventura",
-                    categoryQuery: "adventure",
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 7. Horror
-                  const BookSection(title: "Horror", categoryQuery: "horror"),
-                  const SizedBox(height: 10),
-
-                  // 8. Gialli / Mistery
-                  const BookSection(
-                    title: "Gialli & Mistery",
-                    categoryQuery: "mystery",
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 9. Storici
-                  const BookSection(
-                    title: "🏛️ Romanzi Storici",
-                    categoryQuery: "historical_fiction",
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 10. Crescita Personale
-                  const BookSection(
-                    title: "🧠 Mindset & Crescita",
-                    categoryQuery: "self_help",
-                  ),
+                  // Il Catalogo Generato dal Builder
+                  ...HomeContentBuilder.buildBookContent(),
                 ] else ...[
-                  _buildMoviesPlaceholder(),
+                  // --- CINEMA ---
+                  _buildAIBannerPlaceholder(),
+                  const SizedBox(height: 30),
+
+                  // Sezione Utente
+                  UserBooksSection(
+                    title: "Da Vedere Stasera",
+                    status: "towatch",
+                  ),
+
+                  // Il Catalogo Generato dal Builder
+                  ...HomeContentBuilder.buildMovieContent(),
                 ],
 
                 const SizedBox(height: 80),
@@ -166,24 +118,19 @@ class HomePage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 15),
           height: 50,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.08),
+            color: Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: _brandColor.withOpacity(0.3)),
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.search,
-                color: mode == AppMode.books
-                    ? Colors.cyanAccent
-                    : Colors.orangeAccent,
-              ),
+              const Icon(Icons.search, color: _brandColor),
               const SizedBox(width: 10),
               Text(
                 mode == AppMode.books
                     ? "Cerca titolo, autore..."
                     : "Cerca film, attori...",
-                style: const TextStyle(color: Colors.white38),
+                style: TextStyle(color: Colors.white.withOpacity(0.5)),
               ),
             ],
           ),
@@ -192,30 +139,43 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Placeholder per il banner AI (copia qui il codice del container viola se non lo estrai)
   Widget _buildAIBannerPlaceholder() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         height: 180,
         decoration: BoxDecoration(
-          color: Colors.deepPurple,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.orangeAccent.withOpacity(0.2),
+              const Color(0xFF1E1E1E),
+            ],
+          ),
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.orangeAccent.withOpacity(0.2)),
         ),
-        child: const Center(
-          child: Text("Banner AI", style: TextStyle(color: Colors.white)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMoviesPlaceholder() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(40.0),
-        child: Text(
-          "Cinema in arrivo...",
-          style: TextStyle(color: Colors.white),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.auto_awesome,
+                color: Colors.orangeAccent,
+                size: 40,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "ANALISI INTELLIGENTE",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
