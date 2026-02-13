@@ -1,4 +1,10 @@
-﻿import 'package:flutter/material.dart';
+# Backup original files
+Copy-Item lib/models/home_widgets/home_content_builders.dart lib/models/home_widgets/home_content_builders.dart.bak -Force
+Copy-Item lib/Pages/home_page.dart lib/Pages/home_page.dart.bak -Force
+
+# Overwrite HomeContentBuilder with hero banner integration
+@"
+import 'package:flutter/material.dart';
 import '../../services/pages_services/home_service.dart';
 // Import Widget necessari
 import '../../models/book_widgets/book_section.dart';
@@ -17,11 +23,11 @@ class HomeContentBuilder {
   // Costruisce la lista di widget per i LIBRI
   static List<Widget> buildBookContent() {
     return HomeService.bookSections.map((data) {
-      // Se Ã¨ un header
+      // Se è un header
       if (data.containsKey('header')) {
         return _SectionHeader(text: data['header']);
       }
-      // Se Ã¨ una sezione libro
+      // Se è una sezione libro
       return Column(
         children: [
           BookSection(title: data['title'], categoryQuery: data['query']),
@@ -122,3 +128,15 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+"@ | Set-Content -Path lib/models/home_widgets/home_content_builders.dart -Encoding UTF8
+
+# Replace AI placeholder in home_page.dart to call HomeContentBuilder.buildHeroBanner(mode)
+(Get-Content lib/Pages/home_page.dart -Raw) `
+ -replace '\s*_buildAIBannerPlaceholder\(\),\s*\n\s*const SizedBox\(height: 30\),' , 'HomeContentBuilder.buildHeroBanner(mode),`n                  const SizedBox(height: 30),' `
+ -replace '\s*// 2\. CONTENUTO DINAMICO\s*\n\s*if \(mode == AppMode\.books\) \.\.\.\[', ' // 2. CONTENUTO DINAMICO\n                if (mode == AppMode.books) ...[' |
+ Set-Content lib/Pages/home_page.dart -Encoding UTF8
+
+# Remove the old _buildAIBannerPlaceholder implementation if present
+(Get-Content lib/Pages/home_page.dart -Raw) -replace '(?s)Widget\s+_buildAIBannerPlaceholder\(\)\s*\{.*?\}\s*', '' | Set-Content lib/Pages/home_page.dart -Encoding UTF8
+
+Write-Host "Hero banner integration applied. Backups created: *.bak"

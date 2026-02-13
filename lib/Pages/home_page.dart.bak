@@ -87,8 +87,7 @@ class HomePage extends StatelessWidget {
                   // Il Catalogo Generato dal Builder (che è una List<Widget>)
                   ...HomeContentBuilder.buildBookContent(),
                 ] else ...[
-                  HomeContentBuilder.buildHeroBanner(mode),
-                  const SizedBox(height: 30),// Sezione Utente (Film)
+                  // Sezione Utente (Film)
                   const UserBooksSection(
                     title: "Da Vedere Stasera",
                     status: "towatch",
@@ -138,6 +137,5 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-
 
 

@@ -47,16 +47,7 @@ class HomeContentBuilder {
   }
 
   // Hero banner dinamico (Book o Movie)
-  static Widget buildHeroBanner(AppMode mode) {
-    return FutureBuilder<List<dynamic>>(
-      future: _fetchHeroItems(mode),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox(
-            height: 280,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
+  static\ Widget\ buildHeroBanner\(AppMode\ mode\)\ \{\n\ \ return\ FutureBuilder<List<dynamic>>\(\n\ \ \ \ future:\ _fetchHeroItems\(mode\),\n\ \ \ \ builder:\ \(context,\ snapshot\)\ \{\n\ \ \ \ \ \ if\ \(!snapshot\.hasData\ \|\|\ snapshot\.data!\.isEmpty\)\ \{\n\ \ \ \ \ \ \ \ return\ const\ SizedBox\(\n\ \ \ \ \ \ \ \ \ \ height:\ 280,\n\ \ \ \ \ \ \ \ \ \ child:\ Center\(child:\ CircularProgressIndicator\(\)\),\n\ \ \ \ \ \ \ \ \);\n\ \ \ \ \ \ }\n\n\ \ \ \ \ \ final\ heroItems\ =\ snapshot\.data!\.take\(5\)\.toList\(\);\n\n\ \ \ \ \ \ final\ banner\ =\ AiHeroBanner\(\n\ \ \ \ \ \ \ \ items:\ heroItems,\n\ \ \ \ \ \ \ \ onItemTap:\ \(item\)\ \{\n\ \ \ \ \ \ \ \ \ \ if\ \(item\ is\ Book\)\ \{\n\ \ \ \ \ \ \ \ \ \ \ \ Navigator\.push\(\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ context,\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ MaterialPageRoute\(builder:\ \(_\)\ =>\ BookDetailPage\(book:\ item\)\),\n\ \ \ \ \ \ \ \ \ \ \ \ \);\n\ \ \ \ \ \ \ \ \ \ }\ else\ if\ \(item\ is\ Movie\)\ \{\n\ \ \ \ \ \ \ \ \ \ \ \ Navigator\.push\(\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ context,\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ MaterialPageRoute\(builder:\ \(_\)\ =>\ MovieDetailPage\(movie:\ item\)\),\n\ \ \ \ \ \ \ \ \ \ \ \ \);\n\ \ \ \ \ \ \ \ \ \ }\n\ \ \ \ \ \ \ \ },\n\ \ \ \ \ \ \);\n\n\ \ \ \ \ \ //\ Se\ siamo\ in\ modalità\ film,\ sovrapponiamo\ l'intestazione\ al\ banner\n\ \ \ \ \ \ if\ \(mode\ ==\ AppMode\.movies\)\ \{\n\ \ \ \ \ \ \ \ return\ SizedBox\(\n\ \ \ \ \ \ \ \ \ \ height:\ 280,\n\ \ \ \ \ \ \ \ \ \ child:\ Stack\(\n\ \ \ \ \ \ \ \ \ \ \ \ fit:\ StackFit\.expand,\n\ \ \ \ \ \ \ \ \ \ \ \ children:\ \[\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ banner,\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ Positioned\(\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ top:\ 18,\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ left:\ 20,\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ child:\ Text\(\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "DA\ VEDERE\ STASERA",\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ style:\ TextStyle\(\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ color:\ Colors\.orangeAccent\.withOpacity\(0\.95\),\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fontSize:\ 12,\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fontWeight:\ FontWeight\.bold,\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ letterSpacing:\ 2,\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \),\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \),\n\ \ \ \ \ \ \ \ \ \ \ \ \ \ \),\n\ \ \ \ \ \ \ \ \ \ \ \ ],\n\ \ \ \ \ \ \ \ \ \ \),\n\ \ \ \ \ \ \ \ \);\n\ \ \ \ \ \ }\n\n\ \ \ \ \ \ //\ Default:\ banner\ senza\ header\n\ \ \ \ \ \ return\ banner;\n\ \ \ \ },\n\ \ \);\n}
 
         final heroItems = snapshot.data!.take(5).toList();
 
@@ -122,3 +113,4 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
