@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '/models/book_widgets/book_model.dart';
+import 'package:library_ai/domain/entities/book.dart';
 import '../../pages/reviews_page.dart';
-import 'star_rating.dart'; // IMPORTA IL TUO WIDGET STELLE
+import 'star_rating.dart';
 
 class BookStatsBar extends StatelessWidget {
   final Book book;
@@ -52,15 +52,17 @@ class BookStatsBar extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      // Usiamo il tuo widget StarRating modulare!
+                      // STELLE CORRETTE
                       StarRating(
-                        rating: book.averageRating?.toDouble() ?? 0.0,
+                        rating: book.rating, // Usa .rating (double)
                         size: 16,
                         color: Colors.amber,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        book.averageRating?.toStringAsFixed(1) ?? "N/D",
+                        book.rating > 0
+                            ? book.rating.toStringAsFixed(1)
+                            : "N/D",
                         style: const TextStyle(
                           color: Colors.amber,
                           fontWeight: FontWeight.bold,
@@ -71,7 +73,7 @@ class BookStatsBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "${book.ratingsCount ?? 0} recensioni",
+                    "${book.ratingsCount} recensioni",
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.5),
                       fontSize: 10,

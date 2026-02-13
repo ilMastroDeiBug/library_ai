@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_mode.dart';
-import '../services/pages_services/library_service.dart';
 // Import Widget Modulari
 import '../models/library_widgets/library_header.dart';
 import '../models/library_widgets/library_grid.dart';
@@ -9,16 +9,17 @@ class LibraryPage extends StatelessWidget {
   final AppMode mode;
   final VoidCallback onOpenDrawer;
 
-  // Istanziamo il service solo per prendere l'utente corrente se serve,
-  // o lo facciamo dentro i widget. Qui serve per l'header.
-  final LibraryService _service = LibraryService();
-
-  LibraryPage({super.key, required this.mode, required this.onOpenDrawer});
+  const LibraryPage({
+    super.key,
+    required this.mode,
+    required this.onOpenDrawer,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isBooks = mode == AppMode.books;
-    final user = _service.getCurrentUser();
+    // Recuperiamo l'utente direttamente da Firebase (o tramite AuthRepository se preferisci)
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F10),
@@ -42,6 +43,7 @@ class LibraryPage extends StatelessWidget {
                   onPressed: onOpenDrawer,
                 ),
                 flexibleSpace: FlexibleSpaceBar(
+                  // Passiamo l'utente all'header
                   background: LibraryHeader(mode: mode, user: user),
                 ),
                 bottom: PreferredSize(

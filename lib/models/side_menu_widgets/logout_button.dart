@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import '/services/utility_services/auth_service.dart';
+// CLEAN ARCH IMPORTS
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/auth_use_cases.dart'; // Contiene LogoutUseCase
 
 class LogoutButton extends StatelessWidget {
-  final AuthService _authService = AuthService();
-
-  LogoutButton({super.key});
+  const LogoutButton({super.key});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
-        await _authService.signOut();
-        // L'AuthGate nel main.dart gestirà il reindirizzamento al login
+        // USIAMO LO USE CASE
+        await sl<LogoutUseCase>().call();
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(

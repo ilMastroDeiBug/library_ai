@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/movie_widget/movie_model.dart';
+import 'package:library_ai/domain/entities/movie.dart'; // Assicurati di puntare alla nuova Entity
 
 class MovieCard extends StatelessWidget {
   final Movie movie;

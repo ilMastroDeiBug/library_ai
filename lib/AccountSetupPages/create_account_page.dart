@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-// Importiamo il NOSTRO servizio, non Firebase direttamente.
-import '../services/pages_services/create_account_service.dart';
+// CLEAN ARCH IMPORTS
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
@@ -13,11 +14,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Istanziamo il servizio (come se fosse una Dependency Injection manuale)
-  final CreateAccountService _authService = CreateAccountService();
-
   Future<void> _register() async {
-    // Validazione basilare UI (puoi spostarla anche nel service se vuoi essere estremo)
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -29,7 +26,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     }
 
     try {
-      // 1. Mostra Loading
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -38,32 +34,24 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         ),
       );
 
-      // 2. CHIAMA IL SERVIZIO (Backend Logic)
-      await _authService.registerUser(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      // INIEZIONE + ESECUZIONE
+      await sl<RegisterUseCase>().call(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
-      // 3. Gestione Successo UI
-      if (mounted) Navigator.pop(context); // Chiudi dialog loading
-      if (mounted) Navigator.pop(context); // Chiudi pagina e torna al login
+      if (mounted) Navigator.pop(context); // Chiudi loading
+      if (mounted) Navigator.pop(context); // Torna indietro
 
-      // Opzionale: Mostra successo
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Account creato con successo!")),
         );
       }
     } catch (e) {
-      // 4. Gestione Errore UI
-      if (mounted) {
-        Navigator.pop(context); // Chiudi dialog loading in caso di errore
-      }
-
-      // 'e' qui è l'Exception pulita lanciata dal nostro Service
+      if (mounted) Navigator.pop(context); // Chiudi loading su errore
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          // Togliamo "Exception: " dalla stringa se presente, per pulizia
           content: Text(e.toString().replaceAll("Exception: ", "")),
           backgroundColor: Colors.redAccent.shade700,
           behavior: SnackBarBehavior.floating,
@@ -74,6 +62,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ... COPIA ESATTAMENTE IL TUO BUILD METHOD DI PRIMA (è solo UI) ...
+    // ... Ho riassunto qui per brevità, ma usa la tua UI moderna ...
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -116,8 +106,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   ),
                 ),
                 const SizedBox(height: 50),
-
-                // Campi Input Custom
                 _buildModernTextField(
                   _emailController,
                   "Email",
@@ -132,8 +120,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   true,
                 ),
                 const SizedBox(height: 40),
-
-                // Pulsante di Azione
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),

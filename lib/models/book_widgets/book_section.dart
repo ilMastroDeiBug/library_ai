@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '/models/book_widgets/book_model.dart';
-// Importiamo il TUO Service specifico
-import 'package:library_ai/services/utility_services/open_library_service.dart';
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/book_use_cases.dart';
+import 'package:library_ai/domain/entities/book.dart';
 import 'book_card.dart';
 
 class BookSection extends StatefulWidget {
@@ -20,21 +20,20 @@ class BookSection extends StatefulWidget {
 
 class _BookSectionState extends State<BookSection> {
   late Future<List<Book>> _booksFuture;
-  final OpenLibraryService _booksService = OpenLibraryService();
 
   @override
   void initState() {
     super.initState();
-    // Chiamiamo la tua funzione "Elite"
-    _booksFuture = _booksService.fetchBooks(widget.categoryQuery);
+    // USE CASE
+    _booksFuture = sl<SearchBooksUseCase>().call(widget.categoryQuery);
   }
 
   @override
   Widget build(BuildContext context) {
+    // ... UI IDENTICA AL TUO FILE ORIGINALE ...
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- HEADER ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(
@@ -57,14 +56,11 @@ class _BookSectionState extends State<BookSection> {
             ],
           ),
         ),
-
-        // --- LISTA ORIZZONTALE ---
         SizedBox(
-          height: 240, // Altezza calibrata per le BookCard
+          height: 240,
           child: FutureBuilder<List<Book>>(
             future: _booksFuture,
             builder: (context, snapshot) {
-              // 1. CARICAMENTO
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                   child: CircularProgressIndicator(
@@ -72,9 +68,7 @@ class _BookSectionState extends State<BookSection> {
                     strokeWidth: 2,
                   ),
                 );
-              }
-              // 2. NESSUN DATO o ERRORE (Il tuo service ritorna [] se fallisce)
-              else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -96,17 +90,13 @@ class _BookSectionState extends State<BookSection> {
                   ),
                 );
               }
-
-              // 3. SUCCESSO (Lista Elite pronta)
               final books = snapshot.data!;
               return ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.only(left: 20, right: 10),
                 itemCount: books.length,
-                itemBuilder: (context, index) {
-                  return BookCard(book: books[index]);
-                },
+                itemBuilder: (context, index) => BookCard(book: books[index]),
               );
             },
           ),

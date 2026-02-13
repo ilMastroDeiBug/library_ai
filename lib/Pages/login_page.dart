@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import '../services/utility_services/auth_service.dart';
 import '../AccountSetupPages/create_account_page.dart';
 import '../AccountSetupPages/login_email_page.dart';
-// Import Widget Modulari
 import '../models/login_widgets/login_logo.dart';
 import '../models/login_widgets/social_login_button.dart';
+
+// CLEAN ARCH IMPORTS
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,15 +16,14 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final AuthService _authService = AuthService();
   bool _isLoading = false;
 
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      await _authService.signInWithGoogle();
-      // Non serve navigare manualmente: il AuthGate nel main.dart
-      // rileverà il cambio di stato e porterà l'utente alla Home.
+      // INIEZIONE + ESECUZIONE
+      await sl<GoogleLoginUseCase>().call();
+
       print("DEBUG: Login Google riuscito");
     } catch (e) {
       if (mounted) {
@@ -40,6 +41,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // La UI è identica a prima, basta copiare il build() del tuo codice originale
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -56,27 +58,17 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 1. LOGO E TITOLO (Widget Estratto)
                   const LoginLogo(),
-
                   const SizedBox(height: 80),
-
-                  // 2. BOTTONE GOOGLE (Widget Estratto + Logica Service)
                   SocialLoginButton(
                     label: "Accedi con Google",
                     icon: Icons.g_mobiledata,
                     onPressed: _handleGoogleSignIn,
                     isLoading: _isLoading,
                   ),
-
                   const SizedBox(height: 30),
-
-                  // 3. DIVISORE
                   _buildDivider(),
-
                   const SizedBox(height: 30),
-
-                  // 4. BOTTONI SECONDARI
                   Row(
                     children: [
                       Expanded(
@@ -107,7 +99,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // Piccoli helper locali per UI che non meritano un file a parte (ancora)
   Widget _buildDivider() {
     return Row(
       children: [

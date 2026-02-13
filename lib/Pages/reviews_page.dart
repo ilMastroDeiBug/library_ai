@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/models/book_widgets/book_model.dart';
+import '../domain/entities/book.dart'; // O domain/entities/book.dart
 
 class ReviewsPage extends StatelessWidget {
   final Book book;

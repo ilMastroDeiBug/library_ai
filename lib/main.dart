@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:library_ai/Pages/login_page.dart';
 import 'firebase_options.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
+// PAGES
+import 'package:library_ai/Pages/login_page.dart';
 import 'package:library_ai/AccountSetupPages/profile_setup_page.dart';
 import 'package:library_ai/navigation_hub.dart';
+
+// CLEAN ARCH IMPORTS - Usa i percorsi assoluti package:
+import 'package:library_ai/injection_container.dart' as di;
+import 'package:library_ai/domain/repositories/auth_repository.dart';
+import 'package:library_ai/domain/entities/app_user.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // INIZIALIZZA IL SERVICE LOCATOR (Fondamentale!)
+  await di.init();
+
   runApp(const MyApp());
 }
 
@@ -19,32 +29,23 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Library AI',
-      debugShowCheckedModeBanner:
-          false, // Rimuove la scritta "DEBUG" in alto a destra
-      // --- TEMA GLOBALE SCURO ---
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark, // Dice a Flutter: "Siamo al buio"
+        brightness: Brightness.dark,
         primaryColor: Colors.cyanAccent,
-        scaffoldBackgroundColor: const Color(
-          0xFF121212,
-        ), // Lo sfondo predefinito per tutte le pagine
-        // Impostiamo i colori base
+        scaffoldBackgroundColor: const Color(0xFF121212),
         colorScheme: const ColorScheme.dark(
           primary: Colors.cyanAccent,
           secondary: Colors.deepPurpleAccent,
-          surface: Color(0xFF1E1E1E), // Colore delle Card/Dialoghi
+          surface: Color(0xFF1E1E1E),
         ),
-
-        // Stile predefinito per le AppBar
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,
           centerTitle: false,
         ),
-
         useMaterial3: true,
       ),
-
       home: const AuthGate(),
     );
   }
@@ -56,10 +57,10 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+    // ASCOLTA LO STREAM DEL REPOSITORY (Non Firebase diretto!)
+    return StreamBuilder<AppUser?>(
+      stream: di.sl<AuthRepository>().userStream,
       builder: (context, snapshot) {
-        // Se sta caricando (es. avvio lento), mostra una rotella nera su sfondo scuro
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
@@ -70,15 +71,17 @@ class AuthGate extends StatelessWidget {
 
         if (snapshot.hasData) {
           final user = snapshot.data;
-          // Controllo se il nome è vuoto (Profile Setup)
+
+          // Se il nome è vuoto, manda al Profile Setup
           if (user?.displayName == null || user!.displayName!.isEmpty) {
             return const ProfileSetupPage();
           }
-          // Tutto ok -> Hub di Navigazione
+
+          // Utente completo -> Home
           return const NavigationHub();
         }
 
-        // Non loggato -> Login
+        // Nessun utente -> Login
         return const LoginPage();
       },
     );

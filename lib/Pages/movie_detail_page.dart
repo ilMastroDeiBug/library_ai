@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/movie_widget/movie_model.dart';
+import 'package:library_ai/domain/entities/movie.dart';
 import '../services/pages_services/movie_detail_service.dart';
 import '../models/ai_analysis_section.dart';
 // IMPORTIAMO I NUOVI WIDGET MODULARI

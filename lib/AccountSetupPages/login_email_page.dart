@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-// Importiamo solo il nostro servizio
-import '../services/pages_services/login_service.dart';
+// CLEAN ARCH IMPORTS
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 
 class LoginEmailPage extends StatefulWidget {
   const LoginEmailPage({super.key});
@@ -12,32 +13,25 @@ class LoginEmailPage extends StatefulWidget {
 class _LoginEmailPageState extends State<LoginEmailPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Variabile di stato UI
   bool _isLoading = false;
 
-  // Istanza del servizio (Logic Layer)
-  final LoginService _loginService = LoginService();
-
+  // INIEZIONE: Chiediamo lo Use Case al Service Locator
+  // Non esiste più LoginService!
   Future<void> _signIn() async {
-    // 1. Aggiorna UI: Inizia Caricamento
     setState(() => _isLoading = true);
 
     try {
-      // 2. Chiama il Service (Backend Logic)
-      await _loginService.signIn(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      // ESECUZIONE DEL COMANDO
+      await sl<LoginWithEmailUseCase>().call(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
-      // 3. Successo: Naviga via
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      // 4. Errore: Mostra SnackBar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            // Rimuoviamo "Exception:" per pulizia
             content: Text(e.toString().replaceAll("Exception: ", "")),
             backgroundColor: Colors.redAccent,
             behavior: SnackBarBehavior.floating,
@@ -45,13 +39,14 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
         );
       }
     } finally {
-      // 5. Cleanup: Ferma Caricamento (sia in successo che errore)
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // ... IL TUO WIDGET BUILD RIMANE IDENTICO A PRIMA ...
+    // ... Copia il build() che avevi, è perfetto così ...
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -92,7 +87,6 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                 ),
                 const SizedBox(height: 50),
 
-                // Inputs (Refactoring visuale: metodo privato)
                 _buildGlassInput(
                   _emailController,
                   "Email",
@@ -108,7 +102,6 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                 ),
                 const SizedBox(height: 40),
 
-                // Button con gestione loading
                 _isLoading
                     ? const Center(
                         child: CircularProgressIndicator(

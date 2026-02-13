@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '/models/book_widgets/book_model.dart';
-import '../services/utility_services/google_books_service.dart';
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/book_use_cases.dart';
+import 'package:library_ai/domain/entities/book.dart'; // O domain/entities/book.dart
 import '/models/book_widgets/book_card.dart';
 
 class GenreResultPage extends StatefulWidget {
-  final String categoryName; // Es. "Horror" (per l'utente)
-  final String categoryId; // Es. "horror" (per Google)
+  final String categoryName;
+  final String categoryId;
 
   const GenreResultPage({
     super.key,
@@ -23,12 +24,13 @@ class _GenreResultPageState extends State<GenreResultPage> {
   @override
   void initState() {
     super.initState();
-    // Chiamiamo il servizio usando l'ID passato dalla pagina precedente
-    _booksFuture = GoogleBooksService().fetchBooksByCategory(widget.categoryId);
+    // USE CASE
+    _booksFuture = sl<GetBooksByCategoryUseCase>().call(widget.categoryId);
   }
 
   @override
   Widget build(BuildContext context) {
+    // ... UI IDENTICA ...
     return Scaffold(
       backgroundColor: const Color(0xFF232526),
       appBar: AppBar(
@@ -67,20 +69,16 @@ class _GenreResultPageState extends State<GenreResultPage> {
           }
 
           final books = snapshot.data!;
-
-          // Usiamo una GRIGLIA per mostrare tanti risultati
           return GridView.builder(
             padding: const EdgeInsets.all(16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, // 3 libri per riga
-              childAspectRatio: 0.6, // Verticali
+              crossAxisCount: 3,
+              childAspectRatio: 0.6,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
             ),
             itemCount: books.length,
-            itemBuilder: (context, index) {
-              return BookCard(book: books[index]);
-            },
+            itemBuilder: (context, index) => BookCard(book: books[index]),
           );
         },
       ),

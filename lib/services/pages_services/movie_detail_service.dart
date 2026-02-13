@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/services/utility_services/ai_service.dart'; // Assumiamo che esista già
-import '/models/movie_widget/movie_model.dart'; // Assumiamo che esista già
+import 'package:library_ai/domain/entities/movie.dart'; // Assumiamo che esista già
 
 class MovieDetailService {
   final AIService _aiService = AIService();

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-import '../services/utility_services/user_services.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Solo per currentUser (temporaneo) o meglio usare AuthRepository
+// CLEAN ARCH IMPORTS
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/auth_use_cases.dart'; // Per UpdateName, ResetPassword
+import 'package:library_ai/domain/use_cases/user_cases.dart'; // CREIAMOLI SOTTO: UpdateBio, GetUserData, UpdatePrivacy
+
 // Import Widget Modulari
-import '/models/settings_widgets/settings_header.dart';
-import '/models/settings_widgets/settings_tile.dart';
-import '/models/settings_widgets/settings_switch_tile.dart';
-import '/models/settings_widgets/edit_profile_dialogs.dart';
+import '../models/settings_widgets/settings_header.dart';
+import '../models/settings_widgets/settings_tile.dart';
+import '../models/settings_widgets/settings_switch_tile.dart';
+import '../models/settings_widgets/edit_profile_dialogs.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -14,14 +19,15 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final UserService _userService = UserService();
-
-  // Stato Locale (Solo UI)
+  // Stato Locale
   bool _isPublicProfile = true;
   bool _notificationsEnabled = false;
   String _bio = "Caricamento bio...";
 
-  // COLORE DEL BRAND
+  // Otteniamo l'utente corrente da FirebaseAuth per ID/Email (Pragmatismo)
+  // In futuro potresti aggiungerlo all'AuthRepository
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+
   static const Color _brandColor = Colors.orangeAccent;
 
   @override
@@ -31,29 +37,34 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadData() async {
-    final data = await _userService.getUserData();
-    if (mounted && data != null) {
-      setState(() {
-        _bio = data['bio'] ?? "Nessuna biografia.";
-        _isPublicProfile = data['isPublic'] ?? true;
-      });
+    if (currentUser == null) return;
+    try {
+      // USE CASE: GetUserData
+      final userEntity = await sl<GetUserDataUseCase>().call(currentUser!.uid);
+      if (mounted && userEntity != null) {
+        setState(() {
+          _bio = userEntity.bio ?? "Nessuna biografia.";
+          // _isPublicProfile = userEntity.isPublic; // Se aggiungi questo campo all'Entity
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _bio = "Errore caricamento.");
     }
   }
 
   Future<void> _handleUpdateName(String newName) async {
-    await _userService.updateName(newName);
-    setState(() {});
+    await sl<UpdateProfileUseCase>().call(newName);
+    setState(() {}); // Ricarica UI
   }
 
   Future<void> _handleUpdateBio(String newBio) async {
-    await _userService.updateBio(newBio);
+    if (currentUser == null) return;
+    await sl<UpdateBioUseCase>().call(currentUser!.uid, newBio);
     setState(() => _bio = newBio);
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = _userService.currentUser;
-
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
@@ -72,10 +83,9 @@ class _SettingsPageState extends State<SettingsPage> {
         physics: const BouncingScrollPhysics(),
         children: [
           _buildSectionHeader("PROFILO"),
-
-          // 1. HEADER
           SettingsHeader(
-            user: user,
+            user:
+                currentUser, // Passiamo l'User di Firebase al widget header (compatibilità)
             bio: _bio,
             onPhotoTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -85,18 +95,16 @@ class _SettingsPageState extends State<SettingsPage> {
               );
             },
           ),
-
           const SizedBox(height: 20),
 
-          // 2. MODIFICA DATI
           _buildSectionHeader("MODIFICA DATI"),
           SettingsTile(
             icon: Icons.edit,
             title: "Nome Visualizzato",
-            subtitle: user?.displayName ?? "Tocca per impostare",
+            subtitle: currentUser?.displayName ?? "Tocca per impostare",
             onTap: () => EditProfileDialogs.showNameDialog(
               context,
-              user?.displayName,
+              currentUser?.displayName,
               _handleUpdateName,
             ),
           ),
@@ -113,13 +121,12 @@ class _SettingsPageState extends State<SettingsPage> {
           SettingsTile(
             icon: Icons.email_outlined,
             title: "Email",
-            subtitle: user?.email ?? "Nessuna email",
-            onTap: null, // Read-only
+            subtitle: currentUser?.email ?? "Nessuna email",
+            onTap: null,
           ),
 
           const SizedBox(height: 20),
 
-          // 3. PRIVACY & SICUREZZA
           _buildSectionHeader("PRIVACY & SICUREZZA"),
           SettingsSwitchTile(
             title: "Profilo Pubblico",
@@ -127,22 +134,23 @@ class _SettingsPageState extends State<SettingsPage> {
             value: _isPublicProfile,
             onChanged: (val) async {
               setState(() => _isPublicProfile = val);
-              await _userService.updatePrivacyProfile(val);
+              if (currentUser != null) {
+                await sl<UpdatePrivacyUseCase>().call(currentUser!.uid, val);
+              }
             },
           ),
           SettingsTile(
             icon: Icons.lock_reset,
             title: "Cambia Password",
             onTap: () async {
+              if (currentUser?.email == null) return;
               try {
-                await _userService.sendPasswordReset();
+                await sl<ResetPasswordUseCase>().call(currentUser!.email!);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        "📧 Email per il reset inviata! Controlla la posta.",
-                      ),
-                      backgroundColor: Colors.green, // Verde per successo ok
+                      content: Text("📧 Email per il reset inviata!"),
+                      backgroundColor: Colors.green,
                     ),
                   );
                 }
@@ -160,8 +168,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           const SizedBox(height: 20),
-
-          // 4. PREFERENZE
           _buildSectionHeader("PREFERENZE APP"),
           SettingsSwitchTile(
             title: "Notifiche Push",
@@ -172,13 +178,10 @@ class _SettingsPageState extends State<SettingsPage> {
           SettingsTile(
             icon: Icons.info_outline,
             title: "Informazioni App",
-            subtitle: "Versione 1.0.0 Beta",
+            subtitle: "Versione 1.0.0 Alpha",
             onTap: () {},
           ),
-
           const SizedBox(height: 40),
-
-          // 5. DANGER ZONE
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: ElevatedButton(
@@ -191,13 +194,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 side: BorderSide(color: Colors.redAccent.withOpacity(0.5)),
               ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Funzione critica non ancora implementata."),
-                  ),
-                );
-              },
+              onPressed: () {},
               child: const Text("ELIMINA ACCOUNT"),
             ),
           ),
@@ -207,14 +204,13 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // TITOLI SEZIONI (COLORE UNIFORMATO)
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
       child: Text(
         title,
         style: TextStyle(
-          color: _brandColor.withOpacity(0.8), // Giallognolo/Arancio
+          color: _brandColor.withOpacity(0.8),
           fontSize: 12,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.5,

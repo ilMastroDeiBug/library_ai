@@ -23,6 +23,7 @@ dependencies:
    google_generative_ai: ^0.4.7
    cupertino_icons: ^1.0.8
    http: ^1.2.0
+   get_it: ^9.2.0
 
 dev_dependencies:
   flutter_test:

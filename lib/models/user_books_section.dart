@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/utility_services/user_books_service.dart';
-import '/models/book_widgets/book_model.dart';
-import '/models/book_widgets/book_card.dart'; // Assicurati che l'import sia giusto
+import 'package:firebase_auth/firebase_auth.dart';
+// IMPORT CORRETTI
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/book_use_cases.dart';
+import 'package:library_ai/domain/entities/book.dart';
+import 'package:library_ai/models/book_widgets/book_card.dart';
 
 class UserBooksSection extends StatelessWidget {
   final String title;
   final String status;
-  final UserBooksService _service = UserBooksService();
 
-  UserBooksSection({super.key, required this.title, required this.status});
+  const UserBooksSection({
+    super.key,
+    required this.title,
+    required this.status,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -34,34 +42,24 @@ class UserBooksSection extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 240, // Altezza coerente con le altre sezioni
-          child: StreamBuilder<QuerySnapshot>(
-            stream: _service.getUserBooksStream(status),
+          height: 240,
+          child: StreamBuilder<List<Book>>(
+            // QUI CHIAMA IL SERVICE LOCATOR
+            stream: sl<GetUserBooksUseCase>().call(user.uid, status),
             builder: (context, snapshot) {
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return _buildEmptyState();
               }
-              final docs = snapshot.data!.docs;
+              final books = snapshot.data!;
               return ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.only(left: 20),
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  // Creiamo il Book in modo sicuro (con fallback)
-                  final book = Book(
-                    id: docs[index].id,
-                    title: data['title'] ?? 'Senza Titolo',
-                    author: data['author'] ?? 'Sconosciuto',
-                    thumbnailUrl: data['thumbnailUrl'] ?? '',
-                    description: data['description'] ?? '',
-                    pageCount: data['pageCount'],
-                    averageRating: (data['averageRating'] as num?)?.toDouble(),
-                    ratingsCount: data['ratingsCount'],
-                  );
-                  return BookCard(book: book);
-                },
+                itemCount: books.length,
+                itemBuilder: (context, index) => BookCard(book: books[index]),
               );
             },
           ),
@@ -79,11 +77,10 @@ class UserBooksSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: Colors.white10),
       ),
-      child: Center(
+      child: const Center(
         child: Text(
-          "Nessun libro in lista.\nCerca e aggiungi il primo!",
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey[500]),
+          "Nessun libro in lista.",
+          style: TextStyle(color: Colors.white38),
         ),
       ),
     );

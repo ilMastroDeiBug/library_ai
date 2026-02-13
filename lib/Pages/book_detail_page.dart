@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '/models/book_widgets/book_model.dart';
-import '../services/pages_services/book_detail_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:library_ai/injection_container.dart';
+// IMPORT CORRETTO: punta alla cartella 'books'
+import 'package:library_ai/domain/use_cases/book_use_cases.dart';
+import '../../domain/entities/book.dart';
+import '../../services/utility_services/ai_service.dart';
 import '/models/book_widgets/book_stats_bar.dart';
 import '../models/ai_analysis_section.dart';
 
@@ -14,18 +18,14 @@ class BookDetailPage extends StatefulWidget {
 }
 
 class _BookDetailPageState extends State<BookDetailPage> {
-  final BookDetailService _service = BookDetailService();
   bool _isAnalyzing = false;
-
-  // COLORE TEMA UNIFICATO
   static const Color _brandColor = Colors.orangeAccent;
 
   Future<void> _handleStatusToggle(Book liveBook, String currentStatus) async {
     try {
-      final newStatus = await _service.toggleReadStatus(
-        bookId: liveBook.id,
-        currentStatus: currentStatus,
-        bookData: liveBook.toMap(),
+      final newStatus = await sl<ToggleBookStatusUseCase>().call(
+        liveBook.id,
+        currentStatus,
       );
 
       if (mounted) {
@@ -36,24 +36,58 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   ? "Salvato in libreria."
                   : "Spostato in 'Da Leggere'.",
             ),
-            // Feedback colore: Verde per successo, Arancio per pending
             backgroundColor: newStatus == 'read' ? Colors.green : _brandColor,
           ),
         );
       }
     } catch (e) {
-      print("Errore: $e");
+      // Fallback per libri non ancora nel DB
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final bookToSave = Book(
+            id: liveBook.id,
+            title: liveBook.title,
+            author: liveBook.author,
+            description: liveBook.description,
+            thumbnailUrl: liveBook.thumbnailUrl,
+            pageCount: liveBook.pageCount,
+            rating: liveBook.rating,
+            ratingsCount: liveBook.ratingsCount,
+            status: currentStatus == 'read' ? 'toread' : 'read',
+          );
+          await sl<AddBookUseCase>().call(bookToSave, user.uid);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Libro aggiunto al Database."),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      } catch (innerE) {
+        print("Errore critico salvataggio: $innerE");
+      }
     }
   }
 
   Future<void> _handleAnalysis(Book liveBook) async {
     setState(() => _isAnalyzing = true);
     try {
-      await _service.analyzeAndSaveBook(
-        bookId: liveBook.id,
+      // CORREZIONE QUI: Usa AIService (tutto maiuscolo AI)
+      final aiService = AIService();
+
+      final analysis = await aiService.analyzeMedia(
         title: liveBook.title,
-        author: liveBook.author,
+        type: 'book',
+        userProfile: "16 anni, Developer, MMA",
+        creator: liveBook.author,
       );
+
+      // Salva l'analisi nel DB usando lo Use Case
+      await sl<SaveBookAnalysisUseCase>().call(liveBook.id, analysis);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -79,13 +113,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
 
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
-          currentStatus = data['status'] ?? 'toread';
-          storedAnalysis = data['aiAnalysis'];
+          liveBook = Book.fromFirestore(data, widget.book.id);
+          currentStatus = liveBook.status;
+          storedAnalysis = liveBook.aiAnalysis;
         }
         final isRead = currentStatus == 'read';
 
         return Scaffold(
-          backgroundColor: const Color(0xFF121212), // Sfondo nero profondo
+          backgroundColor: const Color(0xFF121212),
           extendBodyBehindAppBar: true,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
@@ -107,24 +142,22 @@ class _BookDetailPageState extends State<BookDetailPage> {
             ),
           ),
           body: SingleChildScrollView(
-            // Rimosso il container con gradiente per pulizia, usiamo sfondo scaffold
             child: Column(
               children: [
-                // 1. HEADER COPERTINA SFUMATA (Effetto Cinema anche per libri)
                 SizedBox(
                   height: 400,
                   child: Stack(
                     children: [
-                      // Immagine Sfondo sfuocata
                       Positioned.fill(
                         child: Image.network(
                           liveBook.thumbnailUrl,
                           fit: BoxFit.cover,
                           color: Colors.black.withOpacity(0.6),
                           colorBlendMode: BlendMode.darken,
+                          errorBuilder: (_, __, ___) =>
+                              Container(color: Colors.grey[900]),
                         ),
                       ),
-                      // Gradiente per coprire il taglio in basso
                       Positioned.fill(
                         child: Container(
                           decoration: const BoxDecoration(
@@ -137,7 +170,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           ),
                         ),
                       ),
-                      // Copertina in primo piano
                       Center(
                         child: Hero(
                           tag: liveBook.id,
@@ -156,6 +188,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                               image: DecorationImage(
                                 image: NetworkImage(liveBook.thumbnailUrl),
                                 fit: BoxFit.cover,
+                                onError: (_, __) {},
                               ),
                             ),
                           ),
@@ -164,8 +197,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     ],
                   ),
                 ),
-
-                // 2. CONTENUTO SCORREVOLE
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -183,32 +214,24 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       const SizedBox(height: 10),
                       Text(
                         liveBook.author.toUpperCase(),
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: _brandColor, // Autore in giallo/arancio
+                          color: _brandColor,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 2,
                         ),
                       ),
                       const SizedBox(height: 30),
-
-                      // STATS BAR
-                      BookStatsBar(
-                        book: liveBook,
-                      ), // Assicurati che questo widget si adatti ai colori o sia neutro
+                      BookStatsBar(book: liveBook),
                       const SizedBox(height: 30),
-
-                      // STATUS BUTTON
                       SizedBox(
                         width: double.infinity,
                         height: 55,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isRead
-                                ? const Color(
-                                    0xFF1B5E20,
-                                  ) // Verde scuro per completato
-                                : _brandColor, // Giallo per azione
+                                ? const Color(0xFF1B5E20)
+                                : _brandColor,
                             foregroundColor: isRead
                                 ? Colors.white
                                 : Colors.black,
@@ -233,17 +256,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
                         ),
                       ),
                       const SizedBox(height: 30),
-
-                      // AI SECTION
                       AIAnalysisSection(
                         analysisText: storedAnalysis,
                         isAnalyzing: _isAnalyzing,
                         onAnalyzeTap: () => _handleAnalysis(liveBook),
                       ),
-
                       const SizedBox(height: 40),
-
-                      // SINOSSI
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -260,11 +278,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       Text(
                         liveBook.description.isNotEmpty
                             ? liveBook.description
-                            : "Nessuna descrizione disponibile per questo titolo.",
+                            : "Nessuna descrizione disponibile.",
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 16,
-                          height: 1.6, // Migliore leggibilità
+                          height: 1.6,
                         ),
                       ),
                       const SizedBox(height: 50),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'movie_model.dart';
+import 'package:library_ai/domain/entities/movie.dart'; // Assicurati di puntare alla nuova Entity
 
 class MovieStatsBar extends StatelessWidget {
   final Movie movie;

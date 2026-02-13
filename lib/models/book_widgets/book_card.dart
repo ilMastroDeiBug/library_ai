@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '/models/book_widgets/book_model.dart';
-import '/pages/book_detail_page.dart';
-// IMPORTANTE: Importa il widget che abbiamo creato al punto 1
+// Assicurati che questo import punti alla NUOVA entità
+import 'package:library_ai/domain/entities/book.dart';
+import '../../pages/book_detail_page.dart'; // Controlla il percorso delle pagine
 import 'star_rating.dart';
 
 class BookCard extends StatelessWidget {
@@ -19,7 +19,7 @@ class BookCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 120, // Larghezza fissa della card
+        width: 120,
         margin: const EdgeInsets.only(right: 15),
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E1E),
@@ -80,37 +80,37 @@ class BookCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                    // --- 3. STELLINE DI PRECISIONE (MODIFICATO) ---
-                    if (book.averageRating != null) ...[
-                      const SizedBox(height: 8), // Spazio extra
+                    // --- 3. RATING CORRETTO ---
+                    // Mostriamo le stelle solo se il rating è maggiore di 0
+                    if (book.rating > 0) ...[
+                      const SizedBox(height: 8),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // A. IL NUMERO (Es. 4.5)
+                          // A. IL NUMERO
                           Text(
-                            book.averageRating?.toStringAsFixed(1) ?? "N/D",
+                            book.rating.toStringAsFixed(1),
                             style: const TextStyle(
-                              color: Colors.white, // Numero Bianco
+                              color: Colors.white,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(width: 4),
 
-                          // B. LE STELLE (Gialle e Grigie)
+                          // B. LE STELLE
                           StarRating(
-                            rating: book.averageRating?.toDouble() ?? 0.0,
-                            size: 10, // Stelle piccole ed eleganti
+                            rating: book.rating, // Ora è double, perfetto
+                            size: 10,
                             color: Colors.amber,
                           ),
 
                           const SizedBox(width: 4),
 
-                          // C. IL CONTEGGIO (Es. (120))
+                          // C. IL CONTEGGIO
                           Expanded(
-                            // Per evitare overflow se il numero è lungo
                             child: Text(
-                              "(${book.ratingsCount ?? 0})",
+                              "(${book.ratingsCount})",
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.4),
                                 fontSize: 9,

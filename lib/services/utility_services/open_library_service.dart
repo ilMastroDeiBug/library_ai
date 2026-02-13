@@ -1,26 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../models/book_widgets/book_model.dart';
+import '../../domain/entities/book.dart'; // Assicurati che il path sia giusto
 
 class OpenLibraryService {
   static const String _baseUrl = 'https://openlibrary.org/search.json';
   static const String _coverBaseUrl = 'https://covers.openlibrary.org/b/id';
 
-  /// Cerca libri con supporto per Ordinamento
-  /// [sortBy]: 'relevance', 'new', 'old', 'rating_desc' (Client side)
   Future<List<Book>> fetchBooks(
     String query, {
     String sortBy = 'relevance',
   }) async {
     final sanitizedQuery = query.replaceAll(' ', '+');
 
-    // Costruiamo l'URL base
-    // Nota: 'sort' parameter di OpenLib supporta 'new', 'old', 'random'.
     String apiSortParam = '';
     if (sortBy == 'new') apiSortParam = '&sort=new';
     if (sortBy == 'old') apiSortParam = '&sort=old';
 
-    // Richiediamo più campi per poter ordinare lato client se necessario
     final url = Uri.parse(
       '$_baseUrl?q=$sanitizedQuery$apiSortParam&limit=25&fields=key,title,author_name,cover_i,ratings_average,ratings_count,number_of_pages_median,first_sentence,subject',
     );
@@ -37,40 +32,25 @@ class OpenLibraryService {
         final data = json.decode(response.body);
         final List<dynamic> docs = data['docs'] ?? [];
 
-        // 1. Mappatura
         List<Book> books = docs
             .map((json) => _mapOpenLibraryToBook(json))
             .where(
               (book) =>
-                  // Filtri Qualità Architect
                   book.thumbnailUrl.isNotEmpty &&
                   !book.title.toLowerCase().contains("collection") &&
-                  (book.ratingsCount ?? 0) > 0,
+                  book.ratingsCount > 0,
             )
             .toList();
 
-        // 2. Sorting Lato Client (Dove l'API fallisce o non supporta)
+        // Sorting Client Side
         if (sortBy == 'rating_desc') {
-          // Ordina per voto medio decrescente
-          books.sort((a, b) {
-            // Null safety check: if null, treat as 0.0
-            final double ratingA = (a.averageRating ?? 0).toDouble();
-            final double ratingB = (b.averageRating ?? 0).toDouble();
-            return ratingB.compareTo(ratingA); // Decrescente (B compareTo A)
-          });
+          books.sort((a, b) => b.rating.compareTo(a.rating));
         } else if (sortBy == 'reviews_desc') {
-          // Ordina per numero recensioni decrescente
-          books.sort((a, b) {
-            // Null safety check: if null, treat as 0
-            final int countA = a.ratingsCount ?? 0;
-            final int countB = b.ratingsCount ?? 0;
-            return countB.compareTo(countA); // Decrescente
-          });
+          books.sort((a, b) => b.ratingsCount.compareTo(a.ratingsCount));
         }
 
         return books;
       } else {
-        // Gestione errore (opzionale: loggare lo status code)
         return [];
       }
     } catch (e) {
@@ -79,7 +59,7 @@ class OpenLibraryService {
     }
   }
 
-  // --- MAPPATURA ---
+  // --- MAPPATURA CORRETTA ---
   Book _mapOpenLibraryToBook(Map<String, dynamic> json) {
     String coverUrl = "";
     if (json['cover_i'] != null) {
@@ -106,7 +86,6 @@ class OpenLibraryService {
     }
 
     final rawId = json['key'] ?? DateTime.now().toString();
-    // Sanitize ID per Firestore (rimuovi slash che creano sottocollezioni)
     final safeId = rawId.toString().replaceAll('/', '_');
 
     return Book(
@@ -116,8 +95,9 @@ class OpenLibraryService {
       description: description,
       thumbnailUrl: coverUrl,
       pageCount: json['number_of_pages_median'],
-      // Parsing sicuro per double e int
-      averageRating: (json['ratings_average'] as num?)?.toDouble() ?? 0.0,
+
+      // CORREZIONE 2: Parametro 'rating' invece di 'averageRating'
+      rating: (json['ratings_average'] as num?)?.toDouble() ?? 0.0,
       ratingsCount: json['ratings_count'] ?? 0,
     );
   }

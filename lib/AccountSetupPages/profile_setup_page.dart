@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-// Importiamo il Service
-import '../services/pages_services/profile_creation_service.dart';
+// CLEAN ARCH IMPORTS
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/auth_use_cases.dart'; // Contiene UpdateProfileUseCase
+// O NavigationHub
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -11,15 +13,9 @@ class ProfileSetupPage extends StatefulWidget {
 
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final _usernameController = TextEditingController();
-
-  // Stato UI
   bool _isLoading = false;
 
-  // Istanza Service
-  final ProfileService _profileService = ProfileService();
-
   Future<void> _saveProfile() async {
-    // Validazione UI veloce
     if (_usernameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -33,30 +29,26 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Chiamata al Service
-      await _profileService.updateDisplayName(_usernameController.text.trim());
+      // USIAMO LO USE CASE
+      await sl<UpdateProfileUseCase>().call(_usernameController.text.trim());
 
-      // Successo
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            // SPOSTIAMO LO STILE QUI DENTRO
             content: Text(
               "Benvenuto a bordo, Architect.",
               style: TextStyle(
-                color: Colors.black, // Nero su Ciano si legge bene
+                color: Colors.black,
                 fontWeight: FontWeight.bold,
               ),
             ),
             backgroundColor: Colors.cyanAccent,
           ),
         );
-
-        // QUI DOVRESTI NAVIGARE ALLA HOME
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+        // Navigazione gestita da AuthGate, ma se serve forzare:
+        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NavigationHub()));
       }
     } catch (e) {
-      // Errore
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -72,6 +64,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ... IL TUO BUILD RIMANE IDENTICO ...
+    // ... Copia il build() dal tuo file originale ...
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -87,7 +81,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Avatar Placeholder
                 Stack(
                   alignment: Alignment.center,
                   children: [
@@ -114,7 +107,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   ],
                 ),
                 const SizedBox(height: 40),
-
                 const Text(
                   "Identità Architect",
                   style: TextStyle(
@@ -130,7 +122,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   style: TextStyle(color: Colors.white.withOpacity(0.5)),
                 ),
                 const SizedBox(height: 40),
-
                 TextField(
                   controller: _usernameController,
                   style: const TextStyle(
@@ -160,8 +151,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // Button con Loading State
                 SizedBox(
                   width: double.infinity,
                   height: 55,

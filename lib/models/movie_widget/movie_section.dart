@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
-import '/services/utility_services/tmdb_service.dart';
-import '../../models/movie_widget/movie_model.dart';
+// 1. CLEAN ARCHITECTURE IMPORTS
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
+import '../../domain/entities/movie.dart'; // Assicurati di puntare alla nuova Entity
+
 import 'movie_card.dart';
-// 1. IMPORTIAMO LA PAGINA DI DETTAGLIO
 import '../../pages/movie_detail_page.dart';
 
 class MovieSection extends StatelessWidget {
   final String title;
-  final String categoryPath; // Es: "movie/popular" o "discover/movie?..."
-  final TmdbService _tmdbService = TmdbService();
+  final String categoryPath; // Es: "movie/popular"
 
-  MovieSection({super.key, required this.title, required this.categoryPath});
+  const MovieSection({
+    super.key,
+    required this.title,
+    required this.categoryPath,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -43,9 +48,11 @@ class MovieSection extends StatelessWidget {
 
         // Lista Orizzontale
         SizedBox(
-          height: 180, // Altezza del poster
+          height: 180,
           child: FutureBuilder<List<Movie>>(
-            future: _tmdbService.fetchByCategory(categoryPath),
+            // --- FIX QUI: USIAMO LO USE CASE ---
+            future: sl<GetMoviesByCategoryUseCase>().call(categoryPath),
+
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -79,7 +86,6 @@ class MovieSection extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final movie = movies[index];
 
-                  // 2. IL TRUCCO: AVVOLGIAMO LA CARD NEL GESTURE DETECTOR
                   return GestureDetector(
                     onTap: () {
                       Navigator.push(

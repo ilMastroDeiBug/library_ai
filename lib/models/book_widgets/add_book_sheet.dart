@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../services/utility_services/user_books_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/book_use_cases.dart';
+import 'package:library_ai/domain/entities/book.dart'; // O domain/entities/book.dart
 
 class AddBookSheet extends StatefulWidget {
   const AddBookSheet({super.key});
@@ -11,7 +14,6 @@ class AddBookSheet extends StatefulWidget {
 class _AddBookSheetState extends State<AddBookSheet> {
   final _titleController = TextEditingController();
   final _authorController = TextEditingController();
-  final _service = UserBooksService();
   bool _isLoading = false;
 
   Future<void> _save() async {
@@ -19,21 +21,35 @@ class _AddBookSheetState extends State<AddBookSheet> {
 
     setState(() => _isLoading = true);
     try {
-      await _service.addBookManually(
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final newBook = Book(
+        id: 'manual_${DateTime.now().millisecondsSinceEpoch}',
         title: _titleController.text,
-        author: _authorController.text,
+        author: _authorController.text.isNotEmpty
+            ? _authorController.text
+            : 'Sconosciuto',
+        description: 'Aggiunto manualmente',
+        status: 'toread',
       );
+
+      // USE CASE
+      await sl<AddBookUseCase>().call(newBook, user.uid);
+
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      // Gestione errore (opzionale)
-      print(e);
+      print("Errore add book: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // ... Il metodo build() rimane IDENTICO al tuo file originale ...
+  // ... Copia tutto il resto del file UI da quello che mi hai mandato ...
   @override
   Widget build(BuildContext context) {
+    // COPIA IL TUO BUILD METHOD QUI
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
