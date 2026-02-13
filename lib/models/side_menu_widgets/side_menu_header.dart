@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:library_ai/domain/entities/app_user.dart';
 import '../../pages/settings_page.dart';
 
 class SideMenuHeader extends StatelessWidget {
-  final User? user;
+  final AppUser? user;
 
   const SideMenuHeader({super.key, required this.user});
 
@@ -40,12 +40,18 @@ class SideMenuHeader extends StatelessWidget {
               child: CircleAvatar(
                 radius: 28,
                 backgroundColor: const Color(0xFF2C2C2C),
-                backgroundImage: user?.photoURL != null
-                    ? NetworkImage(user!.photoURL!)
-                    : null,
-                child: user?.photoURL == null
-                    ? const Icon(Icons.person, color: Colors.white70)
-                    : null,
+                child: user != null
+                    ? Text(
+                        (user!.displayName?.isNotEmpty ?? false)
+                            ? user!.displayName![0].toUpperCase()
+                            : (user!.email.isNotEmpty ? user!.email[0].toUpperCase() : 'A'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      )
+                    : const Icon(Icons.person, color: Colors.white70),
               ),
             ),
             const SizedBox(width: 15),
@@ -58,26 +64,21 @@ class SideMenuHeader extends StatelessWidget {
                     user?.displayName ?? "Architect",
                     style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
                       fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    user?.email ?? "",
+                    user?.email ?? "user@example.com",
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.5),
-                      fontSize: 11,
+                      fontSize: 12,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.3)),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/models/movie_widget/review_model.dart';
 import 'package:library_ai/models/movie_widget/cast_model.dart';
+import 'package:library_ai/services/utility_services/ai_service.dart';
 
 // DB USE CASES
 class GetWatchlistUseCase {
@@ -59,4 +60,30 @@ class GetMovieCastUseCase {
   GetMovieCastUseCase(this.repository);
   Future<List<CastMember>> call(int movieId) =>
       repository.getMovieCast(movieId);
+}
+// ... altri use cases esistenti ...
+
+class AnalyzeMovieUseCase {
+  final MovieRepository repository;
+  // Per semplicità istanziamo qui il service, ma in futuro potresti iniettarlo
+  final AIService _aiService = AIService();
+
+  AnalyzeMovieUseCase(this.repository);
+
+  Future<String> call(int movieId, String title) async {
+    // 1. Chiede l'analisi all'AI
+    final analysis = await _aiService.analyzeMedia(
+      title: title,
+      type: 'movie',
+      // Puoi rendere questo profilo dinamico passandolo come parametro se vuoi
+      userProfile: "16 anni, Developer, Appassionato di Cinema",
+      creator:
+          "", // Per i film il creator è meno rilevante nel prompt generico, o puoi passare il regista
+    );
+
+    // 2. Salva nel DB tramite il Repository
+    await repository.saveAnalysis(movieId, analysis);
+
+    return analysis;
+  }
 }

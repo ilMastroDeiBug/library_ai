@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
+import 'package:library_ai/domain/repositories/auth_repository.dart';
 import '../../domain/entities/book.dart';
 import '/models/book_widgets/book_card.dart';
 import '../app_mode.dart';
@@ -49,47 +49,51 @@ class LibraryGrid extends StatelessWidget {
     final isBooks = mode == AppMode.books;
     if (!isBooks) return _buildMoviesPlaceholder();
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return _buildEmptyState();
+    return StreamBuilder(
+      stream: sl<AuthRepository>().userStream,
+      builder: (context, userSnapshot) {
+        final user = userSnapshot.data;
+        if (user == null) return _buildEmptyState();
 
-    return Container(
-      color: const Color(0xFF0F0F10),
-      child: StreamBuilder<List<Book>>(
-        // USE CASE: GET BOOKS
-        stream: sl<GetUserBooksUseCase>().call(user.uid, status),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            );
-          }
+        return Container(
+          color: const Color(0xFF0F0F10),
+          child: StreamBuilder<List<Book>>(
+            stream: sl<GetUserBooksUseCase>().call(user.id, status),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildEmptyState();
-          }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return _buildEmptyState();
+              }
 
-          final books = snapshot.data!;
+              final books = snapshot.data!;
 
-          return GridView.builder(
-            padding: const EdgeInsets.fromLTRB(20, 30, 20, 100),
-            itemCount: books.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.68,
-              crossAxisSpacing: 20,
-              mainAxisSpacing: 25,
-            ),
-            itemBuilder: (context, index) {
-              final book = books[index];
-              return InkWell(
-                borderRadius: BorderRadius.circular(15),
-                onLongPress: () => _handleDelete(context, book.id, book.title),
-                child: BookCard(book: book),
+              return GridView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 30, 20, 100),
+                itemCount: books.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.68,
+                  crossAxisSpacing: 20,
+                  mainAxisSpacing: 25,
+                ),
+                itemBuilder: (context, index) {
+                  final book = books[index];
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(15),
+                    onLongPress: () => _handleDelete(context, book.id, book.title),
+                    child: BookCard(book: book),
+                  );
+                },
               );
             },
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -119,24 +123,10 @@ class LibraryGrid extends StatelessWidget {
   }
 
   Widget _buildMoviesPlaceholder() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.movie_filter_outlined,
-            size: 60,
-            color: Colors.white.withOpacity(0.1),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            "Modulo Cinema in sviluppo...",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.3),
-              letterSpacing: 1,
-            ),
-          ),
-        ],
+    return const Center(
+      child: Text(
+        "Sezione Cinema in arrivo...",
+        style: TextStyle(color: Colors.white30),
       ),
     );
   }

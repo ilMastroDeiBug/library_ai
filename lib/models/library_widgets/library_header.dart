@@ -1,13 +1,13 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../pages/settings_page.dart'; // Assumendo che esista
+import 'package:library_ai/domain/entities/app_user.dart';
+import '../../pages/settings_page.dart';
 import '../app_mode.dart';
 import 'library_stat_card.dart';
 
 class LibraryHeader extends StatelessWidget {
   final AppMode mode;
-  final User? user;
+  final AppUser? user;
 
   const LibraryHeader({super.key, required this.mode, required this.user});
 
@@ -109,12 +109,18 @@ class LibraryHeader extends StatelessWidget {
           child: CircleAvatar(
             radius: 24,
             backgroundColor: Colors.grey[900],
-            backgroundImage: user?.photoURL != null
-                ? NetworkImage(user!.photoURL!)
-                : null,
-            child: user?.photoURL == null
-                ? const Icon(Icons.person, color: Colors.white)
-                : null,
+            child: user != null
+                ? Text(
+                    (user!.displayName?.isNotEmpty ?? false)
+                        ? user!.displayName![0].toUpperCase()
+                        : (user!.email.isNotEmpty ? user!.email[0].toUpperCase() : 'A'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  )
+                : const Icon(Icons.person, color: Colors.white),
           ),
         ),
       ),

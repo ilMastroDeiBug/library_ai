@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../models/app_mode.dart';
 import 'search_page.dart';
 // Import Widget Modulari
@@ -139,45 +139,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAIBannerPlaceholder() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        height: 180,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.orangeAccent.withOpacity(0.2),
-              const Color(0xFF1E1E1E),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.orangeAccent.withOpacity(0.2)),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.auto_awesome,
-                color: Colors.orangeAccent,
-                size: 40,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "ANALISI INTELLIGENTE",
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildAIBannerPlaceholder() { return const SizedBox.shrink(); }
 }
+

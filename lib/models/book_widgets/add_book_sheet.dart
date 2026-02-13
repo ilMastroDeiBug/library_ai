@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
-import 'package:library_ai/domain/entities/book.dart'; // O domain/entities/book.dart
+import 'package:library_ai/domain/repositories/auth_repository.dart';
+import 'package:library_ai/domain/entities/book.dart';
 
 class AddBookSheet extends StatefulWidget {
   const AddBookSheet({super.key});
@@ -21,8 +21,10 @@ class _AddBookSheetState extends State<AddBookSheet> {
 
     setState(() => _isLoading = true);
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      final authRepo = sl<AuthRepository>();
+      final userStream = await authRepo.userStream.first;
+      
+      if (userStream == null) return;
 
       final newBook = Book(
         id: 'manual_${DateTime.now().millisecondsSinceEpoch}',
@@ -35,7 +37,7 @@ class _AddBookSheetState extends State<AddBookSheet> {
       );
 
       // USE CASE
-      await sl<AddBookUseCase>().call(newBook, user.uid);
+      await sl<AddBookUseCase>().call(newBook, userStream.id);
 
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -45,11 +47,8 @@ class _AddBookSheetState extends State<AddBookSheet> {
     }
   }
 
-  // ... Il metodo build() rimane IDENTICO al tuo file originale ...
-  // ... Copia tutto il resto del file UI da quello che mi hai mandato ...
   @override
   Widget build(BuildContext context) {
-    // COPIA IL TUO BUILD METHOD QUI
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,

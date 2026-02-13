@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../models/app_mode.dart';
 // Page Imports
 import 'pages/home_page.dart';
@@ -23,7 +23,7 @@ class _NavigationHubState extends State<NavigationHub> {
 
   // State
   int _selectedIndex = 0;
-  AppMode _currentMode = AppMode.books;
+  AppMode _currentMode = AppMode.movies;
   bool _isSocialActive = false;
 
   // --- Logic Methods ---
@@ -121,3 +121,4 @@ class _NavigationHubState extends State<NavigationHub> {
     );
   }
 }
+

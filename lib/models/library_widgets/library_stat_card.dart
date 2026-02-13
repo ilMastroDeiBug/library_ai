@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
-import 'package:library_ai/domain/use_cases/book_use_cases.dart'; // Assicurati che il path sia corretto
+import 'package:library_ai/domain/use_cases/book_use_cases.dart';
+import 'package:library_ai/domain/repositories/auth_repository.dart';
 import '../../domain/entities/book.dart';
 
 class LibraryStatCard extends StatelessWidget {
@@ -20,21 +20,25 @@ class LibraryStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    // Se l'utente non è loggato, mostriamo 0
-    if (user == null) return _buildCard("0");
+    return StreamBuilder(
+      stream: sl<AuthRepository>().userStream,
+      builder: (context, userSnapshot) {
+        final user = userSnapshot.data;
+        // Se l'utente non Ã¨ loggato, mostriamo 0
+        if (user == null) return _buildCard("0");
 
-    return Expanded(
-      child: StreamBuilder<List<Book>>(
-        // USIAMO LO USE CASE E MAPPIAMO LA LISTA IN UN NUMERO
-        stream: sl<GetUserBooksUseCase>().call(user.uid, status),
-        builder: (context, snapshot) {
-          final count = snapshot.hasData
-              ? snapshot.data!.length.toString()
-              : "0";
-          return _buildCard(count);
-        },
-      ),
+        return Expanded(
+          child: StreamBuilder<List<Book>>(
+            stream: sl<GetUserBooksUseCase>().call(user.id, status),
+            builder: (context, snapshot) {
+              final count = snapshot.hasData
+                  ? snapshot.data!.length.toString()
+                  : "0";
+              return _buildCard(count);
+            },
+          ),
+        );
+      },
     );
   }
 

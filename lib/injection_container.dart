@@ -56,4 +56,5 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetMoviesByCategoryUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieReviewsUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieCastUseCase(sl()));
+  sl.registerLazySingleton(() => AnalyzeMovieUseCase(sl()));
 }

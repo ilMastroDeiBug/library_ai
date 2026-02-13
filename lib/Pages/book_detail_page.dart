@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:library_ai/injection_container.dart';
-// IMPORT CORRETTO: punta alla cartella 'books'
+import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import '../../domain/entities/book.dart';
 import '../../services/utility_services/ai_service.dart';
@@ -43,8 +42,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
     } catch (e) {
       // Fallback per libri non ancora nel DB
       try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
+        final authRepo = sl<AuthRepository>();
+        final userStream = await authRepo.userStream.first;
+
+        if (userStream != null) {
           final bookToSave = Book(
             id: liveBook.id,
             title: liveBook.title,
@@ -56,7 +57,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
             ratingsCount: liveBook.ratingsCount,
             status: currentStatus == 'read' ? 'toread' : 'read',
           );
-          await sl<AddBookUseCase>().call(bookToSave, user.uid);
+          await sl<AddBookUseCase>().call(bookToSave, userStream.id);
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -76,7 +77,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
   Future<void> _handleAnalysis(Book liveBook) async {
     setState(() => _isAnalyzing = true);
     try {
-      // CORREZIONE QUI: Usa AIService (tutto maiuscolo AI)
       final aiService = AIService();
 
       final analysis = await aiService.analyzeMedia(
