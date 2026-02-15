@@ -1,11 +1,12 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
-// Opzionale se usi cached, altrimenti Image.network
+import 'package:library_ai/domain/entities/tv_series.dart'; // Fondamentale
 
 class AiHeroBanner extends StatefulWidget {
-  final List<dynamic> items; // Accetta sia List<Book> che List<Movie>
+  final List<dynamic> items;
   final Function(dynamic) onItemTap;
 
   const AiHeroBanner({super.key, required this.items, required this.onItemTap});
@@ -15,14 +16,41 @@ class AiHeroBanner extends StatefulWidget {
 }
 
 class _AiHeroBannerState extends State<AiHeroBanner> {
-  final PageController _pageController = PageController();
-  int _currentIndex = 0;
+  late PageController _pageController;
+  int _realIndex = 0;
   Timer? _timer;
+  double _currentPageValue = 0.0;
+
+  List<dynamic> _dailyItems = [];
+  static const int _infiniteStart = 10000;
 
   @override
   void initState() {
     super.initState();
+    _generateDailyRotation();
+    _pageController = PageController(initialPage: _infiniteStart);
+
+    _pageController.addListener(() {
+      setState(() {
+        _currentPageValue = _pageController.page ?? _infiniteStart.toDouble();
+      });
+    });
+
     _startAutoScroll();
+  }
+
+  void _generateDailyRotation() {
+    if (widget.items.isEmpty) {
+      _dailyItems = [];
+      return;
+    }
+    final now = DateTime.now();
+    final int dailySeed = now.year * 10000 + now.month * 100 + now.day;
+    final random = Random(dailySeed);
+    final List<dynamic> shuffledItems = List.from(widget.items)
+      ..shuffle(random);
+    final int countToTake = shuffledItems.length > 5 ? 5 : shuffledItems.length;
+    _dailyItems = shuffledItems.take(countToTake).toList();
   }
 
   @override
@@ -32,37 +60,28 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     super.dispose();
   }
 
-  // Logica Auto-Scroll
   void _startAutoScroll() {
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (_currentIndex < widget.items.length - 1) {
-        _currentIndex++;
-      } else {
-        _currentIndex = 0;
-      }
-
+    if (_dailyItems.isEmpty) return;
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (_pageController.hasClients) {
-        _pageController.animateToPage(
-          _currentIndex,
-          duration: const Duration(milliseconds: 800),
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 1000),
           curve: Curves.fastOutSlowIn,
         );
       }
     });
   }
 
-  // Ferma il timer quando l'utente tocca
   void _stopAutoScroll() {
     _timer?.cancel();
   }
 
-  // Helper per estrarre dati da Book o Movie
+  // ESTRAZIONE DATI POLIMORFICA
   Map<String, String> _extractData(dynamic item) {
     if (item is Book) {
       return {
         'title': item.title,
-        'image': item
-            .thumbnailUrl, // Assicurati che sia ad alta risoluzione se possibile
+        'image': item.thumbnailUrl,
         'subtitle': item.author,
       };
     } else if (item is Movie) {
@@ -71,100 +90,138 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
         'image': item.fullBackdropUrl.isNotEmpty
             ? item.fullBackdropUrl
             : item.fullPosterUrl,
-        'subtitle': "Voto: ${item.voteAverage.toStringAsFixed(1)}",
+        'subtitle': "FILM DEL GIORNO",
+      };
+    } else if (item is TvSeries) {
+      return {
+        'title': item.name, // Serie usano 'name'
+        'image': item.fullBackdropUrl.isNotEmpty
+            ? item.fullBackdropUrl
+            : item.fullPosterUrl,
+        'subtitle': "SERIE TV DEL GIORNO",
       };
     }
-    return {'title': 'Sconosciuto', 'image': '', 'subtitle': ''};
+    return {'title': '', 'image': '', 'subtitle': ''};
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.items.isEmpty) return const SizedBox();
+    if (_dailyItems.isEmpty) return const SizedBox();
 
     return Column(
       children: [
         SizedBox(
-          height: 280, // Altezza del banner
+          height: 350,
           child: GestureDetector(
-            // Ferma lo scroll quando tocchi, riprendi quando lasci
             onPanDown: (_) => _stopAutoScroll(),
             onPanCancel: () => _startAutoScroll(),
             onPanEnd: (_) => _startAutoScroll(),
             child: PageView.builder(
               controller: _pageController,
-              itemCount: widget.items.length,
               onPageChanged: (index) {
-                setState(() => _currentIndex = index);
+                setState(() {
+                  _realIndex = index % _dailyItems.length;
+                });
               },
               itemBuilder: (context, index) {
-                final item = widget.items[index];
+                final int actualIndex = index % _dailyItems.length;
+                final item = _dailyItems[actualIndex];
                 final data = _extractData(item);
+
+                double delta = index - _currentPageValue;
+                delta = delta.clamp(-1.0, 1.0);
 
                 return GestureDetector(
                   onTap: () => widget.onItemTap(item),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // 1. Immagine di Sfondo
-                      Image.network(
-                        data['image']!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) =>
-                            Container(color: Colors.grey[900]),
+                      // Immagine Parallax
+                      ClipRRect(
+                        child: Transform(
+                          transform: Matrix4.identity()
+                            ..translate(delta * 50.0, 0.0, 0.0)
+                            ..scale(1.0 + (delta.abs() * 0.1)),
+                          alignment: Alignment.center,
+                          child: Image.network(
+                            data['image']!,
+                            fit: BoxFit.cover,
+                            alignment: Alignment(delta * 0.5, 0),
+                            errorBuilder: (ctx, err, stack) =>
+                                Container(color: const Color(0xFF1E1E1E)),
+                          ),
+                        ),
                       ),
-
-                      // 2. Gradiente per leggibilità testo
+                      // Gradiente
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
+                              Colors.black.withOpacity(0.2),
                               Colors.transparent,
-                              Colors.black.withOpacity(0.0),
-                              Colors.black.withOpacity(
-                                0.8,
-                              ), // Più scuro in basso
-                              const Color(
-                                0xFF121212,
-                              ), // Si fonde con lo sfondo dell'app
+                              Colors.black.withOpacity(0.6),
+                              const Color(0xFF121212),
                             ],
-                            stops: const [0.0, 0.5, 0.8, 1.0],
+                            stops: const [0.0, 0.4, 0.8, 1.0],
                           ),
                         ),
                       ),
-
-                      // 3. Testi
+                      // Testi
                       Positioned(
                         bottom: 40,
                         left: 20,
                         right: 20,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              data['subtitle']!.toUpperCase(),
-                              style: const TextStyle(
-                                color:
-                                    Colors.cyanAccent, // O il tuo brand color
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
+                        child: Opacity(
+                          opacity: (1 - delta.abs()).clamp(0.0, 1.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: Colors.cyanAccent.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  data['subtitle']!.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.cyanAccent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              data['title']!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                height: 1.1,
+                              const SizedBox(height: 10),
+                              Text(
+                                data['title']!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.1,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black87,
+                                      offset: Offset(2, 2),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -174,28 +231,23 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
             ),
           ),
         ),
-
-        // 4. Indicatori (Puntini)
+        // Indicatori
         Transform.translate(
-          offset: const Offset(0, -20), // Li sposta sopra il gradiente
+          offset: const Offset(0, -25),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
-              widget.items.length > 5
-                  ? 5
-                  : widget.items.length, // Max 5 puntini
+              _dailyItems.length,
               (index) => AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 6,
-                width: _currentIndex == index
-                    ? 20
-                    : 6, // Il corrente è più largo
+                height: 4,
+                width: _realIndex == index ? 24 : 4,
                 decoration: BoxDecoration(
-                  color: _currentIndex == index
+                  color: _realIndex == index
                       ? Colors.cyanAccent
                       : Colors.white.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:library_ai/domain/entities/app_user.dart'; // Importa la tua entità
 
 class SettingsHeader extends StatelessWidget {
-  final User? user;
+  final AppUser? user; // Cambiato da User a AppUser
   final String bio;
   final VoidCallback onPhotoTap;
 
@@ -32,12 +32,16 @@ class SettingsHeader extends StatelessWidget {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.grey[800],
-                  backgroundImage: user?.photoURL != null
-                      ? NetworkImage(user!.photoURL!)
-                      : null,
-                  child: user?.photoURL == null
-                      ? const Icon(Icons.person, color: Colors.white, size: 30)
-                      : null,
+                  child: Text(
+                    (user?.displayName?.isNotEmpty ?? false)
+                        ? user!.displayName![0].toUpperCase()
+                        : 'A',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 Positioned(
                   right: 0,
@@ -45,7 +49,7 @@ class SettingsHeader extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
-                      color: Colors.cyanAccent,
+                      color: Colors.orangeAccent, // Usiamo l'accento del brand
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -63,7 +67,7 @@ class SettingsHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user?.displayName ?? "Utente",
+                    user?.displayName ?? "Architect",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,

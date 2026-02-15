@@ -1,19 +1,26 @@
 ﻿import 'package:flutter/material.dart';
 import '../models/app_mode.dart';
-import 'search_page.dart';
-// Import Widget Modulari
-import '/models/book_widgets/add_book_sheet.dart';
+import '../models/book_widgets/add_book_sheet.dart';
 import '../models/user_books_section.dart';
-// Importa il Builder
 import '../models/home_widgets/home_content_builders.dart';
+import '../models/home_widgets/home_cinema_switcher.dart'; // Importa lo switcher
+import 'search_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final AppMode mode;
   final VoidCallback onOpenDrawer;
 
+  const HomePage({super.key, required this.mode, required this.onOpenDrawer});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   static const Color _brandColor = Colors.orangeAccent;
 
-  const HomePage({super.key, required this.mode, required this.onOpenDrawer});
+  // Stato per lo switcher Film/Serie
+  CinemaType _selectedCinemaType = CinemaType.movies;
 
   void _showAddSheet(BuildContext context) {
     showModalBottomSheet(
@@ -34,16 +41,20 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.menu_rounded,
-            color: Colors.orangeAccent,
-            size: 28,
+        automaticallyImplyLeading: false,
+        title: GestureDetector(
+          onTap: widget.onOpenDrawer,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.menu_rounded, color: _brandColor, size: 24),
           ),
-          onPressed: onOpenDrawer,
         ),
       ),
-      floatingActionButton: mode == AppMode.books
+      floatingActionButton: widget.mode == AppMode.books
           ? FloatingActionButton(
               heroTag: 'fab_home',
               onPressed: () => _showAddSheet(context),
@@ -52,50 +63,52 @@ class HomePage extends StatelessWidget {
             )
           : null,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF121212), Color(0xFF1E1E1E)],
-          ),
-        ),
+        decoration: const BoxDecoration(color: Color(0xFF121212)),
         child: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. SEARCH BAR
+                const SizedBox(height: 10),
                 _buildSearchBar(context),
 
-                const SizedBox(height: 20),
+                // --- SWITCHER TIKTOK STYLE (Solo in Cinema Mode) ---
+                if (widget.mode == AppMode.movies)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20, bottom: 10),
+                    child: HomeCinemaSwitcher(
+                      selectedType: _selectedCinemaType,
+                      onTypeChanged: (newType) {
+                        setState(() {
+                          _selectedCinemaType = newType;
+                        });
+                      },
+                    ),
+                  ),
 
-                // 2. HERO BANNER (Carosello)
-                // Nota: Non usare "..." se restituisce un solo Widget
-                HomeContentBuilder.buildHeroBanner(mode),
+                const SizedBox(height: 10),
+
+                // 2. HERO BANNER (Dinamico in base allo switcher)
+                HomeContentBuilder.buildHeroBanner(
+                  widget.mode,
+                  cinemaType: _selectedCinemaType,
+                ),
 
                 const SizedBox(height: 30),
 
-                // 3. CONTENUTO CONDIZIONALE (Libri o Film)
-                if (mode == AppMode.books) ...[
-                  // Sezione Utente (Libri)
+                // 3. CONTENUTO CONDIZIONALE
+                if (widget.mode == AppMode.books) ...[
                   const UserBooksSection(
-                    title: "La tua Coda di Lettura",
+                    title: "In coda di lettura",
                     status: "toread",
                   ),
-
-                  // Il Catalogo Generato dal Builder (che è una List<Widget>)
                   ...HomeContentBuilder.buildBookContent(),
                 ] else ...[
-                  HomeContentBuilder.buildHeroBanner(mode),
-                  const SizedBox(height: 30),// Sezione Utente (Film)
-                  const UserBooksSection(
-                    title: "Da Vedere Stasera",
-                    status: "towatch",
+                  // CORREZIONE: Usiamo buildCinemaContent passando il tipo
+                  ...HomeContentBuilder.buildCinemaContent(
+                    type: _selectedCinemaType,
                   ),
-
-                  // Il Catalogo Generato dal Builder
-                  ...HomeContentBuilder.buildMovieContent(),
                 ],
 
                 const SizedBox(height: 80),
@@ -108,28 +121,42 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildSearchBar(BuildContext context) {
+    // Placeholder dinamico
+    String placeholder = "Cerca...";
+    if (widget.mode == AppMode.books) {
+      placeholder = "Cerca titolo, autore...";
+    } else {
+      placeholder = _selectedCinemaType == CinemaType.movies
+          ? "Cerca film, attori..."
+          : "Cerca serie TV...";
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GestureDetector(
-        onTap: () =>
-            showSearch(context: context, delegate: BookSearchDelegate()),
+        onTap: () => showSearch(
+          context: context,
+          delegate: UniversalSearchDelegate(mode: widget.mode),
+        ),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 15),
-          height: 50,
+          height: 52,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: _brandColor.withOpacity(0.3)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.search, color: _brandColor),
-              const SizedBox(width: 10),
+              const Icon(Icons.search, color: _brandColor, size: 20),
+              const SizedBox(width: 12),
               Text(
-                mode == AppMode.books
-                    ? "Cerca titolo, autore..."
-                    : "Cerca film, attori...",
-                style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                placeholder,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.3),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -138,6 +165,3 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-
-
-

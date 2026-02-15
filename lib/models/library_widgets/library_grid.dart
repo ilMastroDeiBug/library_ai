@@ -1,11 +1,20 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
-import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
-import '../../domain/entities/book.dart';
-import '/models/book_widgets/book_card.dart';
-import '../app_mode.dart';
-import 'delete_book_dialog.dart';
+import 'package:library_ai/models/app_mode.dart';
+
+// Entities
+import 'package:library_ai/domain/entities/book.dart';
+import 'package:library_ai/domain/entities/movie.dart';
+import 'package:library_ai/domain/entities/tv_series.dart'; // Importa TvSeries
+
+// Use Cases
+import 'package:library_ai/domain/use_cases/book_use_cases.dart';
+import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
+
+// Pages
+import 'package:library_ai/Pages/book_detail_page.dart';
+import 'package:library_ai/Pages/movie_detail_page.dart';
 
 class LibraryGrid extends StatelessWidget {
   final AppMode mode;
@@ -13,87 +22,131 @@ class LibraryGrid extends StatelessWidget {
 
   const LibraryGrid({super.key, required this.mode, required this.status});
 
-  Future<void> _handleDelete(
-    BuildContext context,
-    String bookId,
-    String title,
-  ) async {
-    showDialog(
-      context: context,
-      builder: (ctx) => DeleteBookDialog(
-        bookTitle: title,
-        onConfirm: () async {
-          try {
-            // USE CASE: DELETE
-            await sl<DeleteBookUseCase>().call(bookId);
-
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text("Dato rimosso dal database."),
-                  backgroundColor: Colors.redAccent.withOpacity(0.8),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          } catch (e) {
-            print(e);
-          }
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isBooks = mode == AppMode.books;
-    if (!isBooks) return _buildMoviesPlaceholder();
-
     return StreamBuilder(
       stream: sl<AuthRepository>().userStream,
       builder: (context, userSnapshot) {
         final user = userSnapshot.data;
-        if (user == null) return _buildEmptyState();
+        if (user == null) {
+          return const Center(
+            child: Text(
+              "Accesso richiesto",
+              style: TextStyle(color: Colors.white24),
+            ),
+          );
+        }
 
-        return Container(
-          color: const Color(0xFF0F0F10),
-          child: StreamBuilder<List<Book>>(
-            stream: sl<GetUserBooksUseCase>().call(user.id, status),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                );
-              }
+        // Recuperiamo lo stream. Per i Film/Serie usiamo GetWatchlistUseCase
+        // che restituisce una lista mista di Movie e TvSeries
+        final dynamic dataStream = (mode == AppMode.books)
+            ? sl<GetUserBooksUseCase>().call(user.id, status)
+            : sl<GetWatchlistUseCase>().call(user.id, status);
 
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              final books = snapshot.data!;
-
-              return GridView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 30, 20, 100),
-                itemCount: books.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.68,
-                  crossAxisSpacing: 20,
-                  mainAxisSpacing: 25,
-                ),
-                itemBuilder: (context, index) {
-                  final book = books[index];
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(15),
-                    onLongPress: () => _handleDelete(context, book.id, book.title),
-                    child: BookCard(book: book),
-                  );
-                },
+        return StreamBuilder<List<dynamic>>(
+          stream: dataStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.orangeAccent),
               );
-            },
+            }
+
+            final items = snapshot.data ?? [];
+
+            if (items.isEmpty) {
+              return _buildEmptyState();
+            }
+
+            return GridView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+              itemCount: items.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.68,
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 20,
+              ),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return _buildItemCard(context, item);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildItemCard(BuildContext context, dynamic item) {
+    String title = "";
+    String imageUrl = "";
+    String heroTag = "";
+
+    // GESTIONE POLIMORFICA COMPLETA
+    if (item is Book) {
+      title = item.title;
+      imageUrl = item.thumbnailUrl;
+      heroTag = item.id;
+    } else if (item is Movie) {
+      title = item.title;
+      imageUrl = item.fullPosterUrl;
+      heroTag = item.id.toString();
+    } else if (item is TvSeries) {
+      title = item.name; // TvSeries usa 'name'
+      imageUrl = item.fullPosterUrl;
+      heroTag = item.id.toString();
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => (item is Book)
+                ? BookDetailPage(book: item)
+                : MovieDetailPage(media: item), // Accetta anche TvSeries
           ),
         );
       },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Hero(
+              tag: heroTag,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                  image: DecorationImage(
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -103,30 +156,20 @@ class LibraryGrid extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            status == 'toread'
-                ? Icons.bookmark_add_outlined
-                : Icons.done_all_rounded,
-            size: 60,
-            color: Colors.white.withOpacity(0.1),
+            Icons.inventory_2_outlined,
+            size: 64,
+            color: Colors.white.withOpacity(0.05),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 16),
           Text(
-            status == 'toread'
-                ? "Database vuoto.\nAggiungi nuovi input."
-                : "Nessun task completato.",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withOpacity(0.3), height: 1.5),
+            "ARCHIVIO VUOTO",
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.2),
+              letterSpacing: 2,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMoviesPlaceholder() {
-    return const Center(
-      child: Text(
-        "Sezione Cinema in arrivo...",
-        style: TextStyle(color: Colors.white30),
       ),
     );
   }

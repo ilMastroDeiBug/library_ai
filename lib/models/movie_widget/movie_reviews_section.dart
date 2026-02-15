@@ -1,26 +1,32 @@
 import 'package:flutter/material.dart';
-import '../../services/utility_services/tmdb_service.dart';
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
+import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'review_model.dart';
-import '../../pages/all_reviews_page.dart'; // Assicurati che il path sia corretto
+import '../../pages/all_reviews_page.dart';
 
 class MovieReviewsSection extends StatelessWidget {
-  final int movieId;
-  final String movieTitle; // Aggiunto per passarlo alla pagina completa
-  final TmdbService _tmdbService = TmdbService();
+  final int id;
+  final String title;
+  final bool isTvSeries; // Flag
 
-  // Colore Architect
   static const Color _brandColor = Colors.orangeAccent;
 
-  MovieReviewsSection({
+  const MovieReviewsSection({
     super.key,
-    required this.movieId,
-    required this.movieTitle,
+    required this.id,
+    required this.title,
+    this.isTvSeries = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Review>>(
-      future: _tmdbService.fetchMovieReviews(movieId),
+      // CLEAN ARCHITECTURE CALL
+      future: isTvSeries
+          ? sl<GetTvSeriesReviewsUseCase>().call(id)
+          : sl<GetMovieReviewsUseCase>().call(id),
+
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -38,7 +44,7 @@ class MovieReviewsSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Text(
-              "Nessuna recensione disponibile dalla community globale.",
+              "Nessuna recensione disponibile.",
               style: TextStyle(
                 color: Colors.white38,
                 fontStyle: FontStyle.italic,
@@ -48,13 +54,11 @@ class MovieReviewsSection extends StatelessWidget {
           );
         }
 
-        // Anteprima: prendiamo solo le prime 2
         final previewReviews = allReviews.take(2).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Intestazione con tasto "Vedi Tutte"
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -74,7 +78,7 @@ class MovieReviewsSection extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => AllReviewsPage(
                           reviews: allReviews,
-                          movieTitle: movieTitle,
+                          movieTitle: title,
                         ),
                       ),
                     );
@@ -91,16 +95,13 @@ class MovieReviewsSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-
-            // Mappa le recensioni di anteprima
-            ...previewReviews.map((r) => _buildReviewPreviewCard(r)).toList(),
+            ...previewReviews.map((r) => _buildReviewPreviewCard(r)),
           ],
         );
       },
     );
   }
 
-  // Card compatta per l'anteprima nella Home del Dettaglio
   Widget _buildReviewPreviewCard(Review review) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -141,7 +142,7 @@ class MovieReviewsSection extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             review.content,
-            maxLines: 3, // Limite per l'anteprima
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.white.withOpacity(0.6),

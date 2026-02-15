@@ -11,19 +11,17 @@ environment:
 #Dependencies: Sono i materiali che restano nell'edificio finito (mattoni, cavi elettrici).
 #Senza questi, l'app non può girare sul telefono dell'utente. Qui mettiamo Firebase, l'IA, le icone, ecc.
 dependencies:
-   flutter:
+  flutter:
     sdk: flutter
-   firebase_core: ^3.10.1 
-   firebase_auth: ^5.4.1
-  
-  # Questo serve per il login Google
-   google_sign_in: ^6.2.1
-  # Questo serve per salvare i libri nel database
-   cloud_firestore: ^5.6.2
-   google_generative_ai: ^0.4.7
-   cupertino_icons: ^1.0.8
-   http: ^1.2.0
-   get_it: ^9.2.0
+  firebase_core: ^3.10.1 
+  firebase_auth: ^5.4.1
+  google_sign_in: ^6.2.1
+  cloud_firestore: ^5.6.2
+  google_generative_ai: ^0.4.7
+  cupertino_icons: ^1.0.8
+  http: ^1.2.0
+  get_it: ^9.2.0
+  shared_preferences: ^2.2.2 # <--- AGGIUNTO
 
 dev_dependencies:
   flutter_test:

@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../services/utility_services/tmdb_service.dart';
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
+import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'cast_model.dart';
 
 class MovieCastSection extends StatelessWidget {
-  final int movieId;
-  final TmdbService _tmdbService = TmdbService();
+  final int id;
+  final bool isTvSeries; // Flag per decidere
 
-  MovieCastSection({super.key, required this.movieId});
+  const MovieCastSection({
+    super.key,
+    required this.id,
+    this.isTvSeries = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +30,13 @@ class MovieCastSection extends StatelessWidget {
         ),
         const SizedBox(height: 15),
         SizedBox(
-          height: 140, // Altezza fissa per lo scroll orizzontale
+          height: 140,
           child: FutureBuilder<List<CastMember>>(
-            future: _tmdbService.fetchMovieCast(
-              movieId,
-            ), // Metodo da aggiungere
+            // CLEAN ARCHITECTURE CALL
+            future: isTvSeries
+                ? sl<GetTvSeriesCastUseCase>().call(id)
+                : sl<GetMovieCastUseCase>().call(id),
+
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -57,7 +65,6 @@ class MovieCastSection extends StatelessWidget {
                     margin: const EdgeInsets.only(right: 15),
                     child: Column(
                       children: [
-                        // Foto Attore
                         Container(
                           width: 70,
                           height: 70,
@@ -70,14 +77,13 @@ class MovieCastSection extends StatelessWidget {
                                     fit: BoxFit.cover,
                                   )
                                 : null,
-                            color: Colors.white10, // Sfondo se non c'è foto
+                            color: Colors.white10,
                           ),
                           child: actor.fullProfileUrl.isEmpty
                               ? const Icon(Icons.person, color: Colors.white24)
                               : null,
                         ),
                         const SizedBox(height: 8),
-                        // Nome
                         Text(
                           actor.name,
                           maxLines: 2,
@@ -89,7 +95,6 @@ class MovieCastSection extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        // Ruolo
                         Text(
                           actor.character,
                           maxLines: 1,

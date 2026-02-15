@@ -1,66 +1,69 @@
-class Movie {
+// lib/domain/entities/tv_series.dart
+
+class TvSeries {
   final int id;
-  final String title;
+  final String name; // Serie TV usano "name", non "title"
   final String overview;
   final String posterPath;
   final String backdropPath;
   final double voteAverage;
   final int voteCount;
-  final String releaseDate;
+  final String firstAirDate; // Invece di releaseDate
 
   // Campi locali (Database)
   final String status;
   final String? aiAnalysis;
 
-  Movie({
+  TvSeries({
     required this.id,
-    required this.title,
+    required this.name,
     required this.overview,
     required this.posterPath,
     required this.backdropPath,
     required this.voteAverage,
     required this.voteCount,
-    required this.releaseDate,
+    required this.firstAirDate,
     this.status = 'none',
     this.aiAnalysis,
   });
 
-  // --- FIX QUI SOTTO ---
-  // Abbiamo sostituito via.placeholder.com con placehold.co
-  // Oppure puoi restituire '' (stringa vuota) e lasciare che la UI mostri il container grigio
-
   String get fullPosterUrl => posterPath.isNotEmpty
       ? 'https://image.tmdb.org/t/p/w500$posterPath'
-      : 'https://placehold.co/500x750/png?text=No+Poster'; // Servizio stabile
+      : 'https://placehold.co/500x750/png?text=No+Poster';
 
   String get fullBackdropUrl => backdropPath.isNotEmpty
       ? 'https://image.tmdb.org/t/p/w780$backdropPath'
-      : ''; // Per il backdrop lasciamo vuoto, la UI gestirà il gradiente
+      : '';
 
-  factory Movie.fromTmdb(Map<String, dynamic> json) {
-    return Movie(
+  factory TvSeries.fromTmdb(Map<String, dynamic> json) {
+    return TvSeries(
       id: json['id'] ?? 0,
-      title: json['title'] ?? 'Senza Titolo',
+      name: json['name'] ?? 'Senza Nome',
       overview: json['overview'] ?? '',
       posterPath: json['poster_path'] ?? '',
       backdropPath: json['backdrop_path'] ?? '',
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
       voteCount: json['vote_count'] ?? 0,
-      releaseDate: json['release_date'] ?? '',
+      firstAirDate: json['first_air_date'] ?? '',
       status: 'none',
     );
   }
 
-  factory Movie.fromFirestore(Map<String, dynamic> data, int id) {
-    return Movie(
+  // Per Firestore, useremo la stessa logica di mappatura ma adattata
+  factory TvSeries.fromFirestore(Map<String, dynamic> data, int id) {
+    return TvSeries(
       id: id,
-      title: data['title'] ?? '',
+      name:
+          data['title'] ??
+          '', // Su Firestore salviamo tutto come 'title' per uniformità query
       overview: data['overview'] ?? '',
       posterPath: data['posterPath'] ?? '',
       backdropPath: data['backdropPath'] ?? '',
       voteAverage: (data['voteAverage'] as num?)?.toDouble() ?? 0.0,
       voteCount: (data['voteCount'] as num?)?.toInt() ?? 0,
-      releaseDate: data['releaseDate'] ?? '',
+      firstAirDate:
+          data['releaseDate'] ??
+          '', // Su DB usiamo releaseDate come campo comune
       status: data['status'] ?? 'none',
       aiAnalysis: data['aiAnalysis'],
     );
@@ -68,41 +71,16 @@ class Movie {
 
   Map<String, dynamic> toMap() {
     return {
-      'title': title,
+      'title': name, // Salviamo come title per coerenza nel DB misto
       'overview': overview,
       'posterPath': posterPath,
       'backdropPath': backdropPath,
       'voteAverage': voteAverage,
       'voteCount': voteCount,
-      'releaseDate': releaseDate,
+      'releaseDate': firstAirDate,
       'status': status,
       'aiAnalysis': aiAnalysis,
+      'type': 'tv', // Flag fondamentale per distinguere nel DB
     };
-  }
-
-  Movie copyWith({
-    int? id,
-    String? title,
-    String? overview,
-    String? posterPath,
-    String? backdropPath,
-    double? voteAverage,
-    int? voteCount,
-    String? releaseDate,
-    String? status,
-    String? aiAnalysis,
-  }) {
-    return Movie(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      overview: overview ?? this.overview,
-      posterPath: posterPath ?? this.posterPath,
-      backdropPath: backdropPath ?? this.backdropPath,
-      voteAverage: voteAverage ?? this.voteAverage,
-      voteCount: voteCount ?? this.voteCount,
-      releaseDate: releaseDate ?? this.releaseDate,
-      status: status ?? this.status,
-      aiAnalysis: aiAnalysis ?? this.aiAnalysis,
-    );
   }
 }

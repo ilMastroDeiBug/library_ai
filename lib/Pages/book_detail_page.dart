@@ -1,10 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:library_ai/injection_container.dart';
-import 'package:library_ai/domain/repositories/auth_repository.dart';
-import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import '../../domain/entities/book.dart';
-import '../../services/utility_services/ai_service.dart';
+// IMPORTA LA LOGICA E I WIDGET
+import '../services/pages_services/book_detail_logic.dart'; // Assicurati del percorso corretto
 import '/models/book_widgets/book_stats_bar.dart';
 import '../models/ai_analysis_section.dart';
 
@@ -17,86 +15,17 @@ class BookDetailPage extends StatefulWidget {
 }
 
 class _BookDetailPageState extends State<BookDetailPage> {
+  // Istanziamo la logica
+  final BookDetailLogic _logic = BookDetailLogic();
+
   bool _isAnalyzing = false;
   static const Color _brandColor = Colors.orangeAccent;
 
-  Future<void> _handleStatusToggle(Book liveBook, String currentStatus) async {
-    try {
-      final newStatus = await sl<ToggleBookStatusUseCase>().call(
-        liveBook.id,
-        currentStatus,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newStatus == 'read'
-                  ? "Salvato in libreria."
-                  : "Spostato in 'Da Leggere'.",
-            ),
-            backgroundColor: newStatus == 'read' ? Colors.green : _brandColor,
-          ),
-        );
-      }
-    } catch (e) {
-      // Fallback per libri non ancora nel DB
-      try {
-        final authRepo = sl<AuthRepository>();
-        final userStream = await authRepo.userStream.first;
-
-        if (userStream != null) {
-          final bookToSave = Book(
-            id: liveBook.id,
-            title: liveBook.title,
-            author: liveBook.author,
-            description: liveBook.description,
-            thumbnailUrl: liveBook.thumbnailUrl,
-            pageCount: liveBook.pageCount,
-            rating: liveBook.rating,
-            ratingsCount: liveBook.ratingsCount,
-            status: currentStatus == 'read' ? 'toread' : 'read',
-          );
-          await sl<AddBookUseCase>().call(bookToSave, userStream.id);
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Libro aggiunto al Database."),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        }
-      } catch (innerE) {
-        print("Errore critico salvataggio: $innerE");
-      }
-    }
-  }
-
-  Future<void> _handleAnalysis(Book liveBook) async {
+  // Wrapper per chiamare l'analisi e aggiornare il loading locale
+  Future<void> _onAnalyzeTap(Book liveBook) async {
     setState(() => _isAnalyzing = true);
-    try {
-      final aiService = AIService();
-
-      final analysis = await aiService.analyzeMedia(
-        title: liveBook.title,
-        type: 'book',
-        userProfile: "16 anni, Developer, MMA",
-        creator: liveBook.author,
-      );
-
-      // Salva l'analisi nel DB usando lo Use Case
-      await sl<SaveBookAnalysisUseCase>().call(liveBook.id, analysis);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Errore analisi: $e")));
-      }
-    } finally {
-      if (mounted) setState(() => _isAnalyzing = false);
-    }
+    await _logic.handleAnalysis(context, liveBook);
+    if (mounted) setState(() => _isAnalyzing = false);
   }
 
   @override
@@ -108,7 +37,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
           .snapshots(),
       builder: (context, snapshot) {
         Book liveBook = widget.book;
-        String currentStatus = 'toread';
+        String currentStatus = 'none';
         String? storedAnalysis;
 
         if (snapshot.hasData && snapshot.data!.exists) {
@@ -117,7 +46,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
           currentStatus = liveBook.status;
           storedAnalysis = liveBook.aiAnalysis;
         }
-        final isRead = currentStatus == 'read';
 
         return Scaffold(
           backgroundColor: const Color(0xFF121212),
@@ -144,6 +72,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
           body: SingleChildScrollView(
             child: Column(
               children: [
+                // HEADER (Immagine)
                 SizedBox(
                   height: 400,
                   child: Stack(
@@ -188,7 +117,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                               image: DecorationImage(
                                 image: NetworkImage(liveBook.thumbnailUrl),
                                 fit: BoxFit.cover,
-                                onError: (_, __) {},
                               ),
                             ),
                           ),
@@ -197,6 +125,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     ],
                   ),
                 ),
+
+                // CONTENUTO
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -221,46 +151,55 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           letterSpacing: 2,
                         ),
                       ),
+
                       const SizedBox(height: 30),
                       BookStatsBar(book: liveBook),
                       const SizedBox(height: 30),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 55,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isRead
-                                ? const Color(0xFF1B5E20)
-                                : _brandColor,
-                            foregroundColor: isRead
-                                ? Colors.white
-                                : Colors.black,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 5,
-                            shadowColor: _brandColor.withOpacity(0.3),
-                          ),
-                          onPressed: () =>
-                              _handleStatusToggle(liveBook, currentStatus),
-                          icon: Icon(
-                            isRead ? Icons.undo : Icons.check_circle_outline,
-                          ),
-                          label: Text(
-                            isRead ? "COMPLETATO" : "SEGNA COME LETTO",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
+
+                      // I DUE TASTI (Logica delegata al Service)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildActionButton(
+                              label: "DA LEGGERE",
+                              icon: Icons.bookmark_add_outlined,
+                              isActive: currentStatus == 'toread',
+                              activeColor: _brandColor,
+                              // CHIAMA LA LOGICA QUI
+                              onTap: () => _logic.handleStatusAction(
+                                context,
+                                liveBook,
+                                'toread',
+                                currentStatus,
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: _buildActionButton(
+                              label: "LETTO",
+                              icon: Icons.check_circle_outline,
+                              isActive: currentStatus == 'read',
+                              activeColor: Colors.green,
+                              // CHIAMA LA LOGICA QUI
+                              onTap: () => _logic.handleStatusAction(
+                                context,
+                                liveBook,
+                                'read',
+                                currentStatus,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+
                       const SizedBox(height: 30),
                       AIAnalysisSection(
                         analysisText: storedAnalysis,
                         isAnalyzing: _isAnalyzing,
-                        onAnalyzeTap: () => _handleAnalysis(liveBook),
+                        onAnalyzeTap: () => _onAnalyzeTap(liveBook),
                       ),
+
                       const SizedBox(height: 40),
                       const Align(
                         alignment: Alignment.centerLeft,
@@ -294,6 +233,43 @@ class _BookDetailPageState extends State<BookDetailPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isActive
+              ? activeColor
+              : Colors.white.withOpacity(0.05),
+          foregroundColor: isActive ? Colors.black : Colors.white,
+          elevation: isActive ? 5 : 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: isActive
+                ? BorderSide.none
+                : BorderSide(color: Colors.white.withOpacity(0.1)),
+          ),
+        ),
+        onPressed: onTap,
+        icon: Icon(icon, size: 20),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: isActive ? Colors.black : Colors.white70,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -13,172 +13,159 @@ class LibraryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isBooks = mode == AppMode.books;
+    // Utilizziamo l'arancione come colore unico del brand per coerenza
+    const accentColor = Colors.orangeAccent;
 
-    return Stack(
-      children: [
-        // Sfondo con Gradiente
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF1A1F2C), Color(0xFF0F0F10)],
-            ),
-          ),
-        ),
-        // Elemento decorativo sfocato
-        Positioned(
-          top: -50,
-          right: -50,
-          child: Container(
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.purpleAccent.withOpacity(0.05),
-            ),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-              child: Container(color: Colors.transparent),
-            ),
-          ),
-        ),
-        // Contenuto SafeArea
-        SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return Container(
+      // Padding laterale standard per l'app
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Profilo e Benvenuto
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Profilo Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildProfileAvatar(context),
-                    const SizedBox(width: 16),
-                    _buildProfileText(),
+                    const Text(
+                      "BENTORNATO,",
+                      style: TextStyle(
+                        color: accentColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user?.displayName?.toUpperCase() ?? "ARCHITECT",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 30),
-              // Search Bar
-              _buildSearchBar(isBooks),
-              const SizedBox(height: 30),
-              // Stats Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: [
-                    LibraryStatCard(
-                      label: "IN CODA",
-                      status: "toread",
-                      icon: Icons.hourglass_empty_rounded,
-                      accentColor: Colors.orangeAccent,
-                    ),
-                    const SizedBox(width: 16),
-                    LibraryStatCard(
-                      label: isBooks ? "COMPLETATI" : "VISTI",
-                      status: "read",
-                      icon: Icons.check_circle_outline_rounded,
-                      accentColor: Colors.cyanAccent,
-                    ),
-                  ],
-                ),
+              _buildProfileAvatar(context, accentColor),
+            ],
+          ),
+
+          const SizedBox(height: 30),
+
+          // 2. Search Bar - Terminal Style
+          _buildSearchBar(accentColor),
+
+          const SizedBox(height: 30),
+
+          // 3. Stats Row - In coda e Completati
+          Row(
+            children: [
+              LibraryStatCard(
+                label: mode == AppMode.books ? "DA LEGGERE" : "DA VEDERE",
+                status: mode == AppMode.books ? "toread" : "towatch",
+                icon: mode == AppMode.books
+                    ? Icons.bookmark_outline
+                    : Icons.movie_filter_outlined,
+                accentColor: accentColor,
+                mode: mode,
+              ),
+              const SizedBox(width: 16),
+              LibraryStatCard(
+                label: mode == AppMode.books ? "LETTI" : "VISTI",
+                status: mode == AppMode.books ? "read" : "watched",
+                icon: Icons.check_circle_outline,
+                accentColor:
+                    Colors.white, // Contrasto pulito per la seconda card
+                mode: mode,
               ),
             ],
           ),
-        ),
-      ],
+
+          // Spazio extra in fondo per non toccare la TabBar
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 
-  Widget _buildProfileAvatar(BuildContext context) {
+  Widget _buildProfileAvatar(BuildContext context, Color accent) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const SettingsPage()),
       ),
       child: Hero(
-        tag: 'profile_pic',
+        tag: 'profile_avatar_header',
         child: Container(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white12),
-          ),
-          child: CircleAvatar(
-            radius: 24,
-            backgroundColor: Colors.grey[900],
-            child: user != null
-                ? Text(
-                    (user!.displayName?.isNotEmpty ?? false)
-                        ? user!.displayName![0].toUpperCase()
-                        : (user!.email.isNotEmpty ? user!.email[0].toUpperCase() : 'A'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  )
-                : const Icon(Icons.person, color: Colors.white),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileText() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ARCHIVIO DI',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
-            fontSize: 10,
-            letterSpacing: 2,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          user?.displayName?.toUpperCase() ?? "ARCHITECT",
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar(bool isBooks) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Row(
-            children: [
-              const SizedBox(width: 15),
-              Icon(Icons.search, color: Colors.white.withOpacity(0.4)),
-              const SizedBox(width: 15),
-              Text(
-                isBooks ? "Cerca nel database..." : "Cerca nella watchlist...",
-                style: TextStyle(color: Colors.white.withOpacity(0.3)),
+            border: Border.all(color: accent.withOpacity(0.5), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withOpacity(0.1),
+                blurRadius: 10,
+                spreadRadius: 2,
               ),
             ],
           ),
+          child: CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color(0xFF2A2A2A),
+            child: Text(
+              user?.displayName != null && user!.displayName!.isNotEmpty
+                  ? user!.displayName![0].toUpperCase()
+                  : 'A',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(Color accent) {
+    return Container(
+      height: 54,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A), // Grigio molto scuro per l'input
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 18),
+          Icon(Icons.search, color: accent.withOpacity(0.6), size: 20),
+          const SizedBox(width: 12),
+          Text(
+            "Cerca nel tuo archivio...",
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.25),
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
       ),
     );
   }

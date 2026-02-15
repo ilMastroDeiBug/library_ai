@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-// 1. CLEAN ARCHITECTURE IMPORTS
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
-import '../../domain/entities/movie.dart'; // Assicurati di puntare alla nuova Entity
-
+import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'movie_card.dart';
 import '../../pages/movie_detail_page.dart';
 
 class MovieSection extends StatelessWidget {
   final String title;
-  final String categoryPath; // Es: "movie/popular"
+  final String categoryPath;
+  final bool isTvSeries;
 
   const MovieSection({
     super.key,
     required this.title,
     required this.categoryPath,
+    this.isTvSeries = false,
   });
 
   @override
@@ -49,10 +49,10 @@ class MovieSection extends StatelessWidget {
         // Lista Orizzontale
         SizedBox(
           height: 180,
-          child: FutureBuilder<List<Movie>>(
-            // --- FIX QUI: USIAMO LO USE CASE ---
-            future: sl<GetMoviesByCategoryUseCase>().call(categoryPath),
-
+          child: FutureBuilder<List<dynamic>>(
+            future: isTvSeries
+                ? sl<GetTvSeriesByCategoryUseCase>().call(categoryPath)
+                : sl<GetMoviesByCategoryUseCase>().call(categoryPath),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -70,32 +70,32 @@ class MovieSection extends StatelessWidget {
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const Center(
                   child: Text(
-                    "Nessun film trovato",
+                    "Nessun contenuto",
                     style: TextStyle(color: Colors.white38),
                   ),
                 );
               }
 
-              final movies = snapshot.data!;
+              final list = snapshot.data!;
 
               return ListView.builder(
                 padding: const EdgeInsets.only(left: 20),
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                itemCount: movies.length,
+                itemCount: list.length,
                 itemBuilder: (context, index) {
-                  final movie = movies[index];
+                  final item = list[index];
 
-                  return GestureDetector(
+                  return MovieCard(
+                    media: item,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => MovieDetailPage(movie: movie),
+                          builder: (context) => MovieDetailPage(media: item),
                         ),
                       );
                     },
-                    child: MovieCard(movie: movie),
                   );
                 },
               );

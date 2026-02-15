@@ -2,12 +2,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../domain/entities/app_user.dart';
-import '/domain/repositories/auth_repository.dart';
+import '../../domain/repositories/auth_repository.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // IMPLEMENTAZIONE DEL GETTER RICHIESTO
+  @override
+  User? get currentUser => _firebaseAuth.currentUser;
 
   // Mapper: da Firebase a AppUser
   AppUser? _mapUser(User? user) {
@@ -42,12 +46,14 @@ class FirebaseAuthRepository implements AuthRepository {
         email: email,
         password: password,
       );
-      // Creiamo subito il documento su Firestore per il nuovo utente
-      await _firestore.collection('users').doc(credential.user!.uid).set({
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
-        'role': 'user', // Default
-      });
+      // Creiamo subito il documento su Firestore
+      if (credential.user != null) {
+        await _firestore.collection('users').doc(credential.user!.uid).set({
+          'email': email,
+          'createdAt': FieldValue.serverTimestamp(),
+          'role': 'user',
+        });
+      }
     } on FirebaseAuthException catch (e) {
       throw Exception(_mapErrorMessage(e.code));
     }
@@ -71,16 +77,21 @@ class FirebaseAuthRepository implements AuthRepository {
       );
 
       // Controlliamo se serve creare il doc su Firestore
-      final userDoc = await _firestore
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .get();
-      if (!userDoc.exists) {
-        await _firestore.collection('users').doc(userCredential.user!.uid).set({
-          'email': userCredential.user!.email,
-          'displayName': userCredential.user!.displayName,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      if (userCredential.user != null) {
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .get();
+        if (!userDoc.exists) {
+          await _firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set({
+                'email': userCredential.user!.email,
+                'displayName': userCredential.user!.displayName,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+        }
       }
     } catch (e) {
       throw Exception("Errore Login Google: $e");

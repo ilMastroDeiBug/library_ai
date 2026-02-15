@@ -1,5 +1,5 @@
 class HomeService {
-  // Struttura dati per le sezioni
+  // --- SEZIONI LIBRI ---
   static const List<Map<String, dynamic>> bookSections = [
     {'header': 'NARRATIVA'},
     {'title': 'Bestsellers & Classici', 'query': 'fiction'},
@@ -28,36 +28,76 @@ class HomeService {
     {'title': 'Viaggi', 'query': 'travel'},
   ];
 
+  // --- SEZIONI FILM (Endpoints specifici per Movie) ---
   static const List<Map<String, dynamic>> movieSections = [
-    {'header': 'IN EVIDENZA'},
-    {'title': 'Trending Now', 'path': 'movie/popular'},
-    {'title': 'Al Cinema', 'path': 'movie/now_playing'},
-    {'title': 'In Arrivo', 'path': 'movie/upcoming'},
-    {'title': 'Capolavori Assoluti', 'path': 'movie/top_rated'},
+    {'header': 'FILM IN EVIDENZA'},
+    {'title': 'Più Popolari', 'path': 'popular'},
+    {'title': 'Al Cinema ora', 'path': 'now_playing'},
+    {'title': 'Grandi Successi (Top)', 'path': 'top_rated'},
+    {'title': 'Prossime Uscite', 'path': 'upcoming'},
+    {'title': 'Trend della Settimana', 'path': 'trending'},
 
-    {'header': 'AZIONE & SCI-FI'},
-    {'title': 'Sci-Fi & Cyberpunk', 'path': 'discover/movie?with_genres=878'},
+    {'header': 'AZIONE & ADRENALINA'},
+    {'title': 'Sci-Fi & Cyberpunk', 'path': 'with_genres=878'},
+    {'title': 'Azione', 'path': 'with_genres=28'},
+    {'title': 'Avventura', 'path': 'with_genres=12'},
+    {'title': 'Thriller', 'path': 'with_genres=53'},
+    {'title': 'Crime', 'path': 'with_genres=80'},
+    {'title': 'Guerra', 'path': 'with_genres=10752'},
+
+    {'header': 'SENTIMENTO & STORIA'},
+    {'title': 'Drammatico', 'path': 'with_genres=18'},
+    {'title': 'Romantico', 'path': 'with_genres=10749'},
+    {'title': 'Storico', 'path': 'with_genres=36'},
+    {'title': 'Western', 'path': 'with_genres=37'},
+
+    {'header': 'FANTASTICO & DARK'},
+    {'title': 'Fantasy', 'path': 'with_genres=14'},
+    {'title': 'Horror', 'path': 'with_genres=27'},
+    {'title': 'Mistero', 'path': 'with_genres=9648'},
+
+    {'header': 'INTRATTENIMENTO'},
+    {'title': 'Animazione', 'path': 'with_genres=16'},
+    {'title': 'Commedia', 'path': 'with_genres=35'},
+    {'title': 'Per la Famiglia', 'path': 'with_genres=10751'},
+    {'title': 'Musica', 'path': 'with_genres=10402'},
+    {'title': 'Documentari', 'path': 'with_genres=99'},
+  ];
+
+  // --- SEZIONI SERIE TV (Endpoints e IDs specifici per TV) ---
+  static const List<Map<String, dynamic>> tvSections = [
+    {'header': 'SERIE TV IN EVIDENZA'},
+    {'title': 'Trending della Settimana', 'path': 'trending'},
+    {'title': 'Più Popolari', 'path': 'popular'},
+    {'title': 'Le Migliori di sempre', 'path': 'top_rated'},
+    {'title': 'In onda Oggi', 'path': 'airing_today'},
+    {'title': 'Novità in arrivo', 'path': 'on_the_air'},
+
+    {'header': 'SENSE OF WONDER'},
     {
-      'title': 'Adrenalina Pura (Azione)',
-      'path': 'discover/movie?with_genres=28',
-    },
-    {'title': 'Avventura', 'path': 'discover/movie?with_genres=12'},
-    {'title': 'Thriller', 'path': 'discover/movie?with_genres=53'},
-    {'title': 'Guerra', 'path': 'discover/movie?with_genres=10752'},
-    {'title': 'Western', 'path': 'discover/movie?with_genres=37'},
+      'title': 'Sci-Fi & Fantasy',
+      'path': 'with_genres=10765',
+    }, // ID specifico TV
+    {
+      'title': 'Action & Adventure',
+      'path': 'with_genres=10759',
+    }, // ID specifico TV
+    {'title': 'Animazione', 'path': 'with_genres=16'},
 
-    {'header': 'EMOZIONI & STORIE'},
-    {'title': 'Drammatici', 'path': 'discover/movie?with_genres=18'},
-    {'title': 'Commedia', 'path': 'discover/movie?with_genres=35'},
-    {'title': 'Romance', 'path': 'discover/movie?with_genres=10749'},
-    {'title': 'Family', 'path': 'discover/movie?with_genres=10751'},
-    {'title': 'Animazione', 'path': 'discover/movie?with_genres=16'},
+    {'header': 'DRAMMA & TENSIONE'},
+    {'title': 'Crime', 'path': 'with_genres=80'},
+    {'title': 'Drammatico', 'path': 'with_genres=18'},
+    {'title': 'Mistero', 'path': 'with_genres=9648'},
+    {
+      'title': 'Guerra & Politica',
+      'path': 'with_genres=10768',
+    }, // ID specifico TV
 
-    {'header': 'CULT & DARK'},
-    {'title': 'Horror', 'path': 'discover/movie?with_genres=27'},
-    {'title': 'Mistero', 'path': 'discover/movie?with_genres=9648'},
-    {'title': 'Crime', 'path': 'discover/movie?with_genres=80'},
-    {'title': 'Documentari', 'path': 'discover/movie?with_genres=99'},
-    {'title': 'Storici', 'path': 'discover/movie?with_genres=36'},
+    {'header': 'INTRATTENIMENTO TV'},
+    {'title': 'Commedia', 'path': 'with_genres=35'},
+    {'title': 'Documentari', 'path': 'with_genres=99'},
+    {'title': 'Soap Opera', 'path': 'with_genres=10766'},
+    {'title': 'Kids', 'path': 'with_genres=10762'},
+    {'title': 'Reality & Talk', 'path': 'with_genres=10767'},
   ];
 }

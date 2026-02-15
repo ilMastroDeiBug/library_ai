@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// IMPORTA L'ENTITY DEL DOMINIO
 import 'package:library_ai/domain/entities/movie.dart';
+import 'package:library_ai/domain/entities/tv_series.dart';
+import 'package:library_ai/injection_container.dart';
 import '../../models/movie_widget/review_model.dart';
 import '../../models/movie_widget/cast_model.dart';
+import '../utility_services/language_service.dart';
 
 class TmdbService {
   static const String _accessToken =
@@ -15,50 +17,75 @@ class TmdbService {
     'Content-Type': 'application/json;charset=utf-8',
   };
 
-  // Restituisce List<Movie> (Domain Entity)
-  Future<List<Movie>> fetchByCategory(String categoryPath) async {
-    final url = Uri.parse('$_baseUrl/$categoryPath?language=it-IT&page=1');
-    return _fetchFromUrl(url);
+  // --- FILM ---
+  Future<List<Movie>> fetchMoviesByCategory(String endpoint) async {
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse('$_baseUrl/movie/$endpoint?language=$lang&page=1');
+    return _fetchMovies(url);
   }
 
-  Future<List<Movie>> searchMedia(String query) async {
-    if (query.isEmpty) return [];
+  Future<List<Movie>> fetchMoviesByGenre(String genreId) async {
+    final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/search/multi?query=$query&language=it-IT&include_adult=false',
+      '$_baseUrl/discover/movie?with_genres=$genreId&language=$lang&page=1',
     );
-    return _fetchFromUrl(url);
+    return _fetchMovies(url);
   }
 
-  Future<List<Movie>> _fetchFromUrl(Uri url) async {
-    try {
-      final response = await http.get(url, headers: _headers);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List results = data['results'];
-
-        return results
-            .where((item) => item['media_type'] != 'person')
-            // Usa fromTmdb che abbiamo definito nell'Entity
-            .map((item) => Movie.fromTmdb(item))
-            .toList();
-      } else {
-        print("Errore TMDB: ${response.statusCode}");
-        return [];
-      }
-    } catch (e) {
-      print("Eccezione TMDB: $e");
-      return [];
-    }
+  Future<List<Movie>> fetchTrendingMovies() async {
+    final url = Uri.parse('$_baseUrl/trending/movie/week?language=it-IT');
+    return _fetchMovies(url);
   }
 
-  Future<List<CastMember>> fetchMovieCast(int movieId) async {
-    final url = Uri.parse('$_baseUrl/movie/$movieId/credits?language=it-IT');
+  Future<List<Movie>> searchMovies(String query) async {
+    if (query.isEmpty) return [];
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse(
+      '$_baseUrl/search/movie?query=$query&language=$lang&include_adult=false',
+    );
+    return _fetchMovies(url);
+  }
+
+  // --- SERIE TV ---
+  Future<List<TvSeries>> fetchTvSeriesByCategory(String endpoint) async {
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse('$_baseUrl/tv/$endpoint?language=$lang&page=1');
+    return _fetchTvSeries(url);
+  }
+
+  Future<List<TvSeries>> fetchTvByGenre(String genreId) async {
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse(
+      '$_baseUrl/discover/tv?with_genres=$genreId&language=$lang&page=1',
+    );
+    return _fetchTvSeries(url);
+  }
+
+  Future<List<TvSeries>> fetchTvTrending() async {
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse('$_baseUrl/trending/tv/week?language=$lang');
+    return _fetchTvSeries(url);
+  }
+
+  Future<List<TvSeries>> searchTvSeries(String query) async {
+    if (query.isEmpty) return [];
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse(
+      '$_baseUrl/search/tv?query=$query&language=$lang&include_adult=false',
+    );
+    return _fetchTvSeries(url);
+  }
+
+  // --- COMMON ---
+  Future<List<CastMember>> fetchCast(int id, {bool isTv = false}) async {
+    final endpoint = isTv ? 'tv' : 'movie';
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse('$_baseUrl/$endpoint/$id/credits?language=$lang');
     try {
       final response = await http.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List castList = data['cast'];
+        final List castList = data['cast'] ?? [];
         return castList
             .map((json) => CastMember.fromJson(json))
             .take(10)
@@ -70,16 +97,50 @@ class TmdbService {
     }
   }
 
-  Future<List<Review>> fetchMovieReviews(int movieId) async {
+  Future<List<Review>> fetchReviews(int id, {bool isTv = false}) async {
+    final endpoint = isTv ? 'tv' : 'movie';
     final url = Uri.parse(
-      '$_baseUrl/movie/$movieId/reviews?language=en-US&page=1',
+      '$_baseUrl/$endpoint/$id/reviews?language=en-US&page=1',
     );
     try {
       final response = await http.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List results = data['results'];
+        final List results = data['results'] ?? [];
         return results.map((json) => Review.fromJson(json)).take(5).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // --- HELPERS ---
+  Future<List<Movie>> _fetchMovies(Uri url) async {
+    try {
+      print('🌐 Request Movie: $url');
+      final response = await http.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return (data['results'] as List)
+            .map((item) => Movie.fromTmdb(item))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<TvSeries>> _fetchTvSeries(Uri url) async {
+    try {
+      print('🌐 Request TV: $url');
+      final response = await http.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return (data['results'] as List)
+            .map((item) => TvSeries.fromTmdb(item))
+            .toList();
       }
       return [];
     } catch (e) {

@@ -13,6 +13,8 @@ import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
+import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/services/utility_services/language_service.dart';
 
 final sl = GetIt.instance;
 
@@ -37,6 +39,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetUserDataUseCase(sl()));
   sl.registerLazySingleton(() => UpdateBioUseCase(sl()));
   sl.registerLazySingleton(() => UpdatePrivacyUseCase(sl()));
+  sl.registerLazySingleton(() => LanguageService());
 
   // Use Cases (Books)
   sl.registerLazySingleton(() => GetUserBooksUseCase(sl()));
@@ -57,4 +60,21 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetMovieReviewsUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieCastUseCase(sl()));
   sl.registerLazySingleton(() => AnalyzeMovieUseCase(sl()));
+  sl.registerLazySingleton(() => SearchMoviesUseCase(sl()));
+
+  // --- TV SERIES USE CASES ---
+  // API
+  sl.registerLazySingleton(() => GetTvSeriesByCategoryUseCase(sl()));
+  sl.registerLazySingleton(() => SearchTvSeriesUseCase(sl()));
+  sl.registerLazySingleton(() => GetTvSeriesReviewsUseCase(sl()));
+  sl.registerLazySingleton(() => GetTvSeriesCastUseCase(sl()));
+  sl.registerLazySingleton(() => AnalyzeTvSeriesUseCase(sl()));
+
+  // DB
+  sl.registerLazySingleton(() => SaveTvSeriesUseCase(sl()));
+  sl.registerLazySingleton(
+    () => ToggleTvSeriesStatusUseCase(sl()),
+  ); // Opzionale se usi quello movie, ma meglio separare
+  sl.registerLazySingleton(() => DeleteTvSeriesUseCase(sl()));
+  sl.registerLazySingleton(() => SaveTvSeriesAnalysisUseCase(sl()));
 }

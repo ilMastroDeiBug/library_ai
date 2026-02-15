@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-// CLEAN ARCH IMPORTS
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
-// IMPORT CHE MANCAVA:
 import 'package:library_ai/domain/repositories/auth_repository.dart';
+import 'package:library_ai/services/utility_services/language_service.dart';
 
-// Import Widget Modulari
 import '../models/settings_widgets/settings_header.dart';
 import '../models/settings_widgets/settings_tile.dart';
-//import '../models/settings_widgets/settings_switch_tile.dart';
 import '../models/settings_widgets/edit_profile_dialogs.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -23,7 +20,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   AppUser? _currentUser;
   bool _isLoading = true;
-
   static const Color _brandColor = Colors.orangeAccent;
 
   @override
@@ -33,20 +29,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadData() async {
-    // 1. Otteniamo l'istanza del repository
     final authRepo = sl<AuthRepository>();
-
-    // 2. Prendiamo l'utente corrente dallo stream
     final userAuth = await authRepo.userStream.first;
 
     if (userAuth != null) {
       try {
-        // 3. Carichiamo i dati estesi dal DB
         final userData = await sl<GetUserDataUseCase>().call(userAuth.id);
-
         if (mounted) {
           setState(() {
-            // Usa i dati completi se ci sono, altrimenti quelli base
             _currentUser = userData ?? userAuth;
             _isLoading = false;
           });
@@ -64,29 +54,62 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _handleUpdateName(String newName) async {
-    await sl<UpdateProfileUseCase>().call(newName);
-    _loadData(); // Ricarica
+  void _showLanguagePicker() {
+    final langService = sl<LanguageService>();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 20),
+          const Text(
+            "LINGUA CONTENUTI",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(Icons.language, color: Colors.orangeAccent),
+            title: const Text(
+              "Italiano",
+              style: TextStyle(color: Colors.white),
+            ),
+            trailing: langService.currentLanguage == 'it-IT'
+                ? const Icon(Icons.check, color: _brandColor)
+                : null,
+            onTap: () {
+              langService.updateLanguage('it-IT');
+              Navigator.pop(context);
+              setState(() {});
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.language, color: Colors.blueAccent),
+            title: const Text("English", style: TextStyle(color: Colors.white)),
+            trailing: langService.currentLanguage == 'en-US'
+                ? const Icon(Icons.check, color: _brandColor)
+                : null,
+            onTap: () {
+              langService.updateLanguage('en-US');
+              Navigator.pop(context);
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 30),
+        ],
+      ),
+    );
   }
 
-  Future<void> _handleUpdateBio(String newBio) async {
-    if (_currentUser == null) return;
-    await sl<UpdateBioUseCase>().call(_currentUser!.id, newBio);
-    setState(() {
-      _currentUser = AppUser(
-        id: _currentUser!.id,
-        email: _currentUser!.email,
-        displayName: _currentUser!.displayName,
-        bio: newBio,
-        isPublic: _currentUser!.isPublic,
-      );
-    });
-  }
-
-  Future<void> _handleLogout() async {
-    await sl<LogoutUseCase>().call();
-    if (mounted) Navigator.pop(context);
-  }
+  String _getLanguageName(String code) =>
+      code == 'it-IT' ? "Italiano" : "English";
 
   @override
   Widget build(BuildContext context) {
@@ -102,12 +125,22 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
         title: const Text(
-          "Impostazioni",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          "IMPOSTAZIONI",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            letterSpacing: 2,
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -115,14 +148,20 @@ class _SettingsPageState extends State<SettingsPage> {
         physics: const BouncingScrollPhysics(),
         children: [
           _buildSectionHeader("PROFILO"),
-          // SettingsHeader deve accettare AppUser o i singoli campi
           SettingsHeader(
-            user: null,
+            user: _currentUser, // Ora i tipi coincidono (AppUser)
             bio: _currentUser?.bio ?? "Nessuna biografia",
             onPhotoTap: () {},
           ),
           const SizedBox(height: 20),
-
+          _buildSectionHeader("PREFERENZE"),
+          SettingsTile(
+            icon: Icons.translate,
+            title: "Lingua dei risultati",
+            subtitle: _getLanguageName(sl<LanguageService>().currentLanguage),
+            onTap: _showLanguagePicker,
+          ),
+          const SizedBox(height: 20),
           _buildSectionHeader("MODIFICA DATI"),
           SettingsTile(
             icon: Icons.edit,
@@ -131,7 +170,9 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => EditProfileDialogs.showNameDialog(
               context,
               _currentUser?.displayName,
-              _handleUpdateName,
+              (name) => sl<UpdateProfileUseCase>()
+                  .call(name)
+                  .then((_) => _loadData()),
             ),
           ),
           SettingsTile(
@@ -141,21 +182,21 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => EditProfileDialogs.showBioDialog(
               context,
               _currentUser?.bio ?? "",
-              _handleUpdateBio,
+              (bio) => sl<UpdateBioUseCase>()
+                  .call(_currentUser!.id, bio)
+                  .then((_) => _loadData()),
             ),
           ),
-
-          // ... altri tile ...
-          const SizedBox(height: 20),
+          const SizedBox(height: 40),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent.withOpacity(0.1),
-                foregroundColor: Colors.redAccent,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+              onPressed: () => sl<LogoutUseCase>().call().then(
+                (_) => Navigator.pop(context),
               ),
-              onPressed: _handleLogout,
-              child: const Text("LOGOUT"),
+              icon: const Icon(Icons.logout),
+              label: const Text("LOGOUT SESSIONE"),
             ),
           ),
         ],
@@ -165,13 +206,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+      padding: const EdgeInsets.fromLTRB(25, 10, 20, 10),
       child: Text(
         title,
         style: TextStyle(
           color: _brandColor.withOpacity(0.8),
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
+          letterSpacing: 1.5,
         ),
       ),
     );

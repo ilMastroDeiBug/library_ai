@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'search_page.dart';
 import '../models/app_mode.dart';
 import 'package:library_ai/services/pages_services/explore_service.dart';
 import '../models/category_card.dart';
+import 'search_page.dart'; // Assicurati che il nome del file sia corretto
 
 class ExplorePage extends StatelessWidget {
   final AppMode mode;
   final VoidCallback onOpenDrawer;
 
   final ExploreService _exploreService = ExploreService();
-
-  // UNICO COLORE PER TUTTO (Style Architect)
   static const Color _themeColor = Colors.orangeAccent;
 
   ExplorePage({super.key, required this.mode, required this.onOpenDrawer});
@@ -18,10 +16,10 @@ class ExplorePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final categories = _exploreService.getCategories(mode);
-    final title = mode == AppMode.books ? "Esplora Libri" : "Esplora Cinema";
+    final title = mode == AppMode.books ? "ESPLORA LIBRI" : "ESPLORA CINEMA";
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), // Sfondo uniforme alla Home
+      backgroundColor: const Color(0xFF121212),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -30,23 +28,34 @@ class ExplorePage extends StatelessWidget {
             floating: true,
             pinned: true,
             expandedHeight: 120,
-            leading: IconButton(
-              icon: const Icon(
-                Icons.menu_rounded,
-                color: Colors.white,
-                size: 28,
+            elevation: 0,
+            // Custom Leading per evitare collisioni
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GestureDetector(
+                onTap: onOpenDrawer,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.menu_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
               ),
-              onPressed: onOpenDrawer,
             ),
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
               title: Text(
                 title,
                 style: const TextStyle(
-                  fontWeight: FontWeight.w900, // Font più spesso
-                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 20,
                   color: Colors.white,
-                  letterSpacing: 1.5, // Spaziatura cinematografica
+                  letterSpacing: 1.5,
                 ),
               ),
               background: Container(
@@ -55,7 +64,7 @@ class ExplorePage extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      _themeColor.withOpacity(0.15), // Tocco di giallo in alto
+                      _themeColor.withOpacity(0.1),
                       const Color(0xFF121212),
                     ],
                   ),
@@ -67,7 +76,9 @@ class ExplorePage extends StatelessWidget {
                 icon: const Icon(Icons.search, color: _themeColor),
                 onPressed: () => showSearch(
                   context: context,
-                  delegate: BookSearchDelegate(),
+                  delegate: UniversalSearchDelegate(
+                    mode: mode,
+                  ), // FIX: Usiamo quello universale
                 ),
               ),
             ],
@@ -77,16 +88,17 @@ class ExplorePage extends StatelessWidget {
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 1.6, // Formato Wide
+                childAspectRatio: 1.5,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
-              delegate: SliverChildBuilderDelegate((context, index) {
-                return CategoryCard(category: categories[index]);
-              }, childCount: categories.length),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => CategoryCard(category: categories[index]),
+                childCount: categories.length,
+              ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );
