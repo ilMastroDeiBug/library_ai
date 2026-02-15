@@ -13,10 +13,18 @@ class BookDetailLogic {
     String targetStatus,
     String currentStatus,
   ) async {
-    // 1. RIMOZIONE: Se clicco sullo stato già attivo
+    // 1. Recupero Utente
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) {
+      if (context.mounted) _showMinimalSnackBar(context, "Devi essere loggato");
+      return;
+    }
+
+    // 2. RIMOZIONE: Se clicco sullo stato già attivo, elimino il libro dalla libreria dell'utente
     if (currentStatus == targetStatus) {
       try {
-        await sl<DeleteBookUseCase>().call(liveBook.id);
+        // CORRETTO: Passiamo userId e bookId
+        await sl<DeleteBookUseCase>().call(user.uid, liveBook.id);
         if (context.mounted)
           _showMinimalSnackBar(context, "Rimosso dalla libreria");
       } catch (e) {
@@ -26,27 +34,23 @@ class BookDetailLogic {
       return;
     }
 
-    // 2. AGGIORNAMENTO/AGGIUNTA
+    // 3. AGGIORNAMENTO/AGGIUNTA
     try {
-      // Usiamo AddBookUseCase per fare un "Upsert" (Inserisci o Aggiorna) sicuro
-      final authRepo = sl<AuthRepository>();
-      final userStream = await authRepo.userStream.first;
+      final bookToSave = Book(
+        id: liveBook.id,
+        title: liveBook.title,
+        author: liveBook.author,
+        description: liveBook.description,
+        thumbnailUrl: liveBook.thumbnailUrl,
+        pageCount: liveBook.pageCount,
+        rating: liveBook.rating,
+        ratingsCount: liveBook.ratingsCount,
+        status: targetStatus, // Nuovo stato (read o toread)
+        aiAnalysis: liveBook.aiAnalysis,
+      );
 
-      if (userStream != null) {
-        final bookToSave = Book(
-          id: liveBook.id,
-          title: liveBook.title,
-          author: liveBook.author,
-          description: liveBook.description,
-          thumbnailUrl: liveBook.thumbnailUrl,
-          pageCount: liveBook.pageCount,
-          rating: liveBook.rating,
-          ratingsCount: liveBook.ratingsCount,
-          status: targetStatus, // Forziamo il nuovo stato
-          aiAnalysis: liveBook.aiAnalysis,
-        );
-        await sl<AddBookUseCase>().call(bookToSave, userStream.id);
-      }
+      // CORRETTO: Salvataggio nel path users/{userId}/library/{bookId}
+      await sl<AddBookUseCase>().call(bookToSave, user.uid);
 
       if (context.mounted) {
         _showMinimalSnackBar(
@@ -64,17 +68,23 @@ class BookDetailLogic {
 
   // Gestisce l'analisi AI
   Future<String?> handleAnalysis(BuildContext context, Book liveBook) async {
+    // 1. Recupero Utente
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) return null;
+
     try {
       final aiService = AIService();
       final analysis = await aiService.analyzeMedia(
         title: liveBook.title,
         type: 'book',
-        userProfile: "16 anni, Developer, MMA", // Profilo utente
+        userProfile: "16 anni, Architect, Developer, MMA", // Profilo Architect
         creator: liveBook.author,
       );
 
-      // Salva nel DB
-      await sl<SaveBookAnalysisUseCase>().call(liveBook.id, analysis);
+      // 2. Salva nel DB associandolo all'utente corrente
+      // CORRETTO: Passiamo userId, bookId e l'analisi
+      await sl<SaveBookAnalysisUseCase>().call(user.uid, liveBook.id, analysis);
+
       return analysis;
     } catch (e) {
       if (context.mounted) _showMinimalSnackBar(context, "Errore analisi AI");
@@ -82,7 +92,7 @@ class BookDetailLogic {
     }
   }
 
-  // Helper Grafico per i messaggi (Grigio scuro, no emoji)
+  // Helper Grafico per i messaggi
   void _showMinimalSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -94,7 +104,7 @@ class BookDetailLogic {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF333333), // Grigio Scuro elegante
+        backgroundColor: const Color(0xFF333333),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: const Duration(seconds: 2),

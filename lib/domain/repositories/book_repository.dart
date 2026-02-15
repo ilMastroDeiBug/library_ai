@@ -1,14 +1,22 @@
-import '../entities/book.dart'; // O models/book_widgets/book_model.dart
+import '../entities/book.dart';
 
 abstract class BookRepository {
-  // DB
+  // Metodi Database (Richiedono userId per la nuova struttura users/{id}/library)
   Stream<List<Book>> getUserBooksStream(String userId, String status);
   Future<void> addBook(Book book, String userId);
-  Future<void> deleteBook(String bookId);
-  Future<void> updateBookStatus(String bookId, String newStatus);
-  Future<void> saveAnalysis(String bookId, String analysis);
+  Future<void> deleteBook(String userId, String bookId); // Aggiunto userId
+  Future<void> updateBookStatus(
+    String userId,
+    String bookId,
+    String newStatus,
+  ); // Aggiunto userId
+  Future<void> saveAnalysis(
+    String userId,
+    String bookId,
+    String analysis,
+  ); // Aggiunto userId
 
-  // API
-  Future<List<Book>> searchBooks(String query); // Via OpenLibrary
-  Future<List<Book>> getBooksByCategory(String categoryId); // Via GoogleBooks
+  // Metodi API
+  Future<List<Book>> searchBooks(String query);
+  Future<List<Book>> getBooksByCategory(String categoryId);
 }

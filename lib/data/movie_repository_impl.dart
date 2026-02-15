@@ -10,107 +10,85 @@ class MovieRepositoryImpl implements MovieRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TmdbService _tmdbService = TmdbService();
 
-  // --- FIRESTORE METHODS ---
+  // Helper per il percorso della watchlist dell'utente
+  CollectionReference _watchlistRef(String userId) =>
+      _firestore.collection('users').doc(userId).collection('watchlist');
+
   @override
   Stream<List<dynamic>> getWatchlistStream(String userId, String status) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('watchlist')
-        .where('status', isEqualTo: status)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final data = doc.data();
-            final type = data['type'] ?? 'movie';
-            final int id = int.tryParse(doc.id) ?? 0;
-            return (type == 'tv')
-                ? TvSeries.fromFirestore(data, id)
-                : Movie.fromFirestore(data, id);
-          }).toList();
-        });
+    return _watchlistRef(
+      userId,
+    ).where('status', isEqualTo: status).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final type = data['type'] ?? 'movie';
+        final int id = int.tryParse(doc.id) ?? 0;
+        return (type == 'tv')
+            ? TvSeries.fromFirestore(data, id)
+            : Movie.fromFirestore(data, id);
+      }).toList();
+    });
   }
 
   @override
-  Future<void> saveMovie(Movie movie, String userId) async =>
-      _saveMedia(userId, movie.id, movie.toMap(), 'movie');
+  Future<void> saveMovie(Movie movie, String userId) async {
+    final data = movie.toMap();
+    data['type'] = 'movie';
+    data['timestamp'] = FieldValue.serverTimestamp();
+    await _watchlistRef(
+      userId,
+    ).doc(movie.id.toString()).set(data, SetOptions(merge: true));
+  }
 
   @override
-  Future<void> saveTvSeries(TvSeries series, String userId) async =>
-      _saveMedia(userId, series.id, series.toMap(), 'tv');
-
-  Future<void> _saveMedia(
-    String userId,
-    int id,
-    Map<String, dynamic> data,
-    String type,
-  ) async {
-    data['type'] = type;
+  Future<void> saveTvSeries(TvSeries series, String userId) async {
+    final data = series.toMap();
+    data['type'] = 'tv';
     data['timestamp'] = FieldValue.serverTimestamp();
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('watchlist')
-        .doc(id.toString())
-        .set(data, SetOptions(merge: true));
+    await _watchlistRef(
+      userId,
+    ).doc(series.id.toString()).set(data, SetOptions(merge: true));
   }
 
   @override
   Future<void> updateStatus(String userId, int id, String newStatus) async {
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('watchlist')
-        .doc(id.toString())
-        .update({'status': newStatus});
+    await _watchlistRef(
+      userId,
+    ).doc(id.toString()).update({'status': newStatus});
   }
 
   @override
   Future<void> deleteItem(String userId, int id) async {
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('watchlist')
-        .doc(id.toString())
-        .delete();
+    await _watchlistRef(userId).doc(id.toString()).delete();
   }
 
   @override
   Future<void> saveAnalysis(String userId, int id, String analysis) async {
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('watchlist')
-        .doc(id.toString())
-        .set({
-          'aiAnalysis': analysis,
-          'timestamp': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+    await _watchlistRef(userId).doc(id.toString()).set({
+      'aiAnalysis': analysis,
+      'timestamp': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
-  // --- API METHODS ---
+  // --- METODI API TMDB ---
   @override
   Future<List<Movie>> getMoviesByCategory(String categoryPath) async {
     if (categoryPath == 'trending')
       return await _tmdbService.fetchTrendingMovies();
-
     if (categoryPath.contains('with_genres=')) {
       final genreId = categoryPath.split('=').last;
       return await _tmdbService.fetchMoviesByGenre(genreId);
     }
-
     return await _tmdbService.fetchMoviesByCategory(categoryPath);
   }
 
   @override
   Future<List<TvSeries>> getTvSeriesByCategory(String categoryPath) async {
     if (categoryPath == 'trending') return await _tmdbService.fetchTvTrending();
-
     if (categoryPath.contains('with_genres=')) {
       final genreId = categoryPath.split('=').last;
       return await _tmdbService.fetchTvByGenre(genreId);
     }
-
     return await _tmdbService.fetchTvSeriesByCategory(categoryPath);
   }
 

@@ -1,8 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/book.dart';
-// IMPORTA LA LOGICA E I WIDGET
-import '../services/pages_services/book_detail_logic.dart'; // Assicurati del percorso corretto
+import '../services/pages_services/book_detail_logic.dart';
 import '/models/book_widgets/book_stats_bar.dart';
 import '../models/ai_analysis_section.dart';
 
@@ -15,30 +15,29 @@ class BookDetailPage extends StatefulWidget {
 }
 
 class _BookDetailPageState extends State<BookDetailPage> {
-  // Istanziamo la logica
   final BookDetailLogic _logic = BookDetailLogic();
-
   bool _isAnalyzing = false;
   static const Color _brandColor = Colors.orangeAccent;
 
-  // Wrapper per chiamare l'analisi e aggiornare il loading locale
-  Future<void> _onAnalyzeTap(Book liveBook) async {
-    setState(() => _isAnalyzing = true);
-    await _logic.handleAnalysis(context, liveBook);
-    if (mounted) setState(() => _isAnalyzing = false);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    // Pulizia ID per il path Firestore (stessa logica usata nel repository)
+    final String cleanId = widget.book.id.replaceAll('/', '_');
+
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('books')
-          .doc(widget.book.id)
-          .snapshots(),
+      stream: user != null
+          ? FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('library')
+                .doc(cleanId)
+                .snapshots()
+          : null,
       builder: (context, snapshot) {
         Book liveBook = widget.book;
-        String currentStatus = 'none';
-        String? storedAnalysis;
+        String currentStatus = widget.book.status;
+        String? storedAnalysis = widget.book.aiAnalysis;
 
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -56,8 +55,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
             leading: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -72,61 +71,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
           body: SingleChildScrollView(
             child: Column(
               children: [
-                // HEADER (Immagine)
-                SizedBox(
-                  height: 400,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Image.network(
-                          liveBook.thumbnailUrl,
-                          fit: BoxFit.cover,
-                          color: Colors.black.withOpacity(0.6),
-                          colorBlendMode: BlendMode.darken,
-                          errorBuilder: (_, __, ___) =>
-                              Container(color: Colors.grey[900]),
-                        ),
-                      ),
-                      Positioned.fill(
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Colors.transparent, Color(0xFF121212)],
-                              stops: [0.3, 1.0],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Center(
-                        child: Hero(
-                          tag: liveBook.id,
-                          child: Container(
-                            height: 240,
-                            width: 160,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _brandColor.withOpacity(0.2),
-                                  blurRadius: 30,
-                                  spreadRadius: 5,
-                                ),
-                              ],
-                              image: DecorationImage(
-                                image: NetworkImage(liveBook.thumbnailUrl),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // CONTENUTO
+                _buildHeroHeader(liveBook),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -138,7 +83,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
-                          letterSpacing: 1,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -151,12 +95,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           letterSpacing: 2,
                         ),
                       ),
-
                       const SizedBox(height: 30),
                       BookStatsBar(book: liveBook),
                       const SizedBox(height: 30),
-
-                      // I DUE TASTI (Logica delegata al Service)
                       Row(
                         children: [
                           Expanded(
@@ -165,7 +106,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                               icon: Icons.bookmark_add_outlined,
                               isActive: currentStatus == 'toread',
                               activeColor: _brandColor,
-                              // CHIAMA LA LOGICA QUI
                               onTap: () => _logic.handleStatusAction(
                                 context,
                                 liveBook,
@@ -181,7 +121,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                               icon: Icons.check_circle_outline,
                               isActive: currentStatus == 'read',
                               activeColor: Colors.green,
-                              // CHIAMA LA LOGICA QUI
                               onTap: () => _logic.handleStatusAction(
                                 context,
                                 liveBook,
@@ -192,14 +131,16 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 30),
                       AIAnalysisSection(
                         analysisText: storedAnalysis,
                         isAnalyzing: _isAnalyzing,
-                        onAnalyzeTap: () => _onAnalyzeTap(liveBook),
+                        onAnalyzeTap: () async {
+                          setState(() => _isAnalyzing = true);
+                          await _logic.handleAnalysis(context, liveBook);
+                          if (mounted) setState(() => _isAnalyzing = false);
+                        },
                       ),
-
                       const SizedBox(height: 40),
                       const Align(
                         alignment: Alignment.centerLeft,
@@ -236,6 +177,60 @@ class _BookDetailPageState extends State<BookDetailPage> {
     );
   }
 
+  Widget _buildHeroHeader(Book book) {
+    return SizedBox(
+      height: 400,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.network(
+              book.thumbnailUrl,
+              fit: BoxFit.cover,
+              color: Colors.black.withOpacity(0.6),
+              colorBlendMode: BlendMode.darken,
+              errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+            ),
+          ),
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xFF121212)],
+                  stops: [0.3, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Hero(
+              tag: book.id,
+              child: Container(
+                height: 240,
+                width: 160,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _brandColor.withOpacity(0.2),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                  image: DecorationImage(
+                    image: NetworkImage(book.thumbnailUrl),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionButton({
     required String label,
     required IconData icon,
@@ -251,7 +246,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
               ? activeColor
               : Colors.white.withOpacity(0.05),
           foregroundColor: isActive ? Colors.black : Colors.white,
-          elevation: isActive ? 5 : 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: isActive
@@ -263,11 +257,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
         icon: Icon(icon, size: 20),
         label: Text(
           label,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: isActive ? Colors.black : Colors.white70,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         ),
       ),
     );
