@@ -3,7 +3,7 @@ import '../models/app_mode.dart';
 import '../models/book_widgets/add_book_sheet.dart';
 import '../models/user_books_section.dart';
 import '../models/home_widgets/home_content_builders.dart';
-import '../models/home_widgets/home_cinema_switcher.dart'; // Importa lo switcher
+import '../models/home_widgets/home_cinema_switcher.dart';
 import 'search_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -19,8 +19,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   static const Color _brandColor = Colors.orangeAccent;
 
-  // Stato per lo switcher Film/Serie
+  late PageController _cinemaPageController;
   CinemaType _selectedCinemaType = CinemaType.movies;
+
+  @override
+  void initState() {
+    super.initState();
+    _cinemaPageController = PageController(initialPage: 0);
+  }
+
+  @override
+  void dispose() {
+    _cinemaPageController.dispose();
+    super.dispose();
+  }
 
   void _showAddSheet(BuildContext context) {
     showModalBottomSheet(
@@ -65,71 +77,96 @@ class _HomePageState extends State<HomePage> {
       body: Container(
         decoration: const BoxDecoration(color: Color(0xFF121212)),
         child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10),
-                _buildSearchBar(context),
+          bottom: false,
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              _buildSearchBar(context),
 
-                // --- SWITCHER TIKTOK STYLE (Solo in Cinema Mode) ---
-                if (widget.mode == AppMode.movies)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20, bottom: 10),
-                    child: HomeCinemaSwitcher(
-                      selectedType: _selectedCinemaType,
-                      onTypeChanged: (newType) {
-                        setState(() {
-                          _selectedCinemaType = newType;
-                        });
-                      },
-                    ),
+              // SWITCHER (Fisicamente fuori dal PageView per restare fisso)
+              if (widget.mode == AppMode.movies)
+                Padding(
+                  padding: const EdgeInsets.only(top: 20, bottom: 10),
+                  child: HomeCinemaSwitcher(
+                    selectedType: _selectedCinemaType,
+                    onTypeChanged: (newType) {
+                      _cinemaPageController.animateToPage(
+                        newType == CinemaType.movies ? 0 : 1,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutCubic,
+                      );
+                    },
                   ),
-
-                const SizedBox(height: 10),
-
-                // 2. HERO BANNER (Dinamico in base allo switcher)
-                HomeContentBuilder.buildHeroBanner(
-                  widget.mode,
-                  cinemaType: _selectedCinemaType,
                 ),
 
-                const SizedBox(height: 30),
-
-                // 3. CONTENUTO CONDIZIONALE
-                if (widget.mode == AppMode.books) ...[
-                  const UserBooksSection(
-                    title: "In coda di lettura",
-                    status: "toread",
-                  ),
-                  ...HomeContentBuilder.buildBookContent(),
-                ] else ...[
-                  // CORREZIONE: Usiamo buildCinemaContent passando il tipo
-                  ...HomeContentBuilder.buildCinemaContent(
-                    type: _selectedCinemaType,
-                  ),
-                ],
-
-                const SizedBox(height: 80),
-              ],
-            ),
+              // IL CUORE FLUIDO
+              Expanded(
+                child: widget.mode == AppMode.books
+                    ? _buildStaticScroll(HomeContentBuilder.buildBookContent())
+                    : PageView(
+                        controller: _cinemaPageController,
+                        physics: const BouncingScrollPhysics(),
+                        onPageChanged: (index) {
+                          setState(() {
+                            _selectedCinemaType = index == 0
+                                ? CinemaType.movies
+                                : CinemaType.tvSeries;
+                          });
+                        },
+                        children: [
+                          _buildCinemaPage(CinemaType.movies),
+                          _buildCinemaPage(CinemaType.tvSeries),
+                        ],
+                      ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
+  // Costruisce la singola pagina scrollabile del PageView
+  Widget _buildCinemaPage(CinemaType type) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 10),
+          HomeContentBuilder.buildHeroBanner(widget.mode, cinemaType: type),
+          const SizedBox(height: 30),
+          ...HomeContentBuilder.buildCinemaContent(type: type),
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+
+  // Per i libri manteniamo lo scroll standard
+  Widget _buildStaticScroll(List<Widget> content) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 10),
+          HomeContentBuilder.buildHeroBanner(widget.mode),
+          const SizedBox(height: 30),
+          const UserBooksSection(title: "In coda di lettura", status: "toread"),
+          ...content,
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSearchBar(BuildContext context) {
-    // Placeholder dinamico
-    String placeholder = "Cerca...";
-    if (widget.mode == AppMode.books) {
-      placeholder = "Cerca titolo, autore...";
-    } else {
-      placeholder = _selectedCinemaType == CinemaType.movies
-          ? "Cerca film, attori..."
-          : "Cerca serie TV...";
-    }
+    String placeholder = widget.mode == AppMode.books
+        ? "Cerca titolo, autore..."
+        : (_selectedCinemaType == CinemaType.movies
+              ? "Cerca film..."
+              : "Cerca serie TV...");
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),

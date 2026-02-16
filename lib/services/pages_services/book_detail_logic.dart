@@ -13,28 +13,28 @@ class BookDetailLogic {
     String targetStatus,
     String currentStatus,
   ) async {
-    // 1. Recupero Utente
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
       if (context.mounted) _showMinimalSnackBar(context, "Devi essere loggato");
       return;
     }
 
-    // 2. RIMOZIONE: Se clicco sullo stato già attivo, elimino il libro dalla libreria dell'utente
+    // RIMOZIONE
     if (currentStatus == targetStatus) {
       try {
-        // CORRETTO: Passiamo userId e bookId
         await sl<DeleteBookUseCase>().call(user.uid, liveBook.id);
-        if (context.mounted)
+        if (context.mounted) {
           _showMinimalSnackBar(context, "Rimosso dalla libreria");
+        }
       } catch (e) {
-        if (context.mounted)
+        if (context.mounted) {
           _showMinimalSnackBar(context, "Errore nella rimozione");
+        }
       }
       return;
     }
 
-    // 3. AGGIORNAMENTO/AGGIUNTA
+    // AGGIORNAMENTO
     try {
       final bookToSave = Book(
         id: liveBook.id,
@@ -45,45 +45,63 @@ class BookDetailLogic {
         pageCount: liveBook.pageCount,
         rating: liveBook.rating,
         ratingsCount: liveBook.ratingsCount,
-        status: targetStatus, // Nuovo stato (read o toread)
+        status: targetStatus, // Qui cambiamo lo status (es. 'toread')
         aiAnalysis: liveBook.aiAnalysis,
       );
 
-      // CORRETTO: Salvataggio nel path users/{userId}/library/{bookId}
       await sl<AddBookUseCase>().call(bookToSave, user.uid);
 
       if (context.mounted) {
         _showMinimalSnackBar(
           context,
-          targetStatus == 'read'
-              ? "Segnato come letto"
-              : "Aggiunto alla coda di lettura",
+          targetStatus == 'read' ? "Segnato come letto" : "Aggiunto alla coda",
         );
       }
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         _showMinimalSnackBar(context, "Impossibile aggiornare");
+      }
     }
   }
 
   // Gestisce l'analisi AI
   Future<String?> handleAnalysis(BuildContext context, Book liveBook) async {
-    // 1. Recupero Utente
     final user = sl<AuthRepository>().currentUser;
-    if (user == null) return null;
+    if (user == null) {
+      if (context.mounted) {
+        _showMinimalSnackBar(context, "Accedi per usare l'AI");
+      }
+      return null;
+    }
 
     try {
       final aiService = AIService();
       final analysis = await aiService.analyzeMedia(
         title: liveBook.title,
         type: 'book',
-        userProfile: "16 anni, Architect, Developer, MMA", // Profilo Architect
+        userProfile: "16 anni, Architect, Developer, MMA",
         creator: liveBook.author,
       );
 
-      // 2. Salva nel DB associandolo all'utente corrente
-      // CORRETTO: Passiamo userId, bookId e l'analisi
-      await sl<SaveBookAnalysisUseCase>().call(user.uid, liveBook.id, analysis);
+      // --- FIX CRUCIALE ---
+      // Salviamo l'oggetto COMPLETO, non solo l'analisi.
+      // Manteniamo lo status attuale (se era 'none' resta 'none', quindi invisibile nelle liste).
+
+      final bookToSave = Book(
+        id: liveBook.id,
+        title: liveBook.title,
+        author: liveBook.author,
+        description: liveBook.description,
+        thumbnailUrl: liveBook.thumbnailUrl,
+        pageCount: liveBook.pageCount,
+        rating: liveBook.rating,
+        ratingsCount: liveBook.ratingsCount,
+        status: liveBook.status, // Mantiene 'none' o lo stato corrente
+        aiAnalysis: analysis, // Inietta la nuova analisi
+      );
+
+      // Usiamo AddBookUseCase che sovrascrive/aggiorna il documento intero
+      await sl<AddBookUseCase>().call(bookToSave, user.uid);
 
       return analysis;
     } catch (e) {
@@ -92,7 +110,6 @@ class BookDetailLogic {
     }
   }
 
-  // Helper Grafico per i messaggi
   void _showMinimalSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(

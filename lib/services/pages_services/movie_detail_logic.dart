@@ -5,6 +5,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import '../../services/utility_services/ai_service.dart';
 
 class MovieDetailLogic {
   Future<void> handleStatusAction(
@@ -15,14 +16,13 @@ class MovieDetailLogic {
   ) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      if (context.mounted) {
+      if (context.mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Accedi per salvare."),
             backgroundColor: Colors.red,
           ),
         );
-      }
       return;
     }
 
@@ -62,22 +62,45 @@ class MovieDetailLogic {
     if (user == null) return null;
 
     try {
+      final aiService = AIService();
+      final type = (media is TvSeries) ? 'tv' : 'movie';
+      final title = (media is TvSeries) ? media.name : (media as Movie).title;
+
+      final analysis = await aiService.analyzeMedia(
+        title: title,
+        type: type,
+        userProfile: "16 anni, Architect, Developer, MMA",
+        creator: "",
+      );
+
+      // --- FIX: SALVATAGGIO COMPLETO ---
+
       if (media is Movie) {
-        return await sl<AnalyzeMovieUseCase>().call(
-          user.uid,
-          media.id,
-          media.title,
-        );
+        final updatedMovie = media.copyWith(aiAnalysis: analysis);
+        await sl<SaveMovieUseCase>().call(updatedMovie, user.uid);
       } else if (media is TvSeries) {
-        return await sl<AnalyzeTvSeriesUseCase>().call(
-          user.uid,
-          media.id,
-          media.name,
+        final updatedSeries = TvSeries(
+          id: media.id,
+          name: media.name,
+          overview: media.overview,
+          posterPath: media.posterPath,
+          backdropPath: media.backdropPath,
+          voteAverage: media.voteAverage,
+          voteCount: media.voteCount,
+          firstAirDate: media.firstAirDate,
+
+          // CORREZIONE QUI: Rimosso "?? 'none'" perché status non è nullable
+          status: media.status,
+
+          aiAnalysis: analysis,
         );
+        await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.uid);
       }
+
+      return analysis;
     } catch (e) {
+      debugPrint("AI Error: $e");
       return null;
     }
-    return null;
   }
 }

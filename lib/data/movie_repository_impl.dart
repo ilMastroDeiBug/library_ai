@@ -73,8 +73,9 @@ class MovieRepositoryImpl implements MovieRepository {
   // --- METODI API TMDB ---
   @override
   Future<List<Movie>> getMoviesByCategory(String categoryPath) async {
-    if (categoryPath == 'trending')
+    if (categoryPath == 'trending') {
       return await _tmdbService.fetchTrendingMovies();
+    }
     if (categoryPath.contains('with_genres=')) {
       final genreId = categoryPath.split('=').last;
       return await _tmdbService.fetchMoviesByGenre(genreId);

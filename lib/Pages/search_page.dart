@@ -5,16 +5,16 @@ import 'package:library_ai/models/app_mode.dart';
 // Entities
 import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
-import 'package:library_ai/domain/entities/tv_series.dart'; // Importa TvSeries
+import 'package:library_ai/domain/entities/tv_series.dart';
 
 // Use Cases
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
-import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart'; // Importa
+import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 
 // Pages
-import 'package:library_ai/Pages/book_detail_page.dart';
-import 'package:library_ai/Pages/movie_detail_page.dart';
+import 'package:library_ai/pages/book_detail_page.dart';
+import 'package:library_ai/pages/movie_detail_page.dart';
 
 class UniversalSearchDelegate extends SearchDelegate {
   final AppMode mode;
@@ -73,45 +73,54 @@ class UniversalSearchDelegate extends SearchDelegate {
   }
 
   @override
+  Widget buildSuggestions(BuildContext context) {
+    // Se la query è troppo corta, mostriamo il messaggio iniziale
+    if (query.trim().length < 3) {
+      return _buildInitialSuggestions();
+    }
+
+    // Per avere la ricerca "live", buildSuggestions richiama buildResults
+    return buildResults(context);
+  }
+
+  @override
   Widget buildResults(BuildContext context) {
     if (query.trim().length < 3) {
       return _buildMessage(Icons.keyboard, "Digita almeno 3 caratteri...");
     }
 
-    // LOGICA DI RICERCA MISTA
-    Future<List<dynamic>> searchFuture;
-
-    if (mode == AppMode.books) {
-      searchFuture = sl<SearchBooksUseCase>().call(query);
-    } else {
-      // In modalità Cinema, cerchiamo sia Film che Serie
-      // (Potresti usare Future.wait per parallelizzare)
-      searchFuture = _searchCinemaContent(query);
-    }
-
     return FutureBuilder<List<dynamic>>(
-      future: searchFuture,
+      // Usiamo query.trim() per pulire la stringa di ricerca
+      future: mode == AppMode.books
+          ? sl<SearchBooksUseCase>().call(query.trim())
+          : _searchCinemaContent(query.trim()),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(
-            child: CircularProgressIndicator(
-              color: mode == AppMode.books
-                  ? Colors.orangeAccent
-                  : Colors.cyanAccent,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 50),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: mode == AppMode.books
+                    ? Colors.orangeAccent
+                    : Colors.cyanAccent,
+              ),
             ),
           );
         }
+
         if (snapshot.hasError) {
-          return _buildMessage(Icons.error_outline, "Errore di connessione.");
+          return _buildMessage(Icons.error_outline, "Errore nella ricerca.");
         }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+
+        final results = snapshot.data ?? [];
+
+        if (results.isEmpty) {
           return _buildMessage(
             Icons.search_off,
             "Nessun risultato per '$query'",
           );
         }
-
-        final results = snapshot.data!;
 
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -125,15 +134,22 @@ class UniversalSearchDelegate extends SearchDelegate {
     );
   }
 
-  // Helper per cercare sia Film che Serie
+  // --- LOGICA DI RICERCA CINEMA PARALLELA ---
   Future<List<dynamic>> _searchCinemaContent(String query) async {
-    final movies = await sl<SearchMoviesUseCase>().call(query);
-    final series = await sl<SearchTvSeriesUseCase>().call(query);
-    return [...movies, ...series];
+    // Eseguiamo entrambe le ricerche contemporaneamente per massimizzare la velocità
+    final responses = await Future.wait([
+      sl<SearchMoviesUseCase>().call(query),
+      sl<SearchTvSeriesUseCase>().call(query),
+    ]);
+
+    // Uniamo i risultati (Film + Serie TV)
+    // Le API di TMDb gestiscono internamente il fuzzy matching (errori di battitura)
+    return [...responses[0], ...responses[1]];
   }
 
-  @override
-  Widget buildSuggestions(BuildContext context) {
+  // --- UI HELPER ---
+
+  Widget _buildInitialSuggestions() {
     return Container(
       color: const Color(0xFF0F0F10),
       child: Center(
@@ -142,17 +158,20 @@ class UniversalSearchDelegate extends SearchDelegate {
           children: [
             Icon(
               mode == AppMode.books
-                  ? Icons.menu_book_rounded
-                  : Icons.movie_filter_rounded,
+                  ? Icons.auto_stories
+                  : Icons.movie_creation_outlined,
               size: 80,
               color: Colors.white.withOpacity(0.05),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
             Text(
               mode == AppMode.books
                   ? "Cerca Libri nel Vault"
                   : "Cerca Film e Serie TV",
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.3),
+                fontSize: 16,
+              ),
             ),
           ],
         ),
@@ -166,7 +185,6 @@ class UniversalSearchDelegate extends SearchDelegate {
     String imageUrl = "";
     VoidCallback onTap = () {};
 
-    // GESTIONE POLIMORFICA (Book, Movie, TvSeries)
     if (item is Book) {
       title = item.title;
       subtitle = item.author;

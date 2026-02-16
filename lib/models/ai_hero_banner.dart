@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
-import 'package:library_ai/domain/entities/tv_series.dart'; // Fondamentale
+import 'package:library_ai/domain/entities/tv_series.dart';
 
 class AiHeroBanner extends StatefulWidget {
   final List<dynamic> items;
@@ -39,18 +39,44 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     _startAutoScroll();
   }
 
+  // --- FIX CRITICO: Ascoltiamo i cambiamenti dal genitore ---
+  @override
+  void didUpdateWidget(covariant AiHeroBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Se la lista degli items è cambiata (es. switch da Film a Serie), rigeneriamo la rotazione
+    if (widget.items != oldWidget.items) {
+      _stopAutoScroll();
+      _generateDailyRotation();
+      // Resettiamo la posizione per evitare index out of bounds o glitch visivi
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(_infiniteStart);
+      }
+      _startAutoScroll();
+    }
+  }
+  // ----------------------------------------------------------
+
   void _generateDailyRotation() {
     if (widget.items.isEmpty) {
-      _dailyItems = [];
+      setState(() => _dailyItems = []); // Assicuriamoci di aggiornare la UI
       return;
     }
+
+    // Usiamo un seed diverso se siamo in modalità Serie vs Film per avere rotazioni diverse
+    // Trucco: Aggiungiamo la lunghezza della lista al seed per variare
     final now = DateTime.now();
-    final int dailySeed = now.year * 10000 + now.month * 100 + now.day;
+    final int typeModifier = widget.items.first is TvSeries ? 500 : 0;
+    final int dailySeed =
+        now.year * 10000 + now.month * 100 + now.day + typeModifier;
+
     final random = Random(dailySeed);
     final List<dynamic> shuffledItems = List.from(widget.items)
       ..shuffle(random);
     final int countToTake = shuffledItems.length > 5 ? 5 : shuffledItems.length;
-    _dailyItems = shuffledItems.take(countToTake).toList();
+
+    setState(() {
+      _dailyItems = shuffledItems.take(countToTake).toList();
+    });
   }
 
   @override
@@ -61,7 +87,9 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
   }
 
   void _startAutoScroll() {
+    _timer?.cancel(); // Sicurezza extra
     if (_dailyItems.isEmpty) return;
+
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (_pageController.hasClients) {
         _pageController.nextPage(
@@ -76,7 +104,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     _timer?.cancel();
   }
 
-  // ESTRAZIONE DATI POLIMORFICA
+  // ... (Resto dei metodi _extractData e build identici a prima)
   Map<String, String> _extractData(dynamic item) {
     if (item is Book) {
       return {
@@ -94,7 +122,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
       };
     } else if (item is TvSeries) {
       return {
-        'title': item.name, // Serie usano 'name'
+        'title': item.name,
         'image': item.fullBackdropUrl.isNotEmpty
             ? item.fullBackdropUrl
             : item.fullPosterUrl,
@@ -106,7 +134,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
 
   @override
   Widget build(BuildContext context) {
-    if (_dailyItems.isEmpty) return const SizedBox();
+    if (_dailyItems.isEmpty) return const SizedBox(); // O un loader/placeholder
 
     return Column(
       children: [
@@ -124,6 +152,9 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                 });
               },
               itemBuilder: (context, index) {
+                // Sicurezza per l'operatore modulo su lista vuota
+                if (_dailyItems.isEmpty) return const SizedBox();
+
                 final int actualIndex = index % _dailyItems.length;
                 final item = _dailyItems[actualIndex];
                 final data = _extractData(item);

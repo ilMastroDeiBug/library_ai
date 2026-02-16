@@ -13,12 +13,10 @@ import '../../models/app_mode.dart';
 import '../../models/movie_widget/movie_card.dart';
 
 class HomeContentBuilder {
-  // --- LIBRI ---
   static List<Widget> buildBookContent() {
     return HomeService.bookSections.map((data) {
-      if (data.containsKey('header')) {
+      if (data.containsKey('header'))
         return _SectionHeader(text: data['header']);
-      }
       return Column(
         children: [
           BookSection(title: data['title'], categoryQuery: data['query']),
@@ -28,59 +26,50 @@ class HomeContentBuilder {
     }).toList();
   }
 
-  // --- CINEMA ---
   static List<Widget> buildCinemaContent({required CinemaType type}) {
-    // Sceglie la lista in base allo switcher
     final sections = (type == CinemaType.movies)
         ? HomeService.movieSections
         : HomeService.tvSections;
-
     return sections.map((section) {
-      if (section.containsKey('header')) {
+      if (section.containsKey('header'))
         return _SectionHeader(text: section['header']);
-      }
-
       return CinemaHorizontalList(
         title: section['title'],
         path: section['path'],
-        isTv:
-            type ==
-            CinemaType.tvSeries, // FIX: Usato tvShows per matchare l'enum
+        isTv: type == CinemaType.tvSeries,
       );
     }).toList();
   }
 
-  // --- HERO BANNER ---
   static Widget buildHeroBanner(
     AppMode mode, {
     CinemaType cinemaType = CinemaType.movies,
   }) {
     return FutureBuilder<List<dynamic>>(
+      key: ValueKey('hero_${mode.index}_${cinemaType.index}'),
       future: _fetchHeroItems(mode, cinemaType),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
-            height: 280,
+            height: 350,
             child: Center(
               child: CircularProgressIndicator(color: Colors.orangeAccent),
             ),
           );
         }
-        final heroItems = snapshot.data!.take(5).toList();
+        final heroItems = snapshot.data ?? [];
+        if (heroItems.isEmpty) return const SizedBox(height: 350);
         return AiHeroBanner(
-          items: heroItems,
+          items: heroItems.take(5).toList(),
           onItemTap: (item) {
-            if (item is Book) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => BookDetailPage(book: item)),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
-              );
-            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => item is Book
+                    ? BookDetailPage(book: item)
+                    : MovieDetailPage(media: item),
+              ),
+            );
           },
         );
       },
@@ -92,20 +81,17 @@ class HomeContentBuilder {
     CinemaType cinemaType,
   ) async {
     try {
-      if (mode == AppMode.books) {
+      if (mode == AppMode.books)
         return await sl<GetBooksByCategoryUseCase>().call("Fantasy");
-      } else {
-        return cinemaType == CinemaType.movies
-            ? await sl<GetMoviesByCategoryUseCase>().call("trending")
-            : await sl<GetTvSeriesByCategoryUseCase>().call("trending");
-      }
+      return cinemaType == CinemaType.movies
+          ? await sl<GetMoviesByCategoryUseCase>().call("trending")
+          : await sl<GetTvSeriesByCategoryUseCase>().call("trending");
     } catch (e) {
       return [];
     }
   }
 }
 
-// --- WIDGET LISTA ORIZZONTALE CINEMA ---
 class CinemaHorizontalList extends StatelessWidget {
   final String title;
   final String path;
@@ -120,48 +106,57 @@ class CinemaHorizontalList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final future = isTv
+        ? sl<GetTvSeriesByCategoryUseCase>().call(path)
+        : sl<GetMoviesByCategoryUseCase>().call(path);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Icon(Icons.arrow_forward, color: Colors.white54, size: 16),
+            ],
           ),
         ),
         SizedBox(
-          height: 220,
+          height: 240,
           child: FutureBuilder<List<dynamic>>(
-            future: isTv
-                ? sl<GetTvSeriesByCategoryUseCase>().call(path)
-                : sl<GetMoviesByCategoryUseCase>().call(path),
+            key: ValueKey('list_${title}_${isTv}'),
+            future: future,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
-                  child: CircularProgressIndicator(color: Colors.orangeAccent),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 );
               }
-              if (!snapshot.hasData || snapshot.data!.isEmpty)
-                return const SizedBox.shrink();
-
+              final items = snapshot.data ?? [];
+              if (items.isEmpty) return const SizedBox.shrink();
               return ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: snapshot.data!.length,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: items.length,
                 itemBuilder: (context, index) {
-                  final item = snapshot.data![index];
-                  return MovieCard(
-                    media: item,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MovieDetailPage(media: item),
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 15),
+                    child: MovieCard(
+                      media: items[index],
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MovieDetailPage(media: items[index]),
+                        ),
                       ),
                     ),
                   );
@@ -181,14 +176,14 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 30, 20, 10),
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 15),
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
-          color: Colors.orangeAccent.withOpacity(0.8),
+          color: Colors.orangeAccent.withOpacity(0.9),
           fontSize: 12,
           fontWeight: FontWeight.w900,
-          letterSpacing: 2.0,
+          letterSpacing: 2.5,
         ),
       ),
     );
