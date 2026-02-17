@@ -15,8 +15,9 @@ import '../../models/movie_widget/movie_card.dart';
 class HomeContentBuilder {
   static List<Widget> buildBookContent() {
     return HomeService.bookSections.map((data) {
-      if (data.containsKey('header'))
+      if (data.containsKey('header')) {
         return _SectionHeader(text: data['header']);
+      }
       return Column(
         children: [
           BookSection(title: data['title'], categoryQuery: data['query']),
@@ -31,8 +32,9 @@ class HomeContentBuilder {
         ? HomeService.movieSections
         : HomeService.tvSections;
     return sections.map((section) {
-      if (section.containsKey('header'))
+      if (section.containsKey('header')) {
         return _SectionHeader(text: section['header']);
+      }
       return CinemaHorizontalList(
         title: section['title'],
         path: section['path'],
@@ -81,8 +83,9 @@ class HomeContentBuilder {
     CinemaType cinemaType,
   ) async {
     try {
-      if (mode == AppMode.books)
+      if (mode == AppMode.books) {
         return await sl<GetBooksByCategoryUseCase>().call("Fantasy");
+      }
       return cinemaType == CinemaType.movies
           ? await sl<GetMoviesByCategoryUseCase>().call("trending")
           : await sl<GetTvSeriesByCategoryUseCase>().call("trending");
@@ -132,7 +135,7 @@ class CinemaHorizontalList extends StatelessWidget {
         SizedBox(
           height: 240,
           child: FutureBuilder<List<dynamic>>(
-            key: ValueKey('list_${title}_${isTv}'),
+            key: ValueKey('list_${title}_$isTv'),
             future: future,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {

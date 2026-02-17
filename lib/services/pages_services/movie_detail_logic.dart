@@ -16,13 +16,14 @@ class MovieDetailLogic {
   ) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Accedi per salvare."),
             backgroundColor: Colors.red,
           ),
         );
+      }
       return;
     }
 
@@ -50,10 +51,11 @@ class MovieDetailLogic {
         await sl<SaveTvSeriesUseCase>().call(updated, user.uid);
       }
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Errore salvataggio")));
+      }
     }
   }
 
