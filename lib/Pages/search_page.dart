@@ -1,3 +1,4 @@
+import 'dart:async'; // <-- IMPORTANTE PER IL DEBOUNCER
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/models/app_mode.dart';
@@ -74,81 +75,35 @@ class UniversalSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // Se la query è troppo corta, mostriamo il messaggio iniziale
+    // Mentre l'utente digita, mostriamo la versione "Leggera" (solo testo)
     if (query.trim().length < 3) {
       return _buildInitialSuggestions();
     }
 
-    // Per avere la ricerca "live", buildSuggestions richiama buildResults
-    return buildResults(context);
+    return _DebouncedSearchList(
+      query: query,
+      mode: mode,
+      showImages: false, // <-- NIENTE COPERTINE DURANTE LA DIGITAZIONE
+      closeDelegate: (result) => close(context, result),
+    );
   }
 
   @override
   Widget buildResults(BuildContext context) {
+    // Quando l'utente preme "Invio", mostriamo la versione "Pesante" (con locandine)
     if (query.trim().length < 3) {
       return _buildMessage(Icons.keyboard, "Digita almeno 3 caratteri...");
     }
 
-    return FutureBuilder<List<dynamic>>(
-      // Usiamo query.trim() per pulire la stringa di ricerca
-      future: mode == AppMode.books
-          ? sl<SearchBooksUseCase>().call(query.trim())
-          : _searchCinemaContent(query.trim()),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 50),
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: mode == AppMode.books
-                    ? Colors.orangeAccent
-                    : Colors.cyanAccent,
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return _buildMessage(Icons.error_outline, "Errore nella ricerca.");
-        }
-
-        final results = snapshot.data ?? [];
-
-        if (results.isEmpty) {
-          return _buildMessage(
-            Icons.search_off,
-            "Nessun risultato per '$query'",
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          physics: const BouncingScrollPhysics(),
-          itemCount: results.length,
-          itemBuilder: (context, index) {
-            return _buildResultTile(context, results[index]);
-          },
-        );
-      },
+    return _DebouncedSearchList(
+      query: query,
+      mode: mode,
+      showImages: true, // <-- MOSTRA COPERTINE SOLO NEI RISULTATI FINALI
+      closeDelegate: (result) => close(context, result),
     );
   }
 
-  // --- LOGICA DI RICERCA CINEMA PARALLELA ---
-  Future<List<dynamic>> _searchCinemaContent(String query) async {
-    // Eseguiamo entrambe le ricerche contemporaneamente per massimizzare la velocità
-    final responses = await Future.wait([
-      sl<SearchMoviesUseCase>().call(query),
-      sl<SearchTvSeriesUseCase>().call(query),
-    ]);
-
-    // Uniamo i risultati (Film + Serie TV)
-    // Le API di TMDb gestiscono internamente il fuzzy matching (errori di battitura)
-    return [...responses[0], ...responses[1]];
-  }
-
   // --- UI HELPER ---
-
   Widget _buildInitialSuggestions() {
     return Container(
       color: const Color(0xFF0F0F10),
@@ -179,44 +134,241 @@ class UniversalSearchDelegate extends SearchDelegate {
     );
   }
 
-  Widget _buildResultTile(BuildContext context, dynamic item) {
+  Widget _buildMessage(IconData icon, String text) {
+    return Container(
+      color: const Color(0xFF0F0F10),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 60, color: Colors.white.withOpacity(0.1)),
+            const SizedBox(height: 10),
+            Text(text, style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- CLASSE WIDGET SEPARATA PER GESTIRE IL DEBOUNCE E LA UI ---
+
+class _DebouncedSearchList extends StatefulWidget {
+  final String query;
+  final AppMode mode;
+  final bool showImages;
+  final Function(dynamic) closeDelegate;
+
+  const _DebouncedSearchList({
+    required this.query,
+    required this.mode,
+    required this.showImages,
+    required this.closeDelegate,
+  });
+
+  @override
+  State<_DebouncedSearchList> createState() => _DebouncedSearchListState();
+}
+
+class _DebouncedSearchListState extends State<_DebouncedSearchList> {
+  Timer? _debounce;
+  List<dynamic> _results = [];
+  bool _isLoading = false;
+  String _lastSearchedQuery = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _queueSearch();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DebouncedSearchList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.query != widget.query) {
+      _queueSearch();
+    }
+  }
+
+  // Metodo che previene lo spam di chiamate API
+  void _queueSearch() {
+    final currentQuery = widget.query.trim();
+    if (currentQuery.length < 3) return;
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    setState(() => _isLoading = true);
+
+    // Aspetta mezzo secondo prima di chiamare l'API
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(currentQuery);
+    });
+  }
+
+  Future<void> _performSearch(String queryStr) async {
+    if (queryStr == _lastSearchedQuery) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    _lastSearchedQuery = queryStr;
+    List<dynamic> fetchResults = [];
+
+    try {
+      if (widget.mode == AppMode.books) {
+        fetchResults = await sl<SearchBooksUseCase>().call(queryStr);
+      } else {
+        final responses = await Future.wait([
+          sl<SearchMoviesUseCase>().call(queryStr),
+          sl<SearchTvSeriesUseCase>().call(queryStr),
+        ]);
+        fetchResults = [...responses[0], ...responses[1]];
+      }
+    } catch (e) {
+      debugPrint("Search Error: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        _results = fetchResults;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel(); // Spegniamo il timer quando usciamo
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.only(top: 50),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: widget.mode == AppMode.books
+                ? Colors.orangeAccent
+                : Colors.cyanAccent,
+          ),
+        ),
+      );
+    }
+
+    if (_results.isEmpty && _lastSearchedQuery.isNotEmpty) {
+      return Container(
+        color: const Color(0xFF0F0F10),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.search_off,
+                size: 60,
+                color: Colors.white.withOpacity(0.1),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Nessun risultato per '${widget.query}'",
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      physics: const BouncingScrollPhysics(),
+      itemCount: _results.length,
+      itemBuilder: (context, index) {
+        final item = _results[index];
+        return _buildItemRow(context, item);
+      },
+    );
+  }
+
+  Widget _buildItemRow(BuildContext context, dynamic item) {
     String title = "";
     String subtitle = "";
     String imageUrl = "";
-    VoidCallback onTap = () {};
+    IconData defaultIcon = Icons.movie;
 
     if (item is Book) {
       title = item.title;
       subtitle = item.author;
       imageUrl = item.thumbnailUrl;
-      onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => BookDetailPage(book: item)),
-      );
+      defaultIcon = Icons.book;
     } else if (item is Movie) {
       title = item.title;
       subtitle = item.releaseDate.isNotEmpty
           ? "Film (${item.releaseDate.split('-')[0]})"
           : "Film";
       imageUrl = item.fullPosterUrl;
-      onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
-      );
+      defaultIcon = Icons.movie_outlined;
     } else if (item is TvSeries) {
       title = item.name;
       subtitle = item.firstAirDate.isNotEmpty
           ? "Serie TV (${item.firstAirDate.split('-')[0]})"
           : "Serie TV";
       imageUrl = item.fullPosterUrl;
-      onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
+      defaultIcon = Icons.tv_outlined;
+    }
+
+    VoidCallback handleTap = () {
+      // Navigazione
+      if (item is Book) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => BookDetailPage(book: item)),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
+        );
+      }
+    };
+
+    // --- UI LEGGERA (Solo Titoli) ---
+    if (!widget.showImages) {
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        leading: Icon(
+          defaultIcon,
+          color: widget.mode == AppMode.books
+              ? Colors.orangeAccent
+              : Colors.cyanAccent,
+        ),
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 14,
+          color: Colors.white24,
+        ),
+        onTap: handleTap,
       );
     }
 
+    // --- UI PESANTE (Con Immagini, come avevi fatto tu) ---
     return GestureDetector(
-      onTap: onTap,
+      onTap: handleTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(10),
@@ -266,7 +418,7 @@ class UniversalSearchDelegate extends SearchDelegate {
                     subtitle,
                     style: TextStyle(
                       color:
-                          (mode == AppMode.books
+                          (widget.mode == AppMode.books
                                   ? Colors.orangeAccent
                                   : Colors.cyanAccent)
                               .withOpacity(0.7),
@@ -282,22 +434,6 @@ class UniversalSearchDelegate extends SearchDelegate {
               size: 14,
               color: Colors.white24,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessage(IconData icon, String text) {
-    return Container(
-      color: const Color(0xFF0F0F10),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 60, color: Colors.white.withOpacity(0.1)),
-            const SizedBox(height: 10),
-            Text(text, style: const TextStyle(color: Colors.grey)),
           ],
         ),
       ),

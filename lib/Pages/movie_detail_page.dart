@@ -8,6 +8,8 @@ import '../models/ai_analysis_section.dart';
 import '../models/movie_widget/movie_stats_bar.dart';
 import '../models/movie_widget/movie_reviews_section.dart';
 import '../models/movie_widget/movie_cast_section.dart';
+import '../models/movie_widget/trailer_player_widget.dart';
+import '../models/movie_widget/watch_provider_widgets.dart'; // <-- IMPORT WIDGET PROVIDERS
 
 class MovieDetailPage extends StatefulWidget {
   final dynamic media; // Movie o TvSeries
@@ -22,7 +24,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   bool _isAnalyzing = false;
   static const Color _brandColor = Colors.orangeAccent;
 
-  // Helper per identificare il tipo e l'ID
   bool get _isTv => widget.media is TvSeries;
   int get _id => widget.media.id;
 
@@ -40,10 +41,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                 .snapshots()
           : null,
       builder: (context, snapshot) {
-        // Valori iniziali presi dall'oggetto passato alla pagina
         dynamic liveMedia = widget.media;
 
-        // Se il documento esiste su Firestore, sovrascriviamo liveMedia con i dati aggiornati
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
           if (_isTv) {
@@ -53,7 +52,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           }
         }
 
-        // Estrazione dati pulita (Dart gestisce i campi dinamicamente senza cast espliciti)
         final String currentStatus = liveMedia.status ?? 'none';
         final String? storedAnalysis = liveMedia.aiAnalysis;
         final String title = _isTv ? liveMedia.name : liveMedia.title;
@@ -61,7 +59,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         final String poster = liveMedia.fullPosterUrl;
         final String backdrop = liveMedia.fullBackdropUrl;
 
-        // Adattatore per MovieStatsBar: richiede un oggetto di tipo Movie
         final displayMovieForStats = _isTv
             ? Movie(
                 id: _id,
@@ -104,7 +101,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       MovieStatsBar(movie: displayMovieForStats),
                       const SizedBox(height: 30),
 
-                      // 3. Bottoni d'azione (Watchlist / Watched)
+                      // 3. Bottoni d'azione
                       Row(
                         children: [
                           Expanded(
@@ -175,11 +172,17 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      // 6. Cast
+                      // 6. WATCH PROVIDERS WIDGET (I loghi di Netflix, Amazon, ecc.)
+                      WatchProvidersWidget(mediaId: _id, isTvSeries: _isTv),
+
+                      // 7. TRAILER WIDGET
+                      TrailerPlayerWidget(mediaId: _id, isTvSeries: _isTv),
+
+                      // 8. Cast
                       MovieCastSection(id: _id, isTvSeries: _isTv),
                       const SizedBox(height: 40),
 
-                      // 7. Recensioni
+                      // 9. Recensioni
                       MovieReviewsSection(
                         id: _id,
                         title: title,

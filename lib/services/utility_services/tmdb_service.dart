@@ -5,6 +5,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/injection_container.dart';
 import '../../models/movie_widget/review_model.dart';
 import '../../models/movie_widget/cast_model.dart';
+import '../../models/movie_widget/watch_provider_model.dart'; // <-- Import Modello Providers
 import '../utility_services/language_service.dart';
 
 class TmdbService {
@@ -76,7 +77,7 @@ class TmdbService {
     return _fetchTvSeries(url);
   }
 
-  // --- COMMON ---
+  // --- COMMON (Cast, Reviews, Trailers, Providers) ---
   Future<List<CastMember>> fetchCast(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final lang = sl<LanguageService>().currentLanguage;
@@ -112,6 +113,53 @@ class TmdbService {
       return [];
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<String?> fetchTrailerKey(int id, {bool isTv = false}) async {
+    final endpoint = isTv ? 'tv' : 'movie';
+    final url = Uri.parse('$_baseUrl/$endpoint/$id/videos?language=it-IT');
+    try {
+      final response = await http.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List results = data['results'] ?? [];
+        final trailer = results.firstWhere(
+          (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
+          orElse: () => null,
+        );
+        if (trailer != null) {
+          return trailer['key'];
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // NUOVO METODO: Recupero Watch Providers
+  Future<WatchProvidersResult?> fetchWatchProviders(
+    int id, {
+    bool isTv = false,
+  }) async {
+    final endpoint = isTv ? 'tv' : 'movie';
+    final url = Uri.parse('$_baseUrl/$endpoint/$id/watch/providers');
+
+    try {
+      final response = await http.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final results = data['results'];
+
+        // Estraiamo solo i dati per l'Italia ('IT')
+        if (results != null && results.containsKey('IT')) {
+          return WatchProvidersResult.fromJson(results['IT']);
+        }
+      }
+      return null; // Niente provider in Italia
+    } catch (e) {
+      return null;
     }
   }
 

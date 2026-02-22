@@ -19,56 +19,78 @@ class SideMenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            height: 55,
             decoration: BoxDecoration(
-              color: isSelected
-                  ? activeColor.withOpacity(0.15)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected
-                  ? Border.all(color: activeColor.withOpacity(0.3))
-                  : Border.all(color: Colors.transparent),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  color: isSelected ? activeColor : Colors.white54,
-                  size: 22,
-                ),
-                const SizedBox(width: 15),
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 15,
-                  ),
-                ),
-                const Spacer(),
-                if (isSelected)
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: activeColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: activeColor.withOpacity(0.6),
-                          blurRadius: 6,
-                        ),
+              gradient: isSelected
+                  ? LinearGradient(
+                      colors: [
+                        activeColor.withOpacity(0.15),
+                        Colors.transparent,
                       ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Stack(
+              children: [
+                // Indicatore laterale per lo stato attivo
+                if (isSelected)
+                  Positioned(
+                    left: 0,
+                    top: 10,
+                    bottom: 10,
+                    child: Container(
+                      width: 4,
+                      decoration: BoxDecoration(
+                        color: activeColor,
+                        borderRadius: const BorderRadius.horizontal(
+                          right: Radius.circular(4),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: activeColor.withOpacity(0.6),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                // Contenuto
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Icon(
+                        icon,
+                        color: isSelected ? activeColor : Colors.white38,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        text,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          fontSize: 15,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

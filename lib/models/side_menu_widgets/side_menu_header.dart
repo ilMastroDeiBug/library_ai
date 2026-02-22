@@ -9,20 +9,35 @@ class SideMenuHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        border: const Border(bottom: BorderSide(color: Colors.white10)),
-      ),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.pop(context); // Chiude il drawer
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SettingsPage()),
-          );
-        },
+    final String initial = user != null
+        ? ((user!.displayName?.isNotEmpty ?? false)
+              ? user!.displayName![0].toUpperCase()
+              : (user!.email.isNotEmpty ? user!.email[0].toUpperCase() : 'A'))
+        : '?';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SettingsPage()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 60, 16, 20),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
         child: Row(
           children: [
             // Avatar con Glow
@@ -31,30 +46,26 @@ class SideMenuHeader extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.cyanAccent.withOpacity(0.2),
+                    color: Colors.orangeAccent.withOpacity(0.3),
                     blurRadius: 15,
-                    spreadRadius: 2,
+                    spreadRadius: 1,
                   ),
                 ],
               ),
               child: CircleAvatar(
-                radius: 28,
+                radius: 26,
                 backgroundColor: const Color(0xFF2C2C2C),
-                child: user != null
-                    ? Text(
-                        (user!.displayName?.isNotEmpty ?? false)
-                            ? user!.displayName![0].toUpperCase()
-                            : (user!.email.isNotEmpty ? user!.email[0].toUpperCase() : 'A'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      )
-                    : const Icon(Icons.person, color: Colors.white70),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: 16),
             // Testi
             Expanded(
               child: Column(
@@ -65,16 +76,20 @@ class SideMenuHeader extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    user?.email ?? "user@example.com",
+                    user?.email ?? "user@cineshare.com",
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withOpacity(0.4),
                       fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

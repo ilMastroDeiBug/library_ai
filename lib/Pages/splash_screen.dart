@@ -18,7 +18,7 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 1. Setup Animazione (Effetto Respiro/Pulsazione)
+    // 1. Setup Animazione (Effetto Respiro/Pulsazione del logo)
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -31,13 +31,12 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   _startTimer() async {
-    // Aspettiamo 3 secondi per godersi il logo e caricare i servizi in background
+    // Aspettiamo 3 secondi per godersi il logo e caricare Firebase
     await Future.delayed(const Duration(seconds: 3));
 
     if (!mounted) return;
 
     // 3. PASSA LA PALLA AL PORTIERE (AuthGate)
-    // Usiamo pushReplacement per non poter tornare indietro alla splash
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const AuthGate()),
     );
@@ -52,54 +51,52 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), // Sfondo Dark
+      backgroundColor: const Color(
+        0xFF0A0A0C,
+      ), // Sfondo Dark che matcha il tuo logo
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo Animato
+            // IL TUO VERO LOGO ANIMATO
             ScaleTransition(
-              scale: Tween<double>(begin: 0.8, end: 1.0).animate(_animation),
+              scale: Tween<double>(begin: 0.95, end: 1.05).animate(_animation),
               child: Container(
-                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.cyanAccent.withOpacity(0.3),
-                      blurRadius: 40,
+                      color: Colors.orangeAccent.withOpacity(
+                        0.15,
+                      ), // Glow arancione
+                      blurRadius: 50,
                       spreadRadius: 10,
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.auto_stories, // La tua icona
-                  size: 80,
-                  color: Colors.cyanAccent,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(
+                    20,
+                  ), // Arrotondiamo un po' i bordi del jpg
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 200, // Grandezza del logo
+                    height: 200,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 30),
-            // Testo "Architect" style
-            FadeTransition(
-              opacity: _animation,
-              child: const Text(
-                "LIBRARY AI",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 4.0,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "NEURAL NEXUS",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 12,
-                letterSpacing: 2.0,
+
+            const SizedBox(height: 60),
+
+            // Un piccolo loader elegante sotto il logo
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.orangeAccent.withOpacity(0.5),
               ),
             ),
           ],

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-// CLEAN ARCH IMPORTS
 import 'package:library_ai/injection_container.dart';
-import 'package:library_ai/domain/use_cases/auth_use_cases.dart'; // Contiene LogoutUseCase
+import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 
 class LogoutButton extends StatelessWidget {
   const LogoutButton({super.key});
@@ -9,28 +8,33 @@ class LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () async {
-        // USIAMO LO USE CASE
-        await sl<LogoutUseCase>().call();
-      },
-      borderRadius: BorderRadius.circular(12),
+      onTap: () async => await sl<LogoutUseCase>().call(),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(15),
+        height: 55,
         decoration: BoxDecoration(
-          color: Colors.redAccent.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.redAccent.withOpacity(0.2)),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.redAccent.withOpacity(0.3),
+            width: 1.5,
+          ),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
-            SizedBox(width: 10),
-            Text(
+            Icon(
+              Icons.power_settings_new_rounded,
+              color: Colors.redAccent.withOpacity(0.8),
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            const Text(
               "Disconnetti",
               style: TextStyle(
                 color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
               ),
             ),
           ],

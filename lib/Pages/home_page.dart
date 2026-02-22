@@ -83,7 +83,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
               _buildSearchBar(context),
 
-              // SWITCHER (Fisicamente fuori dal PageView per restare fisso)
+              // SWITCHER
               if (widget.mode == AppMode.movies)
                 Padding(
                   padding: const EdgeInsets.only(top: 20, bottom: 10),
@@ -114,8 +114,13 @@ class _HomePageState extends State<HomePage> {
                           });
                         },
                         children: [
-                          _buildCinemaPage(CinemaType.movies),
-                          _buildCinemaPage(CinemaType.tvSeries),
+                          // Avvolgiamo l'intera pagina per mantenere lo scroll quando cambi tra Film e Serie TV
+                          _KeepAliveSection(
+                            child: _buildCinemaPage(CinemaType.movies),
+                          ),
+                          _KeepAliveSection(
+                            child: _buildCinemaPage(CinemaType.tvSeries),
+                          ),
                         ],
                       ),
               ),
@@ -126,38 +131,62 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Costruisce la singola pagina scrollabile del PageView
+  // --- COSTRUZIONE LISTE OTTIMIZZATE ---
+
   Widget _buildCinemaPage(CinemaType type) {
-    return SingleChildScrollView(
+    final sections = HomeContentBuilder.buildCinemaContent(type: type);
+
+    return ListView.builder(
       physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 10),
-          HomeContentBuilder.buildHeroBanner(widget.mode, cinemaType: type),
-          const SizedBox(height: 30),
-          ...HomeContentBuilder.buildCinemaContent(type: type),
-          const SizedBox(height: 80),
-        ],
-      ),
+      padding: const EdgeInsets.only(bottom: 80),
+      itemCount: sections.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          // Il KeepAlive avvolge il banner per non ricaricarlo
+          return _KeepAliveSection(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10),
+                HomeContentBuilder.buildHeroBanner(
+                  widget.mode,
+                  cinemaType: type,
+                ),
+                const SizedBox(height: 30),
+              ],
+            ),
+          );
+        }
+        // Il KeepAlive avvolge ogni signola riga di film! Una volta caricata, resta lì.
+        return _KeepAliveSection(child: sections[index - 1]);
+      },
     );
   }
 
-  // Per i libri manteniamo lo scroll standard
   Widget _buildStaticScroll(List<Widget> content) {
-    return SingleChildScrollView(
+    return ListView.builder(
       physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 10),
-          HomeContentBuilder.buildHeroBanner(widget.mode),
-          const SizedBox(height: 30),
-          const UserBooksSection(title: "In coda di lettura", status: "toread"),
-          ...content,
-          const SizedBox(height: 80),
-        ],
-      ),
+      padding: const EdgeInsets.only(bottom: 80),
+      itemCount: content.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return _KeepAliveSection(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10),
+                HomeContentBuilder.buildHeroBanner(widget.mode),
+                const SizedBox(height: 30),
+                const UserBooksSection(
+                  title: "In coda di lettura",
+                  status: "toread",
+                ),
+              ],
+            ),
+          );
+        }
+        return _KeepAliveSection(child: content[index - 1]);
+      },
     );
   }
 
@@ -200,5 +229,29 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+}
+
+// --- IL WIDGET MAGICO PER LA CACHE ---
+// Questo widget dice a Flutter di non distruggere mai il suo contenuto
+// quando esce dallo schermo. Perfetto per le chiamate API costose.
+class _KeepAliveSection extends StatefulWidget {
+  final Widget child;
+  const _KeepAliveSection({required this.child});
+
+  @override
+  State<_KeepAliveSection> createState() => _KeepAliveSectionState();
+}
+
+class _KeepAliveSectionState extends State<_KeepAliveSection>
+    with AutomaticKeepAliveClientMixin {
+  // Questa è la riga che fa la magia. True = non mi uccidere.
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Fondamentale chiamare il super
+    return widget.child;
   }
 }

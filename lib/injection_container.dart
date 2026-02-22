@@ -61,6 +61,8 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetMovieCastUseCase(sl()));
   sl.registerLazySingleton(() => AnalyzeMovieUseCase(sl()));
   sl.registerLazySingleton(() => SearchMoviesUseCase(sl()));
+  sl.registerLazySingleton(() => GetMovieTrailerUseCase(sl())); // <-- NUOVO
+  sl.registerLazySingleton(() => GetMovieWatchProvidersUseCase(sl()));
 
   // --- TV SERIES USE CASES ---
   // API
@@ -69,12 +71,12 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetTvSeriesReviewsUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesCastUseCase(sl()));
   sl.registerLazySingleton(() => AnalyzeTvSeriesUseCase(sl()));
+  sl.registerLazySingleton(() => GetTvSeriesTrailerUseCase(sl())); // <-- NUOVO
+  sl.registerLazySingleton(() => GetTvSeriesWatchProvidersUseCase(sl()));
 
   // DB
   sl.registerLazySingleton(() => SaveTvSeriesUseCase(sl()));
-  sl.registerLazySingleton(
-    () => ToggleTvSeriesStatusUseCase(sl()),
-  ); // Opzionale se usi quello movie, ma meglio separare
+  sl.registerLazySingleton(() => ToggleTvSeriesStatusUseCase(sl()));
   sl.registerLazySingleton(() => DeleteTvSeriesUseCase(sl()));
   sl.registerLazySingleton(() => SaveTvSeriesAnalysisUseCase(sl()));
 }

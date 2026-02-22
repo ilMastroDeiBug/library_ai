@@ -3,6 +3,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/models/movie_widget/review_model.dart';
 import 'package:library_ai/models/movie_widget/cast_model.dart';
 import 'package:library_ai/services/utility_services/ai_service.dart';
+import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
 
 // --- DB USE CASES (SERIE TV) ---
 
@@ -96,4 +97,20 @@ class AnalyzeTvSeriesUseCase {
     await repository.saveAnalysis(userId, seriesId, analysis);
     return analysis;
   }
+}
+
+class GetTvSeriesTrailerUseCase {
+  final MovieRepository repository;
+  GetTvSeriesTrailerUseCase(this.repository);
+
+  Future<String?> call(int seriesId) =>
+      repository.getTrailerKey(seriesId, isTv: true);
+}
+
+class GetTvSeriesWatchProvidersUseCase {
+  final MovieRepository repository;
+  GetTvSeriesWatchProvidersUseCase(this.repository);
+
+  Future<WatchProvidersResult?> call(int seriesId) =>
+      repository.getWatchProviders(seriesId, isTv: true);
 }

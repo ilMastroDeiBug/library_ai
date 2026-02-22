@@ -5,7 +5,7 @@ import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'movie_card.dart';
 import '../../pages/movie_detail_page.dart';
 
-class MovieSection extends StatelessWidget {
+class MovieSection extends StatefulWidget {
   final String title;
   final String categoryPath;
   final bool isTvSeries;
@@ -16,6 +16,23 @@ class MovieSection extends StatelessWidget {
     required this.categoryPath,
     this.isTvSeries = false,
   });
+
+  @override
+  State<MovieSection> createState() => _MovieSectionState();
+}
+
+class _MovieSectionState extends State<MovieSection> {
+  // CONGELIAMO LA CHIAMATA API QUI
+  late Future<List<dynamic>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    // La chiamata parte una volta sola all'inizializzazione del widget
+    _future = widget.isTvSeries
+        ? sl<GetTvSeriesByCategoryUseCase>().call(widget.categoryPath)
+        : sl<GetMoviesByCategoryUseCase>().call(widget.categoryPath);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +46,7 @@ class MovieSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                title,
+                widget.title,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -50,9 +67,8 @@ class MovieSection extends StatelessWidget {
         SizedBox(
           height: 180,
           child: FutureBuilder<List<dynamic>>(
-            future: isTvSeries
-                ? sl<GetTvSeriesByCategoryUseCase>().call(categoryPath)
-                : sl<GetMoviesByCategoryUseCase>().call(categoryPath),
+            future:
+                _future, // Usiamo la variabile salvata! Nessun loop infinito.
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(

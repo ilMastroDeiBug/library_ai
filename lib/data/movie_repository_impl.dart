@@ -5,6 +5,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/models/movie_widget/review_model.dart';
 import 'package:library_ai/models/movie_widget/cast_model.dart';
 import 'package:library_ai/services/utility_services/tmdb_service.dart';
+import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
 
 class MovieRepositoryImpl implements MovieRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -108,4 +109,18 @@ class MovieRepositoryImpl implements MovieRepository {
   @override
   Future<List<TvSeries>> searchTvSeries(String query) async =>
       _tmdbService.searchTvSeries(query);
+
+  // NUOVO METODO: Trailer
+  @override
+  Future<String?> getTrailerKey(int id, {bool isTv = false}) async {
+    return await _tmdbService.fetchTrailerKey(id, isTv: isTv);
+  }
+
+  @override
+  Future<WatchProvidersResult?> getWatchProviders(
+    int id, {
+    bool isTv = false,
+  }) async {
+    return await _tmdbService.fetchWatchProviders(id, isTv: isTv);
+  }
 }

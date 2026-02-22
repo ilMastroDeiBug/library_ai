@@ -31,39 +31,35 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     _pageController = PageController(initialPage: _infiniteStart);
 
     _pageController.addListener(() {
-      setState(() {
-        _currentPageValue = _pageController.page ?? _infiniteStart.toDouble();
-      });
+      if (mounted) {
+        setState(() {
+          _currentPageValue = _pageController.page ?? _infiniteStart.toDouble();
+        });
+      }
     });
 
     _startAutoScroll();
   }
 
-  // --- FIX CRITICO: Ascoltiamo i cambiamenti dal genitore ---
   @override
   void didUpdateWidget(covariant AiHeroBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Se la lista degli items è cambiata (es. switch da Film a Serie), rigeneriamo la rotazione
     if (widget.items != oldWidget.items) {
       _stopAutoScroll();
       _generateDailyRotation();
-      // Resettiamo la posizione per evitare index out of bounds o glitch visivi
       if (_pageController.hasClients) {
         _pageController.jumpToPage(_infiniteStart);
       }
       _startAutoScroll();
     }
   }
-  // ----------------------------------------------------------
 
   void _generateDailyRotation() {
     if (widget.items.isEmpty) {
-      setState(() => _dailyItems = []); // Assicuriamoci di aggiornare la UI
+      setState(() => _dailyItems = []);
       return;
     }
 
-    // Usiamo un seed diverso se siamo in modalità Serie vs Film per avere rotazioni diverse
-    // Trucco: Aggiungiamo la lunghezza della lista al seed per variare
     final now = DateTime.now();
     final int typeModifier = widget.items.first is TvSeries ? 500 : 0;
     final int dailySeed =
@@ -86,11 +82,18 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     super.dispose();
   }
 
+  // --- IL FIX È QUI ---
   void _startAutoScroll() {
-    _timer?.cancel(); // Sicurezza extra
+    _timer?.cancel();
     if (_dailyItems.isEmpty) return;
 
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      // Se il widget è stato distrutto, uccidiamo il timer all'istante
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      // Se è ancora vivo e ha dei client collegati, giriamo pagina
       if (_pageController.hasClients) {
         _pageController.nextPage(
           duration: const Duration(milliseconds: 1000),
@@ -104,7 +107,6 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     _timer?.cancel();
   }
 
-  // ... (Resto dei metodi _extractData e build identici a prima)
   Map<String, String> _extractData(dynamic item) {
     if (item is Book) {
       return {
@@ -134,7 +136,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
 
   @override
   Widget build(BuildContext context) {
-    if (_dailyItems.isEmpty) return const SizedBox(); // O un loader/placeholder
+    if (_dailyItems.isEmpty) return const SizedBox();
 
     return Column(
       children: [
@@ -147,12 +149,13 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
             child: PageView.builder(
               controller: _pageController,
               onPageChanged: (index) {
-                setState(() {
-                  _realIndex = index % _dailyItems.length;
-                });
+                if (mounted) {
+                  setState(() {
+                    _realIndex = index % _dailyItems.length;
+                  });
+                }
               },
               itemBuilder: (context, index) {
-                // Sicurezza per l'operatore modulo su lista vuota
                 if (_dailyItems.isEmpty) return const SizedBox();
 
                 final int actualIndex = index % _dailyItems.length;
@@ -167,7 +170,6 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Immagine Parallax
                       ClipRRect(
                         child: Transform(
                           transform: Matrix4.identity()
@@ -183,7 +185,6 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                           ),
                         ),
                       ),
-                      // Gradiente
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -199,7 +200,6 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                           ),
                         ),
                       ),
-                      // Testi
                       Positioned(
                         bottom: 40,
                         left: 20,
@@ -262,7 +262,6 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
             ),
           ),
         ),
-        // Indicatori
         Transform.translate(
           offset: const Offset(0, -25),
           child: Row(

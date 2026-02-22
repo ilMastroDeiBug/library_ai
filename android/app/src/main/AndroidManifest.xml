@@ -4,9 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
-        android:label="library_ai"
+        android:label="CineShare"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
 
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
