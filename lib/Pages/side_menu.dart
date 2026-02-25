@@ -2,6 +2,7 @@
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import '../../models/app_mode.dart';
+import '../Pages/settings_page.dart';
 // Import Widget Modulari
 import '../models/side_menu_widgets/side_menu_header.dart';
 import '../models/side_menu_widgets/side_menu_item.dart';
@@ -137,7 +138,14 @@ class SideMenu extends StatelessWidget {
                                   isSelected: false,
                                   activeColor: Colors.white,
                                   onTap: () {
-                                    // Navigator.pop(context); -> rimettere quando la pagina esiste
+                                    Navigator.pop(context); // Chiude il drawer
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const SettingsPage(),
+                                      ),
+                                    );
                                   },
                                 ),
                               ],

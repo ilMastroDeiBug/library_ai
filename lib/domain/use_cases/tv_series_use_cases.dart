@@ -19,7 +19,6 @@ class ToggleTvSeriesStatusUseCase {
   final MovieRepository repository;
   ToggleTvSeriesStatusUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId
   Future<String> call(String userId, int id, String currentStatus) async {
     final newStatus = currentStatus == 'watched' ? 'towatch' : 'watched';
     await repository.updateStatus(userId, id, newStatus);
@@ -31,7 +30,6 @@ class DeleteTvSeriesUseCase {
   final MovieRepository repository;
   DeleteTvSeriesUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId
   Future<void> call(String userId, int seriesId) =>
       repository.deleteItem(userId, seriesId);
 }
@@ -40,7 +38,6 @@ class SaveTvSeriesAnalysisUseCase {
   final MovieRepository repository;
   SaveTvSeriesAnalysisUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId
   Future<void> call(String userId, int seriesId, String analysis) =>
       repository.saveAnalysis(userId, seriesId, analysis);
 }
@@ -51,8 +48,9 @@ class GetTvSeriesByCategoryUseCase {
   final MovieRepository repository;
   GetTvSeriesByCategoryUseCase(this.repository);
 
-  Future<List<TvSeries>> call(String path) =>
-      repository.getTvSeriesByCategory(path);
+  // FIX: Aggiunto il parametro opzionale 'page'
+  Future<List<TvSeries>> call(String path, {int page = 1}) =>
+      repository.getTvSeriesByCategory(path, page: page);
 }
 
 class GetTvSeriesReviewsUseCase {
@@ -86,7 +84,6 @@ class AnalyzeTvSeriesUseCase {
 
   AnalyzeTvSeriesUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId per salvare l'analisi
   Future<String> call(String userId, int seriesId, String name) async {
     final analysis = await _aiService.analyzeMedia(
       title: name,

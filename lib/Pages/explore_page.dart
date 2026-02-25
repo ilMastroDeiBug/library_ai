@@ -1,104 +1,144 @@
 import 'package:flutter/material.dart';
-import '../models/app_mode.dart';
-import 'package:library_ai/services/pages_services/explore_service.dart';
+import '../../models/app_mode.dart';
+import '../../injection_container.dart';
+import '../../domain/use_cases/explore_use_cases.dart';
 import '../models/category_card.dart';
-import 'search_page.dart'; // Assicurati che il nome del file sia corretto
+import 'search_page.dart';
 
 class ExplorePage extends StatelessWidget {
   final AppMode mode;
+  final bool isTvSeries; // <-- Aggiunto il controllo
   final VoidCallback onOpenDrawer;
 
-  final ExploreService _exploreService = ExploreService();
-  static const Color _themeColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _bgColor = Color(0xFF0A0A0C);
 
-  ExplorePage({super.key, required this.mode, required this.onOpenDrawer});
+  const ExplorePage({
+    super.key,
+    required this.mode,
+    this.isTvSeries = false, // <-- Gestiamo le Serie TV
+    required this.onOpenDrawer,
+  });
+
+  String _getTitle() {
+    if (mode == AppMode.books) return "Esplora Libri";
+    return isTvSeries ? "Esplora Serie TV" : "Esplora Cinema";
+  }
 
   @override
   Widget build(BuildContext context) {
-    final categories = _exploreService.getCategories(mode);
-    final title = mode == AppMode.books ? "ESPLORA LIBRI" : "ESPLORA CINEMA";
+    // Richiediamo i dati giusti in base alla combinazione Mode / isTvSeries
+    final categories = sl<GetExploreCategoriesUseCase>().call(
+      mode,
+      isTvSeries: isTvSeries,
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: _bgColor,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: _bgColor,
             floating: true,
             pinned: true,
-            expandedHeight: 120,
+            expandedHeight: 140,
             elevation: 0,
-            // Custom Leading per evitare collisioni
-            leading: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: GestureDetector(
-                onTap: onOpenDrawer,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.menu_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
+            leading: IconButton(
+              icon: const Icon(
+                Icons.menu_rounded,
+                color: Colors.white,
+                size: 28,
               ),
+              onPressed: onOpenDrawer,
             ),
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-              title: Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 20,
-                  color: Colors.white,
-                  letterSpacing: 1.5,
-                ),
+              titlePadding: const EdgeInsets.only(
+                left: 20,
+                bottom: 16,
+                right: 20,
               ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      _themeColor.withOpacity(0.1),
-                      const Color(0xFF121212),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _getTitle(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Icon(
+                    mode == AppMode.books
+                        ? Icons.auto_stories
+                        : Icons.movie_creation_rounded,
+                    color: _brandColor.withOpacity(0.5),
+                    size: 24,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: GestureDetector(
+                onTap: () => showSearch(
+                  context: context,
+                  delegate: UniversalSearchDelegate(mode: mode),
+                ),
+                child: Container(
+                  height: 55,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161618),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 20),
+                      Icon(
+                        Icons.search_rounded,
+                        color: Colors.white.withOpacity(0.4),
+                      ),
+                      const SizedBox(width: 15),
+                      Text(
+                        "Cerca un titolo, regista o autore...",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.3),
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search, color: _themeColor),
-                onPressed: () => showSearch(
-                  context: context,
-                  delegate: UniversalSearchDelegate(
-                    mode: mode,
-                  ), // FIX: Usiamo quello universale
-                ),
-              ),
-            ],
           ),
+
           SliverPadding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 1.5,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+                childAspectRatio: 1.2,
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 15,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, index) => CategoryCard(category: categories[index]),
+                (context, index) => CategoryCard(
+                  category: categories[index],
+                  mode: mode,
+                  isTvSeries: isTvSeries, // <-- Passiamolo alla card!
+                ),
                 childCount: categories.length,
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );

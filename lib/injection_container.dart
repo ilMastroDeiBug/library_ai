@@ -3,13 +3,16 @@ import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/repositories/user_repository.dart';
 import 'package:library_ai/domain/repositories/book_repository.dart';
 import 'package:library_ai/domain/repositories/movie_repository.dart';
+import 'package:library_ai/domain/repositories/explore_repository.dart';
 
 import 'package:library_ai/data/firebase_auth_repository.dart';
 import 'package:library_ai/data/firebase_user_repository.dart';
 import 'package:library_ai/data/book_repository_impl.dart';
 import 'package:library_ai/data/movie_repository_impl.dart';
+import 'package:library_ai/data/explore_repository_impl.dart';
 
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
+import 'package:library_ai/domain/use_cases/explore_use_cases.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
@@ -79,4 +82,8 @@ Future<void> init() async {
   sl.registerLazySingleton(() => ToggleTvSeriesStatusUseCase(sl()));
   sl.registerLazySingleton(() => DeleteTvSeriesUseCase(sl()));
   sl.registerLazySingleton(() => SaveTvSeriesAnalysisUseCase(sl()));
+
+  // Explore (Domain & Data)
+  sl.registerLazySingleton<ExploreRepository>(() => ExploreRepositoryImpl());
+  sl.registerLazySingleton(() => GetExploreCategoriesUseCase(sl()));
 }

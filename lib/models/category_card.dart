@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../models/category_model.dart';
-import '../../pages/genre_result_page.dart';
+import '../../domain/entities/category.dart';
+import '../../models/app_mode.dart';
+import '../pages/genre_result_page.dart';
 
 class CategoryCard extends StatelessWidget {
-  final CategoryModel category;
+  final CategoryEntity category;
+  final AppMode mode;
+  final bool isTvSeries;
 
-  const CategoryCard({super.key, required this.category});
+  const CategoryCard({
+    super.key,
+    required this.category,
+    required this.mode,
+    this.isTvSeries = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -17,94 +25,97 @@ class CategoryCard extends StatelessWidget {
             builder: (context) => GenreResultPage(
               categoryName: category.name,
               categoryId: category.id,
+              mode: mode,
+              isTvSeries: isTvSeries, // Passiamo il parametro per TMDB!
             ),
           ),
         );
       },
       child: Container(
-        // Decorazione Scura ed Elegante
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E), // Sfondo Base Scuro
-          borderRadius: BorderRadius.circular(20),
-          // Bordo sottile colorato per dare l'accento
-          border: Border.all(color: category.color.withOpacity(0.3), width: 1),
+          color: const Color(0xFF161618),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.orangeAccent.withOpacity(0.1),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.4),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
           ],
-          // Gradiente interno molto sottile per dare volume
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [const Color(0xFF2C2C2C), const Color(0xFF1A1A1A)],
-          ),
         ),
-        // Clip per tagliare l'icona che sborda
         clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
-            // 1. Icona Gigante Decorativa (Watermark)
             Positioned(
-              right: -20,
-              bottom: -20,
-              child: Transform.rotate(
-                angle: -0.2, // Leggera inclinazione per dinamismo
-                child: Icon(
-                  category.icon,
-                  size: 110,
-                  // Usa il colore della categoria ma molto trasparente
-                  color: category.color.withOpacity(0.08),
+              right: -10,
+              bottom: -15,
+              child: Text(
+                category.name
+                    .substring(
+                      0,
+                      category.name.length > 3 ? 4 : category.name.length,
+                    )
+                    .toUpperCase(),
+                style: TextStyle(
+                  fontSize: 70,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white.withOpacity(0.03),
+                  letterSpacing: -5,
                 ),
               ),
             ),
 
-            // 2. Contenuto
+            Positioned(
+              left: -20,
+              top: -20,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.orangeAccent.withOpacity(0.15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orangeAccent.withOpacity(0.2),
+                      blurRadius: 40,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Icona Piccola nel badge
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: category.color.withOpacity(0.1),
+                      color: Colors.black.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: category.color.withOpacity(0.2),
-                      ),
                     ),
                     child: Icon(
                       category.icon,
-                      color: category.color, // Colore pieno (Ciano o Arancio)
-                      size: 24,
+                      color: Colors.orangeAccent,
+                      size: 26,
                     ),
                   ),
-
-                  // Nome Categoria
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        category.name.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      // Freccettina decorativa
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 16,
-                        color: Colors.white.withOpacity(0.3),
-                      ),
-                    ],
+                  Text(
+                    category.name,
+                    maxLines: 2,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      height: 1.2,
+                    ),
                   ),
                 ],
               ),

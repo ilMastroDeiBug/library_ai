@@ -5,7 +5,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/injection_container.dart';
 import '../../models/movie_widget/review_model.dart';
 import '../../models/movie_widget/cast_model.dart';
-import '../../models/movie_widget/watch_provider_model.dart'; // <-- Import Modello Providers
+import '../../models/movie_widget/watch_provider_model.dart';
 import '../utility_services/language_service.dart';
 
 class TmdbService {
@@ -19,60 +19,74 @@ class TmdbService {
   };
 
   // --- FILM ---
-  Future<List<Movie>> fetchMoviesByCategory(String endpoint) async {
-    final lang = sl<LanguageService>().currentLanguage;
-    final url = Uri.parse('$_baseUrl/movie/$endpoint?language=$lang&page=1');
-    return _fetchMovies(url);
-  }
-
-  Future<List<Movie>> fetchMoviesByGenre(String genreId) async {
+  Future<List<Movie>> fetchMoviesByCategory(
+    String endpoint, {
+    int page = 1,
+  }) async {
     final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/discover/movie?with_genres=$genreId&language=$lang&page=1',
+      '$_baseUrl/movie/$endpoint?language=$lang&page=$page',
     );
     return _fetchMovies(url);
   }
 
-  Future<List<Movie>> fetchTrendingMovies() async {
-    final url = Uri.parse('$_baseUrl/trending/movie/week?language=it-IT');
+  Future<List<Movie>> fetchMoviesByGenre(String genreId, {int page = 1}) async {
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse(
+      '$_baseUrl/discover/movie?with_genres=$genreId&language=$lang&page=$page',
+    );
     return _fetchMovies(url);
   }
 
-  Future<List<Movie>> searchMovies(String query) async {
+  Future<List<Movie>> fetchTrendingMovies({int page = 1}) async {
+    // TMDB Trending supporta la lingua, la uniformiamo con il service
+    final lang = sl<LanguageService>().currentLanguage;
+    final url = Uri.parse(
+      '$_baseUrl/trending/movie/week?language=$lang&page=$page',
+    );
+    return _fetchMovies(url);
+  }
+
+  Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
     if (query.isEmpty) return [];
     final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/search/movie?query=$query&language=$lang&include_adult=false',
+      '$_baseUrl/search/movie?query=$query&language=$lang&include_adult=false&page=$page',
     );
     return _fetchMovies(url);
   }
 
   // --- SERIE TV ---
-  Future<List<TvSeries>> fetchTvSeriesByCategory(String endpoint) async {
+  Future<List<TvSeries>> fetchTvSeriesByCategory(
+    String endpoint, {
+    int page = 1,
+  }) async {
     final lang = sl<LanguageService>().currentLanguage;
-    final url = Uri.parse('$_baseUrl/tv/$endpoint?language=$lang&page=1');
+    final url = Uri.parse('$_baseUrl/tv/$endpoint?language=$lang&page=$page');
     return _fetchTvSeries(url);
   }
 
-  Future<List<TvSeries>> fetchTvByGenre(String genreId) async {
+  Future<List<TvSeries>> fetchTvByGenre(String genreId, {int page = 1}) async {
     final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/discover/tv?with_genres=$genreId&language=$lang&page=1',
+      '$_baseUrl/discover/tv?with_genres=$genreId&language=$lang&page=$page',
     );
     return _fetchTvSeries(url);
   }
 
-  Future<List<TvSeries>> fetchTvTrending() async {
+  Future<List<TvSeries>> fetchTvTrending({int page = 1}) async {
     final lang = sl<LanguageService>().currentLanguage;
-    final url = Uri.parse('$_baseUrl/trending/tv/week?language=$lang');
+    final url = Uri.parse(
+      '$_baseUrl/trending/tv/week?language=$lang&page=$page',
+    );
     return _fetchTvSeries(url);
   }
 
-  Future<List<TvSeries>> searchTvSeries(String query) async {
+  Future<List<TvSeries>> searchTvSeries(String query, {int page = 1}) async {
     if (query.isEmpty) return [];
     final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/search/tv?query=$query&language=$lang&include_adult=false',
+      '$_baseUrl/search/tv?query=$query&language=$lang&include_adult=false&page=$page',
     );
     return _fetchTvSeries(url);
   }
@@ -138,7 +152,6 @@ class TmdbService {
     }
   }
 
-  // NUOVO METODO: Recupero Watch Providers
   Future<WatchProvidersResult?> fetchWatchProviders(
     int id, {
     bool isTv = false,
@@ -157,7 +170,7 @@ class TmdbService {
           return WatchProvidersResult.fromJson(results['IT']);
         }
       }
-      return null; // Niente provider in Italia
+      return null;
     } catch (e) {
       return null;
     }

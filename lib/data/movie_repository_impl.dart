@@ -72,28 +72,62 @@ class MovieRepositoryImpl implements MovieRepository {
   }
 
   // --- METODI API TMDB ---
+
   @override
-  Future<List<Movie>> getMoviesByCategory(String categoryPath) async {
+  Future<List<Movie>> getMoviesByCategory(
+    String categoryPath, {
+    int page = 1,
+  }) async {
+    List<Movie> rawList;
+
     if (categoryPath == 'trending') {
-      return await _tmdbService.fetchTrendingMovies();
-    }
-    if (categoryPath.contains('with_genres=')) {
+      rawList = await _tmdbService.fetchTrendingMovies(page: page);
+    } else if (categoryPath.contains('with_genres=')) {
       final genreId = categoryPath.split('=').last;
-      return await _tmdbService.fetchMoviesByGenre(genreId);
+      rawList = await _tmdbService.fetchMoviesByGenre(genreId, page: page);
+    } else {
+      rawList = await _tmdbService.fetchMoviesByCategory(
+        categoryPath,
+        page: page,
+      );
     }
-    return await _tmdbService.fetchMoviesByCategory(categoryPath);
+
+    // IL BUTTAFUORI: Filtra via i film rotti o sconosciuti dalla Home
+    return rawList.where((movie) {
+      final hasPoster = movie.posterPath.isNotEmpty;
+      final hasVotes = movie.voteCount > 0;
+      return hasPoster && hasVotes;
+    }).toList();
   }
 
   @override
-  Future<List<TvSeries>> getTvSeriesByCategory(String categoryPath) async {
-    if (categoryPath == 'trending') return await _tmdbService.fetchTvTrending();
-    if (categoryPath.contains('with_genres=')) {
+  Future<List<TvSeries>> getTvSeriesByCategory(
+    String categoryPath, {
+    int page = 1,
+  }) async {
+    List<TvSeries> rawList;
+
+    if (categoryPath == 'trending') {
+      rawList = await _tmdbService.fetchTvTrending(page: page);
+    } else if (categoryPath.contains('with_genres=')) {
       final genreId = categoryPath.split('=').last;
-      return await _tmdbService.fetchTvByGenre(genreId);
+      rawList = await _tmdbService.fetchTvByGenre(genreId, page: page);
+    } else {
+      rawList = await _tmdbService.fetchTvSeriesByCategory(
+        categoryPath,
+        page: page,
+      );
     }
-    return await _tmdbService.fetchTvSeriesByCategory(categoryPath);
+
+    // IL BUTTAFUORI: Filtra via le serie tv rotte o sconosciute
+    return rawList.where((tv) {
+      final hasPoster = tv.posterPath.isNotEmpty;
+      final hasVotes = tv.voteCount > 0;
+      return hasPoster && hasVotes;
+    }).toList();
   }
 
+  // I METODI DI RICERCA RESTANO SENZA FILTRO (Trovano tutto!)
   @override
   Future<List<Review>> getReviews(int id, {bool isTv = false}) async =>
       _tmdbService.fetchReviews(id, isTv: isTv);
@@ -110,7 +144,6 @@ class MovieRepositoryImpl implements MovieRepository {
   Future<List<TvSeries>> searchTvSeries(String query) async =>
       _tmdbService.searchTvSeries(query);
 
-  // NUOVO METODO: Trailer
   @override
   Future<String?> getTrailerKey(int id, {bool isTv = false}) async {
     return await _tmdbService.fetchTrailerKey(id, isTv: isTv);

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:library_ai/domain/entities/app_user.dart'; // Importa la tua entità
+import 'package:library_ai/domain/entities/app_user.dart';
 
 class SettingsHeader extends StatelessWidget {
-  final AppUser? user; // Cambiato da User a AppUser
+  final AppUser? user;
   final String bio;
   final VoidCallback onPhotoTap;
 
@@ -18,28 +18,53 @@ class SettingsHeader extends StatelessWidget {
     return GestureDetector(
       onTap: onPhotoTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.orangeAccent.withOpacity(0.15),
+              const Color(0xFF161618),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.orangeAccent.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Stack(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.grey[800],
-                  child: Text(
-                    (user?.displayName?.isNotEmpty ?? false)
-                        ? user!.displayName![0].toUpperCase()
-                        : 'A',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orangeAccent.withOpacity(0.4),
+                        blurRadius: 15,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 35,
+                    backgroundColor: const Color(0xFF0A0A0C),
+                    child: Text(
+                      (user?.displayName?.isNotEmpty ?? false)
+                          ? user!.displayName![0].toUpperCase()
+                          : 'A',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ),
@@ -47,13 +72,17 @@ class SettingsHeader extends StatelessWidget {
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.orangeAccent, // Usiamo l'accento del brand
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.orangeAccent,
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF161618),
+                        width: 2,
+                      ),
                     ),
                     child: const Icon(
-                      Icons.camera_alt,
+                      Icons.camera_alt_rounded,
                       size: 12,
                       color: Colors.black,
                     ),
@@ -70,18 +99,20 @@ class SettingsHeader extends StatelessWidget {
                     user?.displayName ?? "Architect",
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 6),
                   Text(
                     bio,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
-                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 13,
+                      height: 1.4,
                     ),
                   ),
                 ],

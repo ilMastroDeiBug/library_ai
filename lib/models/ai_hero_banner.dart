@@ -88,17 +88,24 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     if (_dailyItems.isEmpty) return;
 
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      // Se il widget è stato distrutto, uccidiamo il timer all'istante
+      // 1. Se abbiamo cambiato pagina e il widget non c'è più, uccidi il timer
       if (!mounted) {
         timer.cancel();
         return;
       }
-      // Se è ancora vivo e ha dei client collegati, giriamo pagina
-      if (_pageController.hasClients) {
-        _pageController.nextPage(
-          duration: const Duration(milliseconds: 1000),
-          curve: Curves.fastOutSlowIn,
-        );
+
+      // 2. FIX FINALE: Giriamo pagina SOLO se il widget è pronto e ha una dimensione fisica
+      if (_pageController.hasClients &&
+          _pageController.position.haveDimensions) {
+        try {
+          _pageController.nextPage(
+            duration: const Duration(milliseconds: 1000),
+            curve: Curves.fastOutSlowIn,
+          );
+        } catch (e) {
+          // Silenziamo qualsiasi errore di transizione grafica
+          debugPrint("Scorrimento banner saltato: ricalcolo layout.");
+        }
       }
     });
   }

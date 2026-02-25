@@ -15,15 +15,18 @@ abstract class MovieRepository {
   Future<void> deleteItem(String userId, int id);
   Future<void> saveAnalysis(String userId, int id, String analysis);
 
-  // API (TMDB)
-  Future<List<Movie>> getMoviesByCategory(String categoryPath);
-  Future<List<TvSeries>> getTvSeriesByCategory(String categoryPath);
+  // API (TMDB) - AGGIUNTO PARAMETRO PAGE
+  Future<List<Movie>> getMoviesByCategory(String categoryPath, {int page = 1});
+  Future<List<TvSeries>> getTvSeriesByCategory(
+    String categoryPath, {
+    int page = 1,
+  });
+
   Future<List<Review>> getReviews(int id, {bool isTv = false});
   Future<List<CastMember>> getCast(int id, {bool isTv = false});
   Future<List<Movie>> searchMovies(String query);
   Future<List<TvSeries>> searchTvSeries(String query);
 
-  // NUOVO METODO: Trailer
   Future<String?> getTrailerKey(int id, {bool isTv = false});
   Future<WatchProvidersResult?> getWatchProviders(int id, {bool isTv = false});
 }
