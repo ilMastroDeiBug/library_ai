@@ -1,10 +1,11 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/book.dart';
 import '../services/pages_services/book_detail_logic.dart';
 import '/models/book_widgets/book_stats_bar.dart';
 import '../models/ai_analysis_section.dart';
+import 'package:library_ai/injection_container.dart'; // Importa GetIt
+import 'package:library_ai/domain/use_cases/book_use_cases.dart'; // Assicurati che GetSingleBookUseCase sia qui
 
 class BookDetailPage extends StatefulWidget {
   final Book book;
@@ -22,29 +23,25 @@ class _BookDetailPageState extends State<BookDetailPage> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    // Pulizia ID per il path Firestore (stessa logica usata nel repository)
     final String cleanId = widget.book.id.replaceAll('/', '_');
 
-    return StreamBuilder<DocumentSnapshot>(
+    // 1. STACCHIAMOCI DA FIRESTORE
+    return StreamBuilder<Book?>(
+      // 2. USIAMO IL NUOVO STREAM DI SUPABASE
       stream: user != null
-          ? FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .collection('library')
-                .doc(cleanId)
-                .snapshots()
+          ? sl<GetSingleBookUseCase>().call(user.uid, cleanId)
           : null,
       builder: (context, snapshot) {
+        // 3. SEZIONE DI DEFAULT (Se sta caricando o se il libro non è mai stato salvato)
         Book liveBook = widget.book;
-        String currentStatus = widget.book.status;
-        String? storedAnalysis = widget.book.aiAnalysis;
 
-        if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          liveBook = Book.fromFirestore(data, widget.book.id);
-          currentStatus = liveBook.status;
-          storedAnalysis = liveBook.aiAnalysis;
+        // 4. SEZIONE DATI REALI (Se il libro esiste nel database Supabase)
+        if (snapshot.hasData && snapshot.data != null) {
+          liveBook = snapshot.data!;
         }
+
+        String currentStatus = liveBook.status;
+        String? storedAnalysis = liveBook.aiAnalysis;
 
         return Scaffold(
           backgroundColor: const Color(0xFF121212),

@@ -27,6 +27,16 @@ class BookRepositoryImpl implements BookRepository {
         });
   }
 
+  // <-- FIX: AGGIUNTO IL METODO MANCANTE PER RISPETTARE L'INTERFACCIA
+  @override
+  Stream<Book?> getSingleBookStream(String userId, String bookId) {
+    String docId = bookId.replaceAll('/', '_');
+    return _libraryRef(userId).doc(docId).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return Book.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+    });
+  }
+
   @override
   Future<void> addBook(Book book, String userId) async {
     final data = book.toMap();

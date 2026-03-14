@@ -44,6 +44,15 @@ class ToggleBookStatusUseCase {
   }
 }
 
+class GetSingleBookUseCase {
+  final BookRepository repository;
+  GetSingleBookUseCase(this.repository);
+
+  Stream<Book?> call(String userId, String bookId) {
+    return repository.getSingleBookStream(userId, bookId);
+  }
+}
+
 class SaveBookAnalysisUseCase {
   final BookRepository repository;
   SaveBookAnalysisUseCase(this.repository);

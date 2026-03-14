@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // <-- NUOVO IMPORT
 import 'package:library_ai/Pages/splash_screen.dart';
 import 'firebase_options.dart';
 
@@ -8,16 +9,23 @@ import 'package:library_ai/Pages/login_page.dart';
 import 'package:library_ai/AccountSetupPages/profile_setup_page.dart';
 import 'package:library_ai/navigation_hub.dart';
 
-// CLEAN ARCH IMPORTS - Usa i percorsi assoluti package:
+// CLEAN ARCH IMPORTS
 import 'package:library_ai/injection_container.dart' as di;
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // INIZIALIZZA IL SERVICE LOCATOR (Fondamentale!)
+  // 1. Manteniamo Firebase acceso per ora (non rompiamo il sistema attuale)
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Supabase.initialize(
+    url:
+        'https://vmbshnrphkmuqtjjfdah.supabase.co', //https://vmbshnrphkmuqtjjfdah.supabase.co
+    anonKey: 'sb_publishable_MiRYZsjKtlT68nNzn2S-JQ_g-bBj_Gu',
+  );
+
+  // 3. INIZIALIZZA IL SERVICE LOCATOR (Fondamentale!)
   await di.init();
 
   runApp(const MyApp());
@@ -58,7 +66,8 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ASCOLTA LO STREAM DEL REPOSITORY (Non Firebase diretto!)
+    // ASCOLTA LO STREAM DEL REPOSITORY
+    // Quando passeremo a Supabase, questo codice rimarrà IDENTICO.
     return StreamBuilder<AppUser?>(
       stream: di.sl<AuthRepository>().userStream,
       builder: (context, snapshot) {

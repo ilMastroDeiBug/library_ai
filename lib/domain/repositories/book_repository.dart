@@ -19,4 +19,5 @@ abstract class BookRepository {
   // Metodi API
   Future<List<Book>> searchBooks(String query);
   Future<List<Book>> getBooksByCategory(String categoryId);
+  Stream<Book?> getSingleBookStream(String userId, String bookId);
 }

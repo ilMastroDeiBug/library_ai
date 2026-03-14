@@ -7,7 +7,8 @@ import 'package:library_ai/domain/repositories/explore_repository.dart';
 
 import 'package:library_ai/data/firebase_auth_repository.dart';
 import 'package:library_ai/data/firebase_user_repository.dart';
-import 'package:library_ai/data/book_repository_impl.dart';
+import 'package:library_ai/data/book_repository_impl.dart'; // Vecchia implementazione Firebase (puoi tenerla per backup)
+import 'package:library_ai/data/supabase_book_repository_impl.dart'; // <-- NUOVO IMPORT SUPABASE
 import 'package:library_ai/data/movie_repository_impl.dart';
 import 'package:library_ai/data/explore_repository_impl.dart';
 
@@ -27,7 +28,9 @@ Future<void> init() async {
   // Repositories
   sl.registerLazySingleton<AuthRepository>(() => FirebaseAuthRepository());
   sl.registerLazySingleton<UserRepository>(() => FirebaseUserRepository());
-  sl.registerLazySingleton<BookRepository>(() => BookRepositoryImpl());
+  sl.registerLazySingleton<BookRepository>(
+    () => SupabaseBookRepositoryImpl(),
+  ); // <-- LA MAGIA È QUI
   sl.registerLazySingleton<MovieRepository>(() => MovieRepositoryImpl());
 
   // Use Cases (Auth)
@@ -53,6 +56,9 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SearchBooksUseCase(sl()));
   sl.registerLazySingleton(() => GetBooksByCategoryUseCase(sl()));
 
+  // <-- IL PEZZO MANCANTE CHE CAUSAVA IL CRASH È QUI:
+  sl.registerLazySingleton(() => GetSingleBookUseCase(sl()));
+
   // Use Cases (Movies)
   sl.registerLazySingleton(() => GetWatchlistUseCase(sl()));
   sl.registerLazySingleton(() => ToggleMovieStatusUseCase(sl()));
@@ -64,7 +70,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetMovieCastUseCase(sl()));
   sl.registerLazySingleton(() => AnalyzeMovieUseCase(sl()));
   sl.registerLazySingleton(() => SearchMoviesUseCase(sl()));
-  sl.registerLazySingleton(() => GetMovieTrailerUseCase(sl())); // <-- NUOVO
+  sl.registerLazySingleton(() => GetMovieTrailerUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieWatchProvidersUseCase(sl()));
 
   // --- TV SERIES USE CASES ---
@@ -74,7 +80,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetTvSeriesReviewsUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesCastUseCase(sl()));
   sl.registerLazySingleton(() => AnalyzeTvSeriesUseCase(sl()));
-  sl.registerLazySingleton(() => GetTvSeriesTrailerUseCase(sl())); // <-- NUOVO
+  sl.registerLazySingleton(() => GetTvSeriesTrailerUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesWatchProvidersUseCase(sl()));
 
   // DB
