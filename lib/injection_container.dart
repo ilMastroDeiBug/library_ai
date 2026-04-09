@@ -4,12 +4,12 @@ import 'package:library_ai/domain/repositories/user_repository.dart';
 import 'package:library_ai/domain/repositories/book_repository.dart';
 import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/repositories/explore_repository.dart';
-
-import 'package:library_ai/data/firebase_auth_repository.dart';
 import 'package:library_ai/data/firebase_user_repository.dart';
 import 'package:library_ai/data/book_repository_impl.dart'; // Vecchia implementazione Firebase (puoi tenerla per backup)
 import 'package:library_ai/data/supabase_book_repository_impl.dart'; // <-- NUOVO IMPORT SUPABASE
 import 'package:library_ai/data/movie_repository_impl.dart';
+import 'package:library_ai/data/supabase_auth_repository_impl.dart';
+import 'package:library_ai/data/supabase_user_repository_impl.dart';
 import 'package:library_ai/data/explore_repository_impl.dart';
 
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
@@ -26,8 +26,8 @@ Future<void> init() async {
   if (sl.isRegistered<AuthRepository>()) return;
 
   // Repositories
-  sl.registerLazySingleton<AuthRepository>(() => FirebaseAuthRepository());
-  sl.registerLazySingleton<UserRepository>(() => FirebaseUserRepository());
+  sl.registerLazySingleton<AuthRepository>(() => SupabaseAuthRepositoryImpl());
+  sl.registerLazySingleton<UserRepository>(() => SupabaseUserRepositoryImpl());
   sl.registerLazySingleton<BookRepository>(
     () => SupabaseBookRepositoryImpl(),
   ); // <-- LA MAGIA È QUI

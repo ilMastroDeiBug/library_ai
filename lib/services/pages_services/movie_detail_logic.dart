@@ -33,7 +33,7 @@ class MovieDetailLogic {
       if (media is Movie) {
         await sl<SaveMovieUseCase>().call(
           media.copyWith(status: newStatus),
-          user.uid,
+          user.id, // <-- FIX: cambiato da uid a id
         );
       } else if (media is TvSeries) {
         final updated = TvSeries(
@@ -48,7 +48,10 @@ class MovieDetailLogic {
           status: newStatus,
           aiAnalysis: media.aiAnalysis,
         );
-        await sl<SaveTvSeriesUseCase>().call(updated, user.uid);
+        await sl<SaveTvSeriesUseCase>().call(
+          updated,
+          user.id,
+        ); // <-- FIX: cambiato da uid a id
       }
     } catch (e) {
       if (context.mounted) {
@@ -79,7 +82,10 @@ class MovieDetailLogic {
 
       if (media is Movie) {
         final updatedMovie = media.copyWith(aiAnalysis: analysis);
-        await sl<SaveMovieUseCase>().call(updatedMovie, user.uid);
+        await sl<SaveMovieUseCase>().call(
+          updatedMovie,
+          user.id,
+        ); // <-- FIX: cambiato da uid a id
       } else if (media is TvSeries) {
         final updatedSeries = TvSeries(
           id: media.id,
@@ -90,13 +96,13 @@ class MovieDetailLogic {
           voteAverage: media.voteAverage,
           voteCount: media.voteCount,
           firstAirDate: media.firstAirDate,
-
-          // CORREZIONE QUI: Rimosso "?? 'none'" perché status non è nullable
           status: media.status,
-
           aiAnalysis: analysis,
         );
-        await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.uid);
+        await sl<SaveTvSeriesUseCase>().call(
+          updatedSeries,
+          user.id,
+        ); // <-- FIX: cambiato da uid a id
       }
 
       return analysis;

@@ -4,8 +4,8 @@ import '../../domain/entities/book.dart';
 import '../services/pages_services/book_detail_logic.dart';
 import '/models/book_widgets/book_stats_bar.dart';
 import '../models/ai_analysis_section.dart';
-import 'package:library_ai/injection_container.dart'; // Importa GetIt
-import 'package:library_ai/domain/use_cases/book_use_cases.dart'; // Assicurati che GetSingleBookUseCase sia qui
+import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 
 class BookDetailPage extends StatefulWidget {
   final Book book;
@@ -25,22 +25,24 @@ class _BookDetailPageState extends State<BookDetailPage> {
     final user = FirebaseAuth.instance.currentUser;
     final String cleanId = widget.book.id.replaceAll('/', '_');
 
-    // 1. STACCHIAMOCI DA FIRESTORE
     return StreamBuilder<Book?>(
-      // 2. USIAMO IL NUOVO STREAM DI SUPABASE
       stream: user != null
           ? sl<GetSingleBookUseCase>().call(user.uid, cleanId)
           : null,
       builder: (context, snapshot) {
-        // 3. SEZIONE DI DEFAULT (Se sta caricando o se il libro non è mai stato salvato)
+        bool isSavedInDatabase = false;
         Book liveBook = widget.book;
 
-        // 4. SEZIONE DATI REALI (Se il libro esiste nel database Supabase)
+        // Se abbiamo dati dallo stream, significa che il libro È nel database
         if (snapshot.hasData && snapshot.data != null) {
           liveBook = snapshot.data!;
+          isSavedInDatabase = true;
         }
 
-        String currentStatus = liveBook.status;
+        // <-- IL FIX CRUCIALE È QUI -->
+        // Se non è salvato nel DB, forziamo lo stato a 'none'.
+        // In questo modo, premendo "Da Leggere" ('toread') non scatterà più la cancellazione accidentale!
+        String currentStatus = isSavedInDatabase ? liveBook.status : 'none';
         String? storedAnalysis = liveBook.aiAnalysis;
 
         return Scaffold(
@@ -107,7 +109,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                                 context,
                                 liveBook,
                                 'toread',
-                                currentStatus,
+                                currentStatus, // Ora passa 'none' se il libro è nuovo!
                               ),
                             ),
                           ),

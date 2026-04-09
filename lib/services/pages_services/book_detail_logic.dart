@@ -22,7 +22,10 @@ class BookDetailLogic {
     // RIMOZIONE
     if (currentStatus == targetStatus) {
       try {
-        await sl<DeleteBookUseCase>().call(user.uid, liveBook.id);
+        await sl<DeleteBookUseCase>().call(
+          user.id,
+          liveBook.id,
+        ); // <-- FIX: cambiato da uid a id
         if (context.mounted) {
           _showMinimalSnackBar(context, "Rimosso dalla libreria");
         }
@@ -45,11 +48,14 @@ class BookDetailLogic {
         pageCount: liveBook.pageCount,
         rating: liveBook.rating,
         ratingsCount: liveBook.ratingsCount,
-        status: targetStatus, // Qui cambiamo lo status (es. 'toread')
+        status: targetStatus,
         aiAnalysis: liveBook.aiAnalysis,
       );
 
-      await sl<AddBookUseCase>().call(bookToSave, user.uid);
+      await sl<AddBookUseCase>().call(
+        bookToSave,
+        user.id,
+      ); // <-- FIX: cambiato da uid a id
 
       if (context.mounted) {
         _showMinimalSnackBar(
@@ -83,10 +89,6 @@ class BookDetailLogic {
         creator: liveBook.author,
       );
 
-      // --- FIX CRUCIALE ---
-      // Salviamo l'oggetto COMPLETO, non solo l'analisi.
-      // Manteniamo lo status attuale (se era 'none' resta 'none', quindi invisibile nelle liste).
-
       final bookToSave = Book(
         id: liveBook.id,
         title: liveBook.title,
@@ -96,12 +98,14 @@ class BookDetailLogic {
         pageCount: liveBook.pageCount,
         rating: liveBook.rating,
         ratingsCount: liveBook.ratingsCount,
-        status: liveBook.status, // Mantiene 'none' o lo stato corrente
-        aiAnalysis: analysis, // Inietta la nuova analisi
+        status: liveBook.status,
+        aiAnalysis: analysis,
       );
 
-      // Usiamo AddBookUseCase che sovrascrive/aggiorna il documento intero
-      await sl<AddBookUseCase>().call(bookToSave, user.uid);
+      await sl<AddBookUseCase>().call(
+        bookToSave,
+        user.id,
+      ); // <-- FIX: cambiato da uid a id
 
       return analysis;
     } catch (e) {
