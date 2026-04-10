@@ -15,11 +15,19 @@ class GetWatchlistUseCase {
       repository.getWatchlistStream(userId, status);
 }
 
+// <-- NUOVO: Use Case dedicato alla pagina di Dettaglio
+class GetSingleMediaStreamUseCase {
+  final MovieRepository repository;
+  GetSingleMediaStreamUseCase(this.repository);
+
+  Stream<dynamic> call(String userId, int id) =>
+      repository.getSingleMediaStream(userId, id);
+}
+
 class ToggleMovieStatusUseCase {
   final MovieRepository repository;
   ToggleMovieStatusUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId
   Future<String> call(String userId, int id, String currentStatus) async {
     final newStatus = currentStatus == 'watched' ? 'towatch' : 'watched';
     await repository.updateStatus(userId, id, newStatus);
@@ -39,7 +47,6 @@ class SaveMovieAnalysisUseCase {
   final MovieRepository repository;
   SaveMovieAnalysisUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId
   Future<void> call(String userId, int movieId, String analysis) =>
       repository.saveAnalysis(userId, movieId, analysis);
 }
@@ -48,7 +55,6 @@ class DeleteMovieUseCase {
   final MovieRepository repository;
   DeleteMovieUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId
   Future<void> call(String userId, int movieId) =>
       repository.deleteItem(userId, movieId);
 }
@@ -60,7 +66,6 @@ class GetMoviesByCategoryUseCase {
   final MovieRepository repository;
   GetMoviesByCategoryUseCase(this.repository);
 
-  // AGGIUNTO IL PARAMETRO PAGE
   Future<List<Movie>> call(String path, {int page = 1}) =>
       repository.getMoviesByCategory(path, page: page);
 }
@@ -96,7 +101,6 @@ class AnalyzeMovieUseCase {
 
   AnalyzeMovieUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId per poter salvare l'analisi
   Future<String> call(String userId, int movieId, String title) async {
     final analysis = await _aiService.analyzeMedia(
       title: title,

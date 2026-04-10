@@ -4,14 +4,14 @@ import 'package:library_ai/domain/repositories/user_repository.dart';
 import 'package:library_ai/domain/repositories/book_repository.dart';
 import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/repositories/explore_repository.dart';
-import 'package:library_ai/data/firebase_user_repository.dart';
-import 'package:library_ai/data/book_repository_impl.dart'; // Vecchia implementazione Firebase (puoi tenerla per backup)
+//import 'package:library_ai/data/firebase_user_repository.dart';
+//import 'package:library_ai/data/book_repository_impl.dart'; // Vecchia implementazione Firebase (puoi tenerla per backup)
 import 'package:library_ai/data/supabase_book_repository_impl.dart'; // <-- NUOVO IMPORT SUPABASE
-import 'package:library_ai/data/movie_repository_impl.dart';
+//import 'package:library_ai/data/movie_repository_impl.dart';
 import 'package:library_ai/data/supabase_auth_repository_impl.dart';
 import 'package:library_ai/data/supabase_user_repository_impl.dart';
 import 'package:library_ai/data/explore_repository_impl.dart';
-
+import 'package:library_ai/data/supabase_movie_repository_impl.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 import 'package:library_ai/domain/use_cases/explore_use_cases.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
@@ -31,7 +31,9 @@ Future<void> init() async {
   sl.registerLazySingleton<BookRepository>(
     () => SupabaseBookRepositoryImpl(),
   ); // <-- LA MAGIA È QUI
-  sl.registerLazySingleton<MovieRepository>(() => MovieRepositoryImpl());
+  sl.registerLazySingleton<MovieRepository>(
+    () => SupabaseMovieRepositoryImpl(),
+  );
 
   // Use Cases (Auth)
   sl.registerLazySingleton(() => LoginWithEmailUseCase(sl()));
@@ -72,6 +74,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SearchMoviesUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieTrailerUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieWatchProvidersUseCase(sl()));
+  sl.registerLazySingleton(() => GetSingleMediaStreamUseCase(sl()));
 
   // --- TV SERIES USE CASES ---
   // API

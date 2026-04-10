@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
+import 'package:google_sign_in/google_sign_in.dart'; // <-- AGGIUNTO L'IMPORT PER GOOGLE
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/entities/app_user.dart';
 
@@ -9,7 +10,7 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
   AppUser? _mapUser(supa.User? user) {
     if (user == null) return null;
     return AppUser(
-      id: user.id, // <-- CORRETTO: Ora usa 'id' come vuole la tua classe
+      id: user.id,
       email: user.email ?? '',
       displayName: user.userMetadata?['name'] ?? 'Utente',
       // 'bio' e 'isPublic' prendono i default finché non li scarichiamo dal database
@@ -38,8 +39,32 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signInWithGoogle() async {
-    throw UnimplementedError(
-      "Login Google su Supabase: Lo facciamo al prossimo step!",
+    // 1. IL TUO WEB CLIENT ID (Prende il posto dell'eccezione)
+    const webClientId =
+        '474613371614-gjgpn9354i52qo7msde01vuq2s54k2d2.apps.googleusercontent.com';
+
+    final GoogleSignIn googleSignIn = GoogleSignIn(serverClientId: webClientId);
+
+    // 2. Apriamo il popup per far scegliere l'account
+    final googleUser = await googleSignIn.signIn();
+    if (googleUser == null) {
+      throw Exception('Login con Google annullato.');
+    }
+
+    // 3. Estraiamo i gettoni di sicurezza (Token)
+    final googleAuth = await googleUser.authentication;
+    final accessToken = googleAuth.accessToken;
+    final idToken = googleAuth.idToken;
+
+    if (accessToken == null || idToken == null) {
+      throw Exception('Impossibile ottenere i token di accesso da Google.');
+    }
+
+    // 4. Autentichiamo su Supabase
+    await _supabase.auth.signInWithIdToken(
+      provider: supa.OAuthProvider.google,
+      idToken: idToken,
+      accessToken: accessToken,
     );
   }
 

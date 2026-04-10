@@ -27,16 +27,15 @@ class MovieDetailLogic {
       return;
     }
 
+    // Toggle logico: se clicchi su uno già attivo, lo spengi ('none')
     final newStatus = (currentStatus == action) ? 'none' : action;
 
     try {
       if (media is Movie) {
-        await sl<SaveMovieUseCase>().call(
-          media.copyWith(status: newStatus),
-          user.id, // <-- FIX: cambiato da uid a id
-        );
+        final updatedMovie = media.copyWith(status: newStatus);
+        await sl<SaveMovieUseCase>().call(updatedMovie, user.id);
       } else if (media is TvSeries) {
-        final updated = TvSeries(
+        final updatedSeries = TvSeries(
           id: media.id,
           name: media.name,
           overview: media.overview,
@@ -48,16 +47,13 @@ class MovieDetailLogic {
           status: newStatus,
           aiAnalysis: media.aiAnalysis,
         );
-        await sl<SaveTvSeriesUseCase>().call(
-          updated,
-          user.id,
-        ); // <-- FIX: cambiato da uid a id
+        await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Errore salvataggio")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Errore nel salvataggio. Riprova.")),
+        );
       }
     }
   }
@@ -74,18 +70,14 @@ class MovieDetailLogic {
       final analysis = await aiService.analyzeMedia(
         title: title,
         type: type,
-        userProfile: "16 anni, Architect, Developer, MMA",
+        userProfile:
+            "16 anni, Architect, Developer, MMA", // Il tuo fantastico prompt AI
         creator: "",
       );
 
-      // --- FIX: SALVATAGGIO COMPLETO ---
-
       if (media is Movie) {
         final updatedMovie = media.copyWith(aiAnalysis: analysis);
-        await sl<SaveMovieUseCase>().call(
-          updatedMovie,
-          user.id,
-        ); // <-- FIX: cambiato da uid a id
+        await sl<SaveMovieUseCase>().call(updatedMovie, user.id);
       } else if (media is TvSeries) {
         final updatedSeries = TvSeries(
           id: media.id,
@@ -96,13 +88,10 @@ class MovieDetailLogic {
           voteAverage: media.voteAverage,
           voteCount: media.voteCount,
           firstAirDate: media.firstAirDate,
-          status: media.status,
+          status: media.status, // Manteniamo lo status originale!
           aiAnalysis: analysis,
         );
-        await sl<SaveTvSeriesUseCase>().call(
-          updatedSeries,
-          user.id,
-        ); // <-- FIX: cambiato da uid a id
+        await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
       }
 
       return analysis;
