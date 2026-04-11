@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/category.dart';
 import '../../models/app_mode.dart';
-import '../pages/genre_result_page.dart';
+import '../Pages/genre_result_page.dart'; // <-- Assicurati che il percorso sia corretto (la cartella Pages di solito ha la P maiuscola nel tuo progetto)
 
 class CategoryCard extends StatelessWidget {
   final CategoryEntity category;
@@ -23,10 +23,9 @@ class CategoryCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => GenreResultPage(
-              categoryName: category.name,
-              categoryId: category.id,
+              category: category, // <-- ECCO IL FIX: Passiamo l'intero oggetto!
               mode: mode,
-              isTvSeries: isTvSeries, // Passiamo il parametro per TMDB!
+              isTvSeries: isTvSeries,
             ),
           ),
         );

@@ -133,8 +133,17 @@ class _HomePageState extends State<HomePage> {
 
   // --- COSTRUZIONE LISTE OTTIMIZZATE ---
 
+  // --- COSTRUZIONE LISTE OTTIMIZZATE ---
+
   Widget _buildCinemaPage(CinemaType type) {
-    final sections = HomeContentBuilder.buildCinemaContent(type: type);
+    // 1. IL REGISTRO ANTI-CLONI: Si resetta ogni volta che cambi tab (Film/Serie)
+    final Set<int> seenIds = {};
+
+    // Passiamo il registro al costruttore dei contenuti
+    final sections = HomeContentBuilder.buildCinemaContent(
+      type: type,
+      seenIds: seenIds,
+    );
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
@@ -142,7 +151,6 @@ class _HomePageState extends State<HomePage> {
       itemCount: sections.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
-          // Il KeepAlive avvolge il banner per non ricaricarlo
           return _KeepAliveSection(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,13 +159,13 @@ class _HomePageState extends State<HomePage> {
                 HomeContentBuilder.buildHeroBanner(
                   widget.mode,
                   cinemaType: type,
+                  seenIds: seenIds, // Passiamo il registro anche al Banner!
                 ),
                 const SizedBox(height: 30),
               ],
             ),
           );
         }
-        // Il KeepAlive avvolge ogni signola riga di film! Una volta caricata, resta lì.
         return _KeepAliveSection(child: sections[index - 1]);
       },
     );

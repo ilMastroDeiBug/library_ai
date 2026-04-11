@@ -82,4 +82,13 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
   Future<void> sendPasswordReset(String email) async {
     await _supabase.auth.resetPasswordForEmail(email);
   }
+
+  @override
+  Future<void> deleteAccount() async {
+    // 1. Chiama la funzione SQL protetta
+    await _supabase.rpc('delete_user');
+
+    // 2. Svuota la sessione locale dal telefono
+    await _supabase.auth.signOut();
+  }
 }

@@ -9,6 +9,7 @@ import 'package:library_ai/services/utility_services/language_service.dart';
 import '../models/settings_widgets/settings_header.dart';
 import '../models/settings_widgets/settings_tile.dart';
 import '../models/settings_widgets/edit_profile_dialogs.dart';
+import '../models/settings_widgets/delete_account_dialog.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -225,7 +226,7 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.text_snippet_rounded,
               title: "Biografia",
               subtitle: _currentUser?.bio ?? "Raccontaci di te",
-              isBottom: true,
+              // isBottom rimosso: non è più l'ultimo elemento!
               onTap: () => EditProfileDialogs.showBioDialog(
                 context,
                 _currentUser?.bio ?? "",
@@ -233,6 +234,22 @@ class _SettingsPageState extends State<SettingsPage> {
                     .call(_currentUser!.id, bio)
                     .then((_) => _loadData()),
               ),
+            ),
+            SettingsTile(
+              icon: Icons.delete_forever_rounded,
+              title: "Elimina Account",
+              subtitle: "Azione irreversibile",
+              // Se il tuo SettingsTile personalizzato non supporta questi due colori extra,
+              // eliminali semplicemente dal codice qui sotto.
+              iconColor: Colors.redAccent,
+              textColor: Colors.redAccent,
+              isBottom: true, // Diventa lui la base curva del container
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => const DeleteAccountDialog(),
+                );
+              },
             ),
           ]),
 

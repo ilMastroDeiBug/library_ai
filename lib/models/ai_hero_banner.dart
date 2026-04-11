@@ -225,14 +225,14 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                                   color: Colors.black.withOpacity(0.6),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: Colors.cyanAccent.withOpacity(0.5),
+                                    color: Colors.orangeAccent.withOpacity(0.5),
                                     width: 1,
                                   ),
                                 ),
                                 child: Text(
                                   data['subtitle']!.toUpperCase(),
                                   style: const TextStyle(
-                                    color: Colors.cyanAccent,
+                                    color: Colors.orangeAccent,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.2,
@@ -282,7 +282,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                 width: _realIndex == index ? 24 : 4,
                 decoration: BoxDecoration(
                   color: _realIndex == index
-                      ? Colors.cyanAccent
+                      ? Colors.orangeAccent
                       : Colors.white.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),

@@ -12,4 +12,5 @@ abstract class AuthRepository {
   Future<void> logout();
   Future<void> updateDisplayName(String name);
   Future<void> sendPasswordReset(String email);
+  Future<void> deleteAccount(); // <-- Aggiungi questo nel contratto
 }

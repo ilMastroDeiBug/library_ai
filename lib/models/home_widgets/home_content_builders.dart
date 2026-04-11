@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:math'; // <-- NECESSARIO PER IL RANDOMIZER
+import 'package:flutter/material.dart';
 import '../../services/pages_services/home_service.dart';
 import '../../models/book_widgets/book_section.dart';
 import '../../injection_container.dart';
@@ -11,6 +12,8 @@ import '../../pages/book_detail_page.dart';
 import '../../pages/movie_detail_page.dart';
 import '../../models/app_mode.dart';
 import '../../models/movie_widget/movie_card.dart';
+import '../../domain/entities/movie.dart';
+import '../../domain/entities/tv_series.dart';
 
 class HomeContentBuilder {
   static List<Widget> buildBookContent() {
@@ -27,7 +30,10 @@ class HomeContentBuilder {
     }).toList();
   }
 
-  static List<Widget> buildCinemaContent({required CinemaType type}) {
+  static List<Widget> buildCinemaContent({
+    required CinemaType type,
+    required Set<int> seenIds, // <-- RICEVE IL REGISTRO
+  }) {
     final sections = (type == CinemaType.movies)
         ? HomeService.movieSections
         : HomeService.tvSections;
@@ -39,6 +45,7 @@ class HomeContentBuilder {
         title: section['title'],
         path: section['path'],
         isTv: type == CinemaType.tvSeries,
+        seenIds: seenIds, // <-- LO PASSA ALLA SINGOLA RIGA
       );
     }).toList();
   }
@@ -46,10 +53,11 @@ class HomeContentBuilder {
   static Widget buildHeroBanner(
     AppMode mode, {
     CinemaType cinemaType = CinemaType.movies,
+    Set<int>? seenIds, // <-- RICEVE IL REGISTRO
   }) {
     return FutureBuilder<List<dynamic>>(
       key: ValueKey('hero_${mode.index}_${cinemaType.index}'),
-      future: _fetchHeroItems(mode, cinemaType),
+      future: _fetchHeroItems(mode, cinemaType, seenIds),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -81,37 +89,116 @@ class HomeContentBuilder {
   static Future<List<dynamic>> _fetchHeroItems(
     AppMode mode,
     CinemaType cinemaType,
+    Set<int>? seenIds,
   ) async {
     try {
+      List<dynamic> items = [];
       if (mode == AppMode.books) {
-        return await sl<GetBooksByCategoryUseCase>().call("Fantasy");
+        items = await sl<GetBooksByCategoryUseCase>().call("Fantasy");
+      } else {
+        items = cinemaType == CinemaType.movies
+            ? await sl<GetMoviesByCategoryUseCase>().call("trending")
+            : await sl<GetTvSeriesByCategoryUseCase>().call("trending");
       }
-      return cinemaType == CinemaType.movies
-          ? await sl<GetMoviesByCategoryUseCase>().call("trending")
-          : await sl<GetTvSeriesByCategoryUseCase>().call("trending");
+
+      // PRENOTAZIONE: Se ci sono film nel banner, li registriamo subito
+      // così non appariranno nelle liste sottostanti!
+      if (seenIds != null && items.isNotEmpty) {
+        for (var item in items.take(5)) {
+          seenIds.add(item.id);
+        }
+      }
+
+      return items;
     } catch (e) {
       return [];
     }
   }
 }
 
-class CinemaHorizontalList extends StatelessWidget {
+// -------------------------------------------------------------
+// ORA È UNO STATEFUL WIDGET PER NON SPARE CHIAMATE API INUTILI
+// E GESTIRE IL FILTRO DEI DOPPIONI
+// -------------------------------------------------------------
+class CinemaHorizontalList extends StatefulWidget {
   final String title;
   final String path;
   final bool isTv;
+  final Set<int> seenIds;
 
   const CinemaHorizontalList({
     required this.title,
     required this.path,
     required this.isTv,
+    required this.seenIds,
     super.key,
   });
 
   @override
+  State<CinemaHorizontalList> createState() => _CinemaHorizontalListState();
+}
+
+class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
+  late Future<List<dynamic>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    // Spariamo il razzo una volta sola!
+    _future = _fetchAndFilter();
+  }
+
+  Future<List<dynamic>> _fetchAndFilter() async {
+    // 1. RANDOMIZER
+    int pageToFetch = 1;
+    if (widget.path.contains('with_genres=')) {
+      pageToFetch = Random().nextInt(3) + 1;
+    }
+
+    // 2. FETCH SEPARATO (Evitiamo il conflitto di tipi di Dart!)
+    List<dynamic> rawItems = [];
+    if (widget.isTv) {
+      rawItems = await sl<GetTvSeriesByCategoryUseCase>().call(
+        widget.path,
+        page: pageToFetch,
+      );
+    } else {
+      rawItems = await sl<GetMoviesByCategoryUseCase>().call(
+        widget.path,
+        page: pageToFetch,
+      );
+    }
+
+    // 3. DEDUPLICAZIONE ANTI-CLONI
+    List<dynamic> uniqueItems = [];
+    for (var item in rawItems) {
+      // TYPE CHECKING: Estraiamo l'id in modo 100% sicuro
+      int currentId = 0;
+      if (item is Movie) {
+        currentId = item.id;
+      } else if (item is TvSeries) {
+        currentId = item.id;
+      } else {
+        continue; // Fallback di sicurezza se l'item è rotto
+      }
+
+      // Se il set NON contiene l'id, il film/serie è inedito
+      if (!widget.seenIds.contains(currentId)) {
+        uniqueItems.add(item);
+        widget.seenIds.add(currentId); // Lo blocchiamo per le righe future
+      }
+    }
+
+    // 4. SHUFFLE
+    if (widget.path.contains('with_genres=')) {
+      uniqueItems.shuffle();
+    }
+
+    return uniqueItems;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final future = isTv
-        ? sl<GetTvSeriesByCategoryUseCase>().call(path)
-        : sl<GetMoviesByCategoryUseCase>().call(path);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -121,7 +208,7 @@ class CinemaHorizontalList extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                title,
+                widget.title, // <-- Aggiornato a widget.title
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -135,8 +222,8 @@ class CinemaHorizontalList extends StatelessWidget {
         SizedBox(
           height: 240,
           child: FutureBuilder<List<dynamic>>(
-            key: ValueKey('list_${title}_$isTv'),
-            future: future,
+            key: ValueKey('list_${widget.title}_${widget.isTv}'),
+            future: _future, // <-- ORA USA IL FUTURE INIZIALIZZATO IN INITSTATE
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -144,7 +231,10 @@ class CinemaHorizontalList extends StatelessWidget {
                 );
               }
               final items = snapshot.data ?? [];
+
+              // Se la deduplicazione ha svuotato la lista, nascondiamo la riga gracefully
               if (items.isEmpty) return const SizedBox.shrink();
+
               return ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),

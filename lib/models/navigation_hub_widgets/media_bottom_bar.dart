@@ -16,7 +16,7 @@ class MediaBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeColor = currentMode == AppMode.books
-        ? Colors.cyanAccent
+        ? Colors.orangeAccent
         : Colors.orangeAccent;
 
     return Container(

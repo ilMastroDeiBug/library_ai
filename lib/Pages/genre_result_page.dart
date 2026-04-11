@@ -1,33 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:library_ai/injection_container.dart';
-import 'package:library_ai/models/app_mode.dart';
-
-// Entities
-import 'package:library_ai/domain/entities/book.dart';
-import 'package:library_ai/domain/entities/movie.dart';
-import 'package:library_ai/domain/entities/tv_series.dart';
-
-// Use Cases
-import 'package:library_ai/domain/use_cases/book_use_cases.dart';
-import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
-import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
-
-// Cards & Pages
-import 'package:library_ai/models/book_widgets/book_card.dart';
-import 'package:library_ai/models/movie_widget/movie_card.dart';
-import 'package:library_ai/pages/movie_detail_page.dart';
-import 'package:library_ai/pages/book_detail_page.dart';
+import '../domain/entities/category.dart';
+import '../models/app_mode.dart';
+import '../injection_container.dart';
+import '../domain/use_cases/movie_use_cases.dart';
+import '../domain/use_cases/tv_series_use_cases.dart';
+import '../domain/use_cases/book_use_cases.dart';
+import '../models/movie_widget/movie_card.dart';
+import '../domain/entities/book.dart';
+import 'movie_detail_page.dart';
+import 'book_detail_page.dart';
 
 class GenreResultPage extends StatefulWidget {
-  final String categoryName;
-  final String categoryId;
+  final CategoryEntity category;
   final AppMode mode;
   final bool isTvSeries;
 
   const GenreResultPage({
     super.key,
-    required this.categoryName,
-    required this.categoryId,
+    required this.category,
     required this.mode,
     this.isTvSeries = false,
   });
@@ -37,28 +27,23 @@ class GenreResultPage extends StatefulWidget {
 }
 
 class _GenreResultPageState extends State<GenreResultPage> {
-  final List<dynamic> _items = [];
-  int _currentPage = 1;
-  bool _isLoading = false;
-  bool _hasMoreData = true;
+  // 1. IL CONTROLLER DELLO SCROLL
   final ScrollController _scrollController = ScrollController();
 
-  static const Color _brandColor = Colors.orangeAccent;
-  static const Color _bgColor = Color(0xFF0A0A0C);
+  // 2. LO STATO DELLA PAGINAZIONE
+  List<dynamic> _items = [];
+  int _currentPage = 1;
+  bool _isLoadingFirstTime = true;
+  bool _isFetchingMore = false;
+  bool _hasReachedMax =
+      false; // Se TMDB ci ridà una lista vuota, siamo alla fine
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent * 0.8 &&
-          !_isLoading &&
-          _hasMoreData) {
-        _loadData();
-      }
-    });
+    _fetchInitialData();
+    // 3. ASCOLTIAMO LO SCROLL IN TEMPO REALE
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -67,150 +52,162 @@ class _GenreResultPageState extends State<GenreResultPage> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    if (_isLoading) return;
+  // --- LA LOGICA DEL RADAR ---
+  void _onScroll() {
+    // Se siamo arrivati a 200 pixel dal fondo (prima ancora di toccarlo visivamente)
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      // E se non stiamo già caricando, e se c'è ancora roba da caricare...
+      if (!_isFetchingMore && !_hasReachedMax && !_isLoadingFirstTime) {
+        _fetchMoreData();
+      }
+    }
+  }
 
+  Future<void> _fetchInitialData() async {
+    final newItems = await _fetchItemsFromApi(1);
+    if (mounted) {
+      setState(() {
+        _items = newItems;
+        _isLoadingFirstTime = false;
+        // Se TMDB ci dà meno di 20 risultati, significa che non c'è una pagina 2
+        if (newItems.length < 20) _hasReachedMax = true;
+      });
+    }
+  }
+
+  Future<void> _fetchMoreData() async {
     setState(() {
-      _isLoading = true;
+      _isFetchingMore = true; // Mostriamo la rotellina in basso
     });
 
-    List<dynamic> newItems = [];
+    _currentPage++; // Andiamo alla pagina successiva
+    final newItems = await _fetchItemsFromApi(_currentPage);
 
+    if (mounted) {
+      setState(() {
+        _isFetchingMore = false;
+        if (newItems.isEmpty) {
+          _hasReachedMax = true; // Fine dei contenuti
+        } else {
+          _items.addAll(newItems); // ACCODIAMO i nuovi film a quelli vecchi!
+        }
+      });
+    }
+  }
+
+  Future<List<dynamic>> _fetchItemsFromApi(int page) async {
     try {
       if (widget.mode == AppMode.books) {
-        newItems = await sl<GetBooksByCategoryUseCase>().call(
-          widget.categoryId,
-        );
-        _hasMoreData = false;
+        // Se i tuoi libri non hanno il parametro page, fermiamo il caricamento alla pagina 1
+        if (page > 1) return [];
+        return await sl<GetBooksByCategoryUseCase>().call(widget.category.name);
       } else {
-        final tmdbPath = 'with_genres=${widget.categoryId}';
-
+        // CINEMA MAGICO
+        final path = 'with_genres=${widget.category.id}';
         if (widget.isTvSeries) {
-          newItems = await sl<GetTvSeriesByCategoryUseCase>().call(
-            tmdbPath,
-            page: _currentPage,
+          return await sl<GetTvSeriesByCategoryUseCase>().call(
+            path,
+            page: page,
           );
         } else {
-          newItems = await sl<GetMoviesByCategoryUseCase>().call(
-            tmdbPath,
-            page: _currentPage,
-          );
+          return await sl<GetMoviesByCategoryUseCase>().call(path, page: page);
         }
       }
-
-      if (mounted) {
-        setState(() {
-          _items.addAll(newItems);
-          _currentPage++;
-          _isLoading = false;
-
-          if (newItems.isEmpty || newItems.length < 20) {
-            _hasMoreData = false;
-          }
-        });
-      }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        debugPrint("Errore caricamento pagina $_currentPage: $e");
-      }
+      return [];
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgColor,
-      appBar: AppBar(
-        backgroundColor: _bgColor,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          widget.categoryName.toUpperCase(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 2.0,
+      backgroundColor: const Color(0xFF0A0A0C),
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // APP BAR
+          SliverAppBar(
+            backgroundColor: const Color(0xFF0A0A0C),
+            floating: true,
+            pinned: true,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.white,
+                size: 20,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              widget.category.name.toUpperCase(),
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                color: Colors.white,
+                letterSpacing: 1.5,
+              ),
+            ),
           ),
-        ),
-      ),
-      body: _items.isEmpty && _isLoading
-          ? const Center(child: CircularProgressIndicator(color: _brandColor))
-          : _items.isEmpty && !_isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.search_off_rounded,
-                    size: 60,
-                    color: Colors.white24,
-                  ),
-                  SizedBox(height: 15),
-                  Text(
-                    "Nessun risultato trovato",
-                    style: TextStyle(color: Colors.white54, fontSize: 16),
-                  ),
-                ],
+
+          // STATO 1: Primo Caricamento
+          if (_isLoadingFirstTime)
+            const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(color: Colors.orangeAccent),
               ),
             )
-          : Column(
-              children: [
-                Expanded(
-                  child: GridView.builder(
-                    controller: _scrollController,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 20,
-                    ),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.6,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 20,
-                        ),
-                    itemCount: _items.length,
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-
-                      if (item is Book) {
-                        return GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BookDetailPage(book: item),
-                            ),
-                          ),
-                          child: BookCard(book: item),
-                        );
-                      } else {
-                        return MovieCard(
-                          media: item,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    MovieDetailPage(media: item),
-                              ),
-                            );
-                          },
-                        );
-                      }
-                    },
-                  ),
+          // STATO 2: Dati Caricati (Griglia Infinita)
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount:
+                      3, // 3 locandine per riga (stile Netflix/Letterboxd)
+                  childAspectRatio:
+                      0.65, // Proporzione classica delle locandine
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 15,
                 ),
-                if (_isLoading && _items.isNotEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: CircularProgressIndicator(color: _brandColor),
-                  ),
-              ],
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final item = _items[index];
+
+                  // Riutilizziamo la tua bellissima MovieCard!
+                  return MovieCard(
+                    media: item,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => item is Book
+                              ? BookDetailPage(book: item)
+                              : MovieDetailPage(media: item),
+                        ),
+                      );
+                    },
+                  );
+                }, childCount: _items.length),
+              ),
             ),
+
+          // STATO 3: Caricamento nuova pagina in fondo alla lista
+          if (_isFetchingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.only(top: 20, bottom: 40),
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.orangeAccent),
+                ),
+              ),
+            ),
+
+          // Buffer di spazio per evitare che l'ultimo film finisca sotto la navigation bar
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
     );
   }
 }

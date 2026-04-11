@@ -1,95 +1,83 @@
 import 'package:flutter/material.dart';
 
 class SettingsTile extends StatelessWidget {
-  final IconData? icon;
+  final IconData icon;
   final String title;
   final String? subtitle;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
   final bool isTop;
   final bool isBottom;
 
+  // 1. AGGIUNGIAMO LE VARIABILI OPZIONALI
+  final Color? iconColor;
+  final Color? textColor;
+
   const SettingsTile({
     super.key,
-    this.icon,
+    required this.icon,
     required this.title,
     this.subtitle,
-    this.onTap,
+    required this.onTap,
     this.isTop = false,
     this.isBottom = false,
+    this.iconColor, // <-- Aggiunto al costruttore
+    this.textColor, // <-- Aggiunto al costruttore
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.vertical(
-              top: isTop ? const Radius.circular(20) : Radius.zero,
-              bottom: isBottom ? const Radius.circular(20) : Radius.zero,
+    return InkWell(
+      onTap: onTap,
+      // La logica per mantenere i bordi curvi del contenitore
+      borderRadius: BorderRadius.vertical(
+        top: isTop ? const Radius.circular(20) : Radius.zero,
+        bottom: isBottom ? const Radius.circular(20) : Radius.zero,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              // 2. USIAMO IL COLORE SE C'È, ALTRIMENTI GRIGIO STANDARD
+              color: iconColor ?? Colors.white54,
+              size: 22,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (icon != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(icon, color: Colors.white70, size: 20),
-                    ),
-                    const SizedBox(width: 16),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.orangeAccent.withOpacity(0.7),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ],
+                  Text(
+                    title,
+                    style: TextStyle(
+                      // 3. USIAMO IL COLORE SE C'È, ALTRIMENTI BIANCO
+                      color: textColor ?? Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (onTap != null)
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Colors.white24,
-                      size: 14,
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.4),
+                        fontSize: 13,
+                      ),
                     ),
+                  ],
                 ],
               ),
             ),
-          ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white.withOpacity(0.2),
+              size: 14,
+            ),
+          ],
         ),
-        if (!isBottom)
-          Divider(
-            color: Colors.white.withOpacity(0.05),
-            height: 1,
-            indent: 60, // Allinea il divisore con il testo, saltando l'icona
-          ),
-      ],
+      ),
     );
   }
 }

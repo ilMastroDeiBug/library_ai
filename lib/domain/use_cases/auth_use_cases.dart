@@ -38,3 +38,10 @@ class ResetPasswordUseCase {
 
   Future<void> call(String email) => repository.sendPasswordReset(email);
 }
+
+class DeleteAccountUseCase {
+  final AuthRepository repository;
+  DeleteAccountUseCase(this.repository);
+
+  Future<void> call() => repository.deleteAccount();
+}
