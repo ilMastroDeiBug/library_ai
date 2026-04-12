@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// CLEAN ARCH IMPORTS
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 
@@ -15,24 +14,30 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  // INIEZIONE: Chiediamo lo Use Case al Service Locator
-  // Non esiste più LoginService!
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
 
     try {
-      // ESECUZIONE DEL COMANDO
       await sl<LoginWithEmailUseCase>().call(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
+        // TRADUTTORE ERRORI SUPABASE
+        String errorMsg = "Login fallito. Riprova.";
+        final errorStr = e.toString();
+
+        if (errorStr.contains('Invalid login credentials')) {
+          errorMsg = "Email o password errati.";
+        } else if (errorStr.contains('Email not confirmed')) {
+          errorMsg = "Devi prima confermare l'email. Controlla la posta!";
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().replaceAll("Exception: ", "")),
+            content: Text(errorMsg),
             backgroundColor: Colors.redAccent,
             behavior: SnackBarBehavior.floating,
           ),
@@ -45,8 +50,6 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ... IL TUO WIDGET BUILD RIMANE IDENTICO A PRIMA ...
-    // ... Copia il build() che avevi, è perfetto così ...
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -55,13 +58,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
-          ),
-        ),
+        color: const Color(0xFF0A0A0C), // TEMA CINESHARE
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(30.0),
@@ -79,14 +76,13 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Accedi per continuare i tuoi studi.",
+                  "Accedi a CineShare per continuare.",
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.6),
                     fontSize: 16,
                   ),
                 ),
                 const SizedBox(height: 50),
-
                 _buildGlassInput(
                   _emailController,
                   "Email",
@@ -101,11 +97,10 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                   true,
                 ),
                 const SizedBox(height: 40),
-
                 _isLoading
                     ? const Center(
                         child: CircularProgressIndicator(
-                          color: Colors.cyanAccent,
+                          color: Colors.orangeAccent,
                         ),
                       )
                     : Container(
@@ -113,7 +108,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.cyanAccent.withOpacity(0.2),
+                              color: Colors.orangeAccent.withOpacity(0.2),
                               blurRadius: 15,
                               offset: const Offset(0, 4),
                             ),
@@ -121,7 +116,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                         ),
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.cyanAccent,
+                            backgroundColor: Colors.orangeAccent,
                             foregroundColor: Colors.black87,
                             minimumSize: const Size(double.infinity, 55),
                             shape: RoundedRectangleBorder(
@@ -160,7 +155,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-        prefixIcon: Icon(icon, color: Colors.cyanAccent),
+        prefixIcon: Icon(icon, color: Colors.orangeAccent),
         filled: true,
         fillColor: Colors.white.withOpacity(0.05),
         enabledBorder: OutlineInputBorder(
@@ -169,7 +164,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.cyanAccent, width: 2),
+          borderSide: const BorderSide(color: Colors.orangeAccent, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,

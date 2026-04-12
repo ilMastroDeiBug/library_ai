@@ -21,15 +21,16 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      // INIEZIONE + ESECUZIONE
       await sl<GoogleLoginUseCase>().call();
-
-      print("DEBUG: Login Google riuscito");
     } catch (e) {
       if (mounted) {
+        final errorStr = e.toString();
+        // IGNORA L'ERRORE SE L'UTENTE HA SOLO CHIUSO LA TENDINA
+        if (errorStr.contains('Login annullato')) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll("Exception: ", "")),
+          const SnackBar(
+            content: Text("Accesso con Google fallito. Riprova."),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -41,15 +42,11 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // La UI è identica a prima, basta copiare il build() del tuo codice originale
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
-          ),
+          // NUOVO TEMA CINESHARE: Sfondo scuro elegante
+          color: Color(0xFF0A0A0C),
         ),
         child: SafeArea(
           child: Center(
@@ -76,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
                           context,
                           "Registrati",
                           const CreateAccountPage(),
-                          Colors.cyanAccent,
+                          Colors.orangeAccent, // BRAND COLOR
                         ),
                       ),
                       const SizedBox(width: 15),

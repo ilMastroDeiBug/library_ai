@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// CLEAN ARCH IMPORTS
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 
@@ -30,40 +29,56 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(
-          child: CircularProgressIndicator(color: Colors.cyanAccent),
+          child: CircularProgressIndicator(color: Colors.orangeAccent),
         ),
       );
 
-      // INIEZIONE + ESECUZIONE
       await sl<RegisterUseCase>().call(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
       if (mounted) Navigator.pop(context); // Chiudi loading
-      if (mounted) Navigator.pop(context); // Torna indietro
+      if (mounted) Navigator.pop(context); // Torna alla pagina login
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Account creato con successo!")),
+          const SnackBar(
+            content: Text("Account creato! Esegui l'accesso per continuare."),
+            backgroundColor: Colors.green, // Verde successo
+          ),
         );
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context); // Chiudi loading su errore
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll("Exception: ", "")),
-          backgroundColor: Colors.redAccent.shade700,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) Navigator.pop(context); // Chiudi loading
+
+      // TRADUTTORE ERRORI
+      String errorMsg = "Registrazione fallita. Riprova.";
+      final errorStr = e.toString();
+
+      if (errorStr.contains('already registered') ||
+          errorStr.contains('already exists')) {
+        errorMsg = "Esiste già un account con questa email.";
+      } else if (errorStr.contains('at least 6 characters')) {
+        errorMsg = "La password deve avere almeno 6 caratteri.";
+      } else if (errorStr.contains('format is invalid')) {
+        errorMsg = "Formato email non valido.";
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.redAccent.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // ... COPIA ESATTAMENTE IL TUO BUILD METHOD DI PRIMA (è solo UI) ...
-    // ... Ho riassunto qui per brevità, ma usa la tua UI moderna ...
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -75,13 +90,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
-          ),
-        ),
+        color: const Color(0xFF0A0A0C), // TEMA CINESHARE
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(30.0),
@@ -89,7 +98,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "Nuovo\nArchitect.",
+                  "Nuovo\nAccount.",
                   style: TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
@@ -99,7 +108,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 ),
                 const SizedBox(height: 15),
                 Text(
-                  "Costruisci la tua libreria digitale.",
+                  "Unisciti a CineShare.",
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.6),
                     fontSize: 16,
@@ -125,7 +134,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.cyanAccent.withOpacity(0.3),
+                        color: Colors.orangeAccent.withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 5),
                       ),
@@ -133,7 +142,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   ),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.cyanAccent,
+                      backgroundColor: Colors.orangeAccent,
                       foregroundColor: Colors.black87,
                       minimumSize: const Size(double.infinity, 55),
                       shape: RoundedRectangleBorder(
@@ -179,7 +188,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-          prefixIcon: Icon(icon, color: Colors.cyanAccent.withOpacity(0.7)),
+          prefixIcon: Icon(icon, color: Colors.orangeAccent.withOpacity(0.7)),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,

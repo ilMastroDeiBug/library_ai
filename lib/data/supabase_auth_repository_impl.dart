@@ -1,19 +1,17 @@
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
-import 'package:google_sign_in/google_sign_in.dart'; // <-- AGGIUNTO L'IMPORT PER GOOGLE
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/entities/app_user.dart';
 
 class SupabaseAuthRepositoryImpl implements AuthRepository {
   final supa.SupabaseClient _supabase = supa.Supabase.instance.client;
 
-  // Converte l'utente Auth di Supabase nella tua Entity AppUser
   AppUser? _mapUser(supa.User? user) {
     if (user == null) return null;
     return AppUser(
       id: user.id,
       email: user.email ?? '',
       displayName: user.userMetadata?['name'] ?? 'Utente',
-      // 'bio' e 'isPublic' prendono i default finché non li scarichiamo dal database
     );
   }
 
@@ -39,19 +37,20 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signInWithGoogle() async {
-    // 1. IL TUO WEB CLIENT ID (Prende il posto dell'eccezione)
     const webClientId =
         '474613371614-gjgpn9354i52qo7msde01vuq2s54k2d2.apps.googleusercontent.com';
 
     final GoogleSignIn googleSignIn = GoogleSignIn(serverClientId: webClientId);
 
-    // 2. Apriamo il popup per far scegliere l'account
+    // FIX GOOGLE: Sloggiamo localmente prima di iniziare.
+    // Forza Google a mostrare sempre la tendina di scelta account!
+    await googleSignIn.signOut();
+
     final googleUser = await googleSignIn.signIn();
     if (googleUser == null) {
-      throw Exception('Login con Google annullato.');
+      throw Exception('Login annullato.');
     }
 
-    // 3. Estraiamo i gettoni di sicurezza (Token)
     final googleAuth = await googleUser.authentication;
     final accessToken = googleAuth.accessToken;
     final idToken = googleAuth.idToken;
@@ -60,7 +59,6 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
       throw Exception('Impossibile ottenere i token di accesso da Google.');
     }
 
-    // 4. Autentichiamo su Supabase
     await _supabase.auth.signInWithIdToken(
       provider: supa.OAuthProvider.google,
       idToken: idToken,
@@ -70,6 +68,7 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
+    await GoogleSignIn().signOut(); // Sloggiamo anche da Google
     await _supabase.auth.signOut();
   }
 
@@ -85,10 +84,7 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> deleteAccount() async {
-    // 1. Chiama la funzione SQL protetta
     await _supabase.rpc('delete_user');
-
-    // 2. Svuota la sessione locale dal telefono
     await _supabase.auth.signOut();
   }
 }

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-// CLEAN ARCH IMPORTS
 import 'package:library_ai/injection_container.dart';
-import 'package:library_ai/domain/use_cases/auth_use_cases.dart'; // Contiene UpdateProfileUseCase
-// O NavigationHub
+import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -29,24 +27,21 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     setState(() => _isLoading = true);
 
     try {
-      // USIAMO LO USE CASE
       await sl<UpdateProfileUseCase>().call(_usernameController.text.trim());
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "Benvenuto a bordo, Architect.",
+              "Benvenuto a bordo di CineShare.",
               style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            backgroundColor: Colors.cyanAccent,
+            backgroundColor: Colors.orangeAccent,
           ),
         );
-        // Navigazione gestita da AuthGate, ma se serve forzare:
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NavigationHub()));
       }
     } catch (e) {
       if (mounted) {
@@ -64,17 +59,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ... IL TUO BUILD RIMANE IDENTICO ...
-    // ... Copia il build() dal tuo file originale ...
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
-          ),
-        ),
+        color: const Color(0xFF0A0A0C), // TEMA CINESHARE
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(30.0),
@@ -89,10 +76,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       width: 120,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.cyanAccent.withOpacity(0.1),
+                        color: Colors.orangeAccent.withOpacity(0.1),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.cyanAccent.withOpacity(0.2),
+                            color: Colors.orangeAccent.withOpacity(0.2),
                             blurRadius: 40,
                             spreadRadius: 10,
                           ),
@@ -102,13 +89,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     const Icon(
                       Icons.person_rounded,
                       size: 60,
-                      color: Colors.cyanAccent,
+                      color: Colors.orangeAccent,
                     ),
                   ],
                 ),
                 const SizedBox(height: 40),
                 const Text(
-                  "Identità Architect",
+                  "Il tuo Profilo",
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -118,7 +105,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Come vuoi essere chiamato?",
+                  "Come vuoi essere chiamato dagli altri?",
                   style: TextStyle(color: Colors.white.withOpacity(0.5)),
                 ),
                 const SizedBox(height: 40),
@@ -131,7 +118,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   ),
                   textAlign: TextAlign.center,
                   decoration: InputDecoration(
-                    hintText: 'Es. Architect_99',
+                    hintText: 'Es. MarioRossi',
                     hintStyle: TextStyle(color: Colors.white.withOpacity(0.2)),
                     filled: true,
                     fillColor: Colors.white.withOpacity(0.05),
@@ -144,7 +131,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: const BorderSide(
-                        color: Colors.cyanAccent,
+                        color: Colors.orangeAccent,
                         width: 2,
                       ),
                     ),
@@ -157,18 +144,18 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   child: _isLoading
                       ? const Center(
                           child: CircularProgressIndicator(
-                            color: Colors.cyanAccent,
+                            color: Colors.orangeAccent,
                           ),
                         )
                       : ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.cyanAccent,
-                            foregroundColor: Colors.black,
+                            backgroundColor: Colors.orangeAccent,
+                            foregroundColor: Colors.black87,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
                             elevation: 10,
-                            shadowColor: Colors.cyanAccent.withOpacity(0.4),
+                            shadowColor: Colors.orangeAccent.withOpacity(0.4),
                           ),
                           onPressed: _saveProfile,
                           child: const Text(

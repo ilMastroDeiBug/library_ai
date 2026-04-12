@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:library_ai/secrets.dart';
 
 class AIService {
   // --- CHIAVE API (La tua è già configurata) ---
-  static const String _apiKey =
-      "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";
+  static const String _apiKey = Secrets.grokApiKey;
 
   static const String _baseUrl =
       "https://api.groq.com/openai/v1/chat/completions";
@@ -60,7 +60,7 @@ class AIService {
       mediaLabel = "LIBRO: \"$title\" ${creator != null ? "di $creator" : ""}";
       specificQuestions = '''
       1. 📚 Compatibilità % (Quanto serve alla mia crescita)
-      2. 🚀 Perché mi serve (o perché è tempo perso)
+      2. 🚀 Perché mi potrebbe piacere (o perché è tempo perso)
       3. 🛠 Un'azione pratica ("Architect Move") da applicare subito.
       ''';
     }
@@ -82,7 +82,7 @@ class AIService {
         Rispondi ESATTAMENTE a questi punti:
         $specificQuestions
         
-        Sii breve (massimo 150 parole). Usa emoji tech/dark.
+        Sii breve (massimo 150 parole). Usa emoji in base alle preferenze dell' utente.
         ''';
 
     // D. Chiamata API
@@ -113,7 +113,7 @@ class AIService {
         return "Errore AI Core: ${response.statusCode} - ${response.body}";
       }
     } catch (e) {
-      return "Impossibile connettersi al Neural Vault: $e";
+      return "Impossibile connettersi al server: $e";
     }
   }
 }
