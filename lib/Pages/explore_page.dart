@@ -3,7 +3,7 @@ import '../../models/app_mode.dart';
 import '../../injection_container.dart';
 import '../../domain/use_cases/explore_use_cases.dart';
 import '../models/category_card.dart';
-import '../models/home_widgets/home_cinema_switcher.dart'; // <-- IMPORTIAMO LO SWITCHER
+import '../models/home_widgets/home_cinema_switcher.dart';
 import 'search_page.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -22,7 +22,6 @@ class ExplorePage extends StatefulWidget {
 
 class _ExplorePageState extends State<ExplorePage> {
   static const Color _brandColor = Colors.orangeAccent;
-  static const Color _bgColor = Color(0xFF0A0A0C);
 
   // STATO LOCALE: Ricorda se stiamo guardando Film o Serie TV
   CinemaType _selectedCinemaType = CinemaType.movies;
@@ -31,103 +30,112 @@ class _ExplorePageState extends State<ExplorePage> {
   bool get isTvSeries => _selectedCinemaType == CinemaType.tvSeries;
 
   String _getTitle() {
-    if (widget.mode == AppMode.books) return "Esplora Libri";
-    return isTvSeries ? "Esplora Serie TV" : "Esplora Cinema";
+    if (widget.mode == AppMode.books) return "Esplora\nLibri";
+    return isTvSeries ? "Esplora\nSerie TV" : "Esplora\nCinema";
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Chiamiamo l'Use Case passando lo stato locale in tempo reale
+    // Caricamento categorie in tempo reale dal Service Locator
     final categories = sl<GetExploreCategoriesUseCase>().call(
       widget.mode,
       isTvSeries: isTvSeries,
     );
 
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: Colors.black, // NERO ASSOLUTO STILE CINESHARE
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // APP BAR
-          SliverAppBar(
-            backgroundColor: _bgColor,
-            floating: true,
-            pinned: true,
-            expandedHeight: 140,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(
-                Icons.menu_rounded,
-                color: Colors.white,
-                size: 28,
-              ),
-              onPressed: widget.onOpenDrawer,
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(
-                left: 20,
-                bottom: 16,
-                right: 20,
-              ),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
+          // HEADER IMMERSIVO (Senza l'orribile SliverAppBar statica)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 1. MENU E ICONA SEZIONE
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Tasto Menu Glassmorphism coerente col resto dell'app
+                      GestureDetector(
+                        onTap: widget.onOpenDrawer,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.menu_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                      // Icona decorativa
+                      Icon(
+                        widget.mode == AppMode.books
+                            ? Icons.auto_stories_rounded
+                            : Icons.movie_filter_rounded,
+                        color: _brandColor.withOpacity(0.4),
+                        size: 32,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 35),
+
+                  // 2. TITOLO GIGANTE
                   Text(
                     _getTitle(),
                     style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 22,
                       color: Colors.white,
-                      letterSpacing: 0.5,
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      height: 1.05,
+                      letterSpacing: -1.5,
                     ),
                   ),
-                  Icon(
-                    widget.mode == AppMode.books
-                        ? Icons.auto_stories
-                        : Icons.movie_creation_rounded,
-                    color: _brandColor.withOpacity(0.5),
-                    size: 24,
-                  ),
-                ],
-              ),
-            ),
-          ),
 
-          // ZONA CONTROLLI (Ricerca + Switcher)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Column(
-                children: [
-                  // BARRA DI RICERCA
+                  const SizedBox(height: 30),
+
+                  // 3. BARRA DI RICERCA (Vetro Semitrasparente)
                   GestureDetector(
                     onTap: () => showSearch(
                       context: context,
                       delegate: UniversalSearchDelegate(mode: widget.mode),
                     ),
                     child: Container(
-                      height: 55,
+                      height: 50,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF161618),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(25),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
+                          color: Colors.white.withOpacity(0.1),
                         ),
                       ),
                       child: Row(
                         children: [
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 18),
                           Icon(
                             Icons.search_rounded,
                             color: Colors.white.withOpacity(0.4),
+                            size: 20,
                           ),
-                          const SizedBox(width: 15),
+                          const SizedBox(width: 12),
                           Text(
                             "Cerca un titolo, regista o autore...",
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.3),
-                              fontSize: 14,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -135,16 +143,15 @@ class _ExplorePageState extends State<ExplorePage> {
                     ),
                   ),
 
-                  // IL NOSTRO SWITCHER (Magia UX!)
-                  // Appare solo se siamo nel lato Cinema dell'app
+                  const SizedBox(height: 25),
+
+                  // 4. SWITCHER FILM/SERIE TV (Allineato a sinistra)
                   if (widget.mode == AppMode.movies)
                     Padding(
-                      padding: const EdgeInsets.only(top: 20, bottom: 5),
+                      padding: const EdgeInsets.only(bottom: 10),
                       child: HomeCinemaSwitcher(
                         selectedType: _selectedCinemaType,
                         onTypeChanged: (newType) {
-                          // Aggiorniamo lo stato: l'UI si ridisegna all'istante
-                          // caricando le nuove categorie dal Repository
                           setState(() {
                             _selectedCinemaType = newType;
                           });
@@ -158,11 +165,13 @@ class _ExplorePageState extends State<ExplorePage> {
 
           // GRIGLIA CATEGORIE
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 15, 20, 100),
+            // Padding bottom a 120 per non far coprire le ultime card dalla barra di navigazione fluttuante
+            padding: const EdgeInsets.fromLTRB(20, 15, 20, 120),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 1.2,
+                childAspectRatio:
+                    1.3, // Proporzione leggermente più "wide" e moderna
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 15,
               ),
@@ -170,8 +179,7 @@ class _ExplorePageState extends State<ExplorePage> {
                 (context, index) => CategoryCard(
                   category: categories[index],
                   mode: widget.mode,
-                  isTvSeries:
-                      isTvSeries, // Ora passa il valore corretto dinamicamente
+                  isTvSeries: isTvSeries,
                 ),
                 childCount: categories.length,
               ),

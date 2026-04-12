@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
+import '../../../main.dart'; // IMPORTANTE: per riavviare AuthGate!
 
 class LogoutButton extends StatelessWidget {
   const LogoutButton({super.key});
@@ -8,33 +9,39 @@ class LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () async => await sl<LogoutUseCase>().call(),
-      borderRadius: BorderRadius.circular(16),
+      onTap: () async {
+        await sl<LogoutUseCase>().call();
+        if (context.mounted) {
+          // FIX BUG: Ricarichiamo la radice per evitare lo schermo bloccato
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const AuthGate()),
+            (route) => false,
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(25),
       child: Container(
-        height: 55,
+        height: 50,
         decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.redAccent.withOpacity(0.3),
-            width: 1.5,
-          ),
+          color: Colors.redAccent.withOpacity(0.1), // Sfondo rosso leggero
+          borderRadius: BorderRadius.circular(25),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.power_settings_new_rounded,
-              color: Colors.redAccent.withOpacity(0.8),
-              size: 22,
+              Icons.logout_rounded, // Icona più moderna
+              color: Colors.redAccent.withOpacity(0.9),
+              size: 20,
             ),
             const SizedBox(width: 10),
             const Text(
               "Disconnetti",
               style: TextStyle(
                 color: Colors.redAccent,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
           ],

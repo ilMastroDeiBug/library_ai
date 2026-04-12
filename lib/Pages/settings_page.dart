@@ -6,6 +6,7 @@ import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 
+import '../../main.dart'; // <-- IMPORT AGGIUNTO PER AUTHGATE
 import '../models/settings_widgets/settings_header.dart';
 import '../models/settings_widgets/settings_tile.dart';
 import '../models/settings_widgets/edit_profile_dialogs.dart';
@@ -226,7 +227,6 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.text_snippet_rounded,
               title: "Biografia",
               subtitle: _currentUser?.bio ?? "Raccontaci di te",
-              // isBottom rimosso: non è più l'ultimo elemento!
               onTap: () => EditProfileDialogs.showBioDialog(
                 context,
                 _currentUser?.bio ?? "",
@@ -239,11 +239,9 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.delete_forever_rounded,
               title: "Elimina Account",
               subtitle: "Azione irreversibile",
-              // Se il tuo SettingsTile personalizzato non supporta questi due colori extra,
-              // eliminali semplicemente dal codice qui sotto.
               iconColor: Colors.redAccent,
               textColor: Colors.redAccent,
-              isBottom: true, // Diventa lui la base curva del container
+              isBottom: true,
               onTap: () {
                 showDialog(
                   context: context,
@@ -255,7 +253,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 40),
 
-          // Tasto Logout Premium
+          // Tasto Logout Premium AGGIORNATO
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -268,8 +266,17 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               foregroundColor: Colors.redAccent,
             ),
-            onPressed: () =>
-                sl<LogoutUseCase>().call().then((_) => Navigator.pop(context)),
+            // FIX LOGICA: Resetta la navigazione e rimette in gioco AuthGate
+            onPressed: () async {
+              await sl<LogoutUseCase>().call();
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AuthGate()),
+                  (route) => false,
+                );
+              }
+            },
             icon: const Icon(Icons.power_settings_new_rounded),
             label: const Text(
               "DISCONNETTI",

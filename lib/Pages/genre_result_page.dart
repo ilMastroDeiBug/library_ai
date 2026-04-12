@@ -5,8 +5,9 @@ import '../injection_container.dart';
 import '../domain/use_cases/movie_use_cases.dart';
 import '../domain/use_cases/tv_series_use_cases.dart';
 import '../domain/use_cases/book_use_cases.dart';
-import '../models/movie_widget/movie_card.dart';
 import '../domain/entities/book.dart';
+import '../domain/entities/movie.dart';
+import '../domain/entities/tv_series.dart';
 import 'movie_detail_page.dart';
 import 'book_detail_page.dart';
 
@@ -27,22 +28,18 @@ class GenreResultPage extends StatefulWidget {
 }
 
 class _GenreResultPageState extends State<GenreResultPage> {
-  // 1. IL CONTROLLER DELLO SCROLL
   final ScrollController _scrollController = ScrollController();
 
-  // 2. LO STATO DELLA PAGINAZIONE
   List<dynamic> _items = [];
   int _currentPage = 1;
   bool _isLoadingFirstTime = true;
   bool _isFetchingMore = false;
-  bool _hasReachedMax =
-      false; // Se TMDB ci ridà una lista vuota, siamo alla fine
+  bool _hasReachedMax = false;
 
   @override
   void initState() {
     super.initState();
     _fetchInitialData();
-    // 3. ASCOLTIAMO LO SCROLL IN TEMPO REALE
     _scrollController.addListener(_onScroll);
   }
 
@@ -52,12 +49,9 @@ class _GenreResultPageState extends State<GenreResultPage> {
     super.dispose();
   }
 
-  // --- LA LOGICA DEL RADAR ---
   void _onScroll() {
-    // Se siamo arrivati a 200 pixel dal fondo (prima ancora di toccarlo visivamente)
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      // E se non stiamo già caricando, e se c'è ancora roba da caricare...
       if (!_isFetchingMore && !_hasReachedMax && !_isLoadingFirstTime) {
         _fetchMoreData();
       }
@@ -70,7 +64,6 @@ class _GenreResultPageState extends State<GenreResultPage> {
       setState(() {
         _items = newItems;
         _isLoadingFirstTime = false;
-        // Se TMDB ci dà meno di 20 risultati, significa che non c'è una pagina 2
         if (newItems.length < 20) _hasReachedMax = true;
       });
     }
@@ -78,32 +71,48 @@ class _GenreResultPageState extends State<GenreResultPage> {
 
   Future<void> _fetchMoreData() async {
     setState(() {
-      _isFetchingMore = true; // Mostriamo la rotellina in basso
+      _isFetchingMore = true;
     });
 
-    _currentPage++; // Andiamo alla pagina successiva
+    _currentPage++;
     final newItems = await _fetchItemsFromApi(_currentPage);
 
     if (mounted) {
       setState(() {
         _isFetchingMore = false;
-        if (newItems.isEmpty) {
-          _hasReachedMax = true; // Fine dei contenuti
+
+        // FIX DELL'INFINITO: Filtro Anti-Cloni!
+        // Controlliamo se gli elementi scaricati sono già nella lista.
+        final existingIds = _items.map((e) => _getId(e)).toSet();
+        final actuallyNew = newItems
+            .where((e) => !existingIds.contains(_getId(e)))
+            .toList();
+
+        // Se la pagina 2 è uguale alla pagina 1, fermiamo il caricamento
+        if (actuallyNew.isEmpty) {
+          _hasReachedMax = true;
         } else {
-          _items.addAll(newItems); // ACCODIAMO i nuovi film a quelli vecchi!
+          _items.addAll(actuallyNew);
         }
       });
     }
   }
 
+  // Helper per estrarre l'ID in modo sicuro
+  dynamic _getId(dynamic item) {
+    if (item is Book) return item.id;
+    if (item is Movie) return item.id;
+    if (item is TvSeries) return item.id;
+    return item.hashCode;
+  }
+
   Future<List<dynamic>> _fetchItemsFromApi(int page) async {
     try {
       if (widget.mode == AppMode.books) {
-        // Se i tuoi libri non hanno il parametro page, fermiamo il caricamento alla pagina 1
+        // Blocchiamo Google Books alla pagina 1 per sicurezza
         if (page > 1) return [];
         return await sl<GetBooksByCategoryUseCase>().call(widget.category.name);
       } else {
-        // CINEMA MAGICO
         final path = 'with_genres=${widget.category.id}';
         if (widget.isTvSeries) {
           return await sl<GetTvSeriesByCategoryUseCase>().call(
@@ -122,14 +131,13 @@ class _GenreResultPageState extends State<GenreResultPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0C),
+      backgroundColor: Colors.black, // NERO ASSOLUTO
       body: CustomScrollView(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // APP BAR
           SliverAppBar(
-            backgroundColor: const Color(0xFF0A0A0C),
+            backgroundColor: Colors.black,
             floating: true,
             pinned: true,
             elevation: 0,
@@ -152,48 +160,48 @@ class _GenreResultPageState extends State<GenreResultPage> {
             ),
           ),
 
-          // STATO 1: Primo Caricamento
           if (_isLoadingFirstTime)
             const SliverFillRemaining(
               child: Center(
                 child: CircularProgressIndicator(color: Colors.orangeAccent),
               ),
             )
-          // STATO 2: Dati Caricati (Griglia Infinita)
+          else if (_items.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.search_off_rounded,
+                      size: 60,
+                      color: Colors.white.withOpacity(0.1),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Nessun risultato",
+                      style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                    ),
+                  ],
+                ),
+              ),
+            )
           else
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount:
-                      3, // 3 locandine per riga (stile Netflix/Letterboxd)
-                  childAspectRatio:
-                      0.65, // Proporzione classica delle locandine
+                  crossAxisCount: 3,
+                  childAspectRatio: 0.65,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 15,
                 ),
                 delegate: SliverChildBuilderDelegate((context, index) {
-                  final item = _items[index];
-
-                  // Riutilizziamo la tua bellissima MovieCard!
-                  return MovieCard(
-                    media: item,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => item is Book
-                              ? BookDetailPage(book: item)
-                              : MovieDetailPage(media: item),
-                        ),
-                      );
-                    },
-                  );
+                  return _GridItemCard(item: _items[index]);
                 }, childCount: _items.length),
               ),
             ),
 
-          // STATO 3: Caricamento nuova pagina in fondo alla lista
           if (_isFetchingMore)
             const SliverToBoxAdapter(
               child: Padding(
@@ -204,9 +212,144 @@ class _GenreResultPageState extends State<GenreResultPage> {
               ),
             ),
 
-          // Buffer di spazio per evitare che l'ultimo film finisca sotto la navigation bar
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
+    );
+  }
+}
+
+// --- FIX RED SCREEN LIBRI ---
+// Widget dedicato per la griglia che supporta sia Film che Libri
+class _GridItemCard extends StatelessWidget {
+  final dynamic item;
+  const _GridItemCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    String imageUrl = '';
+    double rating = 0.0;
+
+    if (item is Book) {
+      imageUrl = item.thumbnailUrl;
+      rating = item.rating;
+    } else if (item is Movie) {
+      imageUrl = item.fullPosterUrl;
+      rating = item.voteAverage;
+    } else if (item is TvSeries) {
+      imageUrl = item.fullPosterUrl;
+      rating = item.voteAverage;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => item is Book
+                ? BookDetailPage(book: item)
+                : MovieDetailPage(media: item),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFF161618),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                    )
+                  : _buildPlaceholder(),
+
+              // Gradiente alla base per far risaltare il vuoto
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 50,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.9),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              if (rating > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.orangeAccent.withOpacity(0.5),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Colors.orangeAccent,
+                          size: 10,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: const Color(0xFF1E1E1E),
+      child: const Center(
+        child: Icon(
+          Icons.broken_image_rounded,
+          color: Colors.white24,
+          size: 30,
+        ),
       ),
     );
   }

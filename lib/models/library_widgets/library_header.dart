@@ -2,95 +2,70 @@
 import 'package:library_ai/domain/entities/app_user.dart';
 import '../../pages/settings_page.dart';
 import '../app_mode.dart';
-import 'library_stat_card.dart';
 
 class LibraryHeader extends StatelessWidget {
   final AppMode mode;
   final AppUser? user;
+  final VoidCallback onOpenDrawer;
 
-  const LibraryHeader({super.key, required this.mode, required this.user});
+  const LibraryHeader({
+    super.key,
+    required this.mode,
+    required this.user,
+    required this.onOpenDrawer,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Utilizziamo l'arancione come colore unico del brand per coerenza
     const accentColor = Colors.orangeAccent;
+    final topPadding = MediaQuery.of(context).padding.top;
 
     return Container(
-      // Padding laterale standard per l'app
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      color: Colors.black,
+      padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Profilo e Benvenuto
+          // 1. MENU E PROFILO
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "BENTORNATO,",
-                      style: TextStyle(
-                        color: accentColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2.0,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      user?.displayName?.toUpperCase() ?? "ARCHITECT",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+              GestureDetector(
+                onTap: onOpenDrawer,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  child: const Icon(
+                    Icons.menu_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ),
               _buildProfileAvatar(context, accentColor),
             ],
           ),
 
-          const SizedBox(height: 30),
+          const Spacer(),
 
-          // 2. Search Bar - Terminal Style
-          _buildSearchBar(accentColor),
-
-          const SizedBox(height: 30),
-
-          // 3. Stats Row - In coda e Completati
-          Row(
-            children: [
-              LibraryStatCard(
-                label: mode == AppMode.books ? "DA LEGGERE" : "DA VEDERE",
-                status: mode == AppMode.books ? "toread" : "towatch",
-                icon: mode == AppMode.books
-                    ? Icons.bookmark_outline
-                    : Icons.movie_filter_outlined,
-                accentColor: accentColor,
-                mode: mode,
-              ),
-              const SizedBox(width: 16),
-              LibraryStatCard(
-                label: mode == AppMode.books ? "LETTI" : "VISTI",
-                status: mode == AppMode.books ? "read" : "watched",
-                icon: Icons.check_circle_outline,
-                accentColor:
-                    Colors.white, // Contrasto pulito per la seconda card
-                mode: mode,
-              ),
-            ],
+          // 2. TITOLO GIGANTE
+          Text(
+            mode == AppMode.books ? "Il tuo\nVault" : "La tua\nWatchlist",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 42,
+              fontWeight: FontWeight.w900,
+              height: 1.05,
+              letterSpacing: -1.5,
+            ),
           ),
 
-          // Spazio extra in fondo per non toccare la TabBar
-          const SizedBox(height: 20),
+          // FIX: Aumentato a 70 per spingere il titolo più in alto ed evitare coperture
+          const SizedBox(height: 70),
         ],
       ),
     );
@@ -111,15 +86,15 @@ class LibraryHeader extends StatelessWidget {
             border: Border.all(color: accent.withOpacity(0.5), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: accent.withOpacity(0.1),
-                blurRadius: 10,
+                color: accent.withOpacity(0.15),
+                blurRadius: 15,
                 spreadRadius: 2,
               ),
             ],
           ),
           child: CircleAvatar(
-            radius: 24,
-            backgroundColor: const Color(0xFF2A2A2A),
+            radius: 20,
+            backgroundColor: const Color(0xFF1E1E1E),
             child: Text(
               user?.displayName != null && user!.displayName!.isNotEmpty
                   ? user!.displayName![0].toUpperCase()
@@ -127,44 +102,11 @@ class LibraryHeader extends StatelessWidget {
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 18,
+                fontSize: 16,
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar(Color accent) {
-    return Container(
-      height: 54,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A), // Grigio molto scuro per l'input
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 18),
-          Icon(Icons.search, color: accent.withOpacity(0.6), size: 20),
-          const SizedBox(width: 12),
-          Text(
-            "Cerca nel tuo archivio...",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.25),
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
       ),
     );
   }

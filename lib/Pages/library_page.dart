@@ -23,16 +23,18 @@ class _LibraryPageState extends State<LibraryPage> {
   bool get _isBooks => widget.mode == AppMode.books;
   static const Color _brandColor = Colors.orangeAccent;
 
-  String get _tab1Label => _isBooks ? "DA LEGGERE" : "DA VEDERE";
-  String get _tab2Label => _isBooks ? "LETTI" : "VISTI";
+  // FIX: Invertiti i label - I completati ora sono a sinistra (Tab 1)
+  String get _tab1Label => _isBooks ? "LETTI" : "VISTI";
+  String get _tab2Label => _isBooks ? "DA LEGGERE" : "DA VEDERE";
 
-  String get _status1 => _isBooks ? "toread" : "towatch";
-  String get _status2 => _isBooks ? "read" : "watched";
+  // FIX: Invertiti gli stati - Il database caricherà i completati per il primo Tab
+  String get _status1 => _isBooks ? "read" : "watched";
+  String get _status2 => _isBooks ? "toread" : "towatch";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: Colors.black,
       floatingActionButton: _isBooks ? _buildStyledFab() : null,
       body: StreamBuilder(
         stream: sl<AuthRepository>().userStream,
@@ -49,7 +51,9 @@ class _LibraryPageState extends State<LibraryPage> {
               body: TabBarView(
                 physics: const BouncingScrollPhysics(),
                 children: [
+                  // Tab 1: Visti/Letti (Aperto di default)
                   LibraryGrid(mode: widget.mode, status: _status1),
+                  // Tab 2: Da Vedere/Leggere
                   LibraryGrid(mode: widget.mode, status: _status2),
                 ],
               ),
@@ -61,86 +65,40 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   Widget _buildSliverAppBar(dynamic user) {
-    const double appBarHeight = 400.0;
-
     return SliverAppBar(
-      expandedHeight: appBarHeight,
+      expandedHeight: 280.0,
       pinned: true,
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: Colors.black,
       elevation: 0,
-      automaticallyImplyLeading:
-          false, // Rimuove il leading di default per controllo totale
-      // leading: Usiamo un allineamento diretto invece del Padding per centrare l'icona
+      automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.pin,
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Sfondo sfumato
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    _brandColor.withOpacity(0.08),
-                    const Color(0xFF121212),
-                  ],
-                  stops: const [0.0, 0.7],
-                ),
-              ),
-            ),
-
-            // Header: spostato leggermente più in alto (da 80 a 70) per equilibrio visivo
-            Padding(
-              padding: const EdgeInsets.only(top: 75),
-              child: LibraryHeader(mode: widget.mode, user: user),
-            ),
-
-            // Tasto Menu personalizzato posizionato manualmente per precisione millimetrica
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
-              left: 15,
-              child: GestureDetector(
-                onTap: widget.onOpenDrawer,
-                child: Container(
-                  width: 45,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  // Center garantisce che l'icona sia al centro del cerchio
-                  child: const Center(
-                    child: Icon(
-                      Icons.menu_rounded,
-                      color: _brandColor,
-                      size: 26,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+        background: LibraryHeader(
+          mode: widget.mode,
+          user: user,
+          onOpenDrawer: widget.onOpenDrawer,
         ),
       ),
-
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: Container(
           height: 60,
           decoration: BoxDecoration(
-            color: const Color(0xFF121212),
+            color: Colors.black,
             border: Border(
-              bottom: BorderSide(color: _brandColor.withOpacity(0.2), width: 1),
+              bottom: BorderSide(
+                color: Colors.white.withOpacity(0.05),
+                width: 1,
+              ),
             ),
           ),
           child: TabBar(
             overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-            indicatorColor: _brandColor,
-            indicatorWeight: 3,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelColor: _brandColor,
+            indicator: const UnderlineTabIndicator(
+              borderSide: BorderSide(color: _brandColor, width: 3),
+              insets: EdgeInsets.symmetric(horizontal: 40),
+            ),
+            labelColor: Colors.white,
             unselectedLabelColor: Colors.white38,
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w900,

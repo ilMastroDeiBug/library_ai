@@ -20,7 +20,7 @@ class SearchResultTile extends StatelessWidget {
     IconData defaultIcon = Icons.movie;
     VoidCallback onTap = () {};
 
-    // Smistamento logico
+    // Estrazione Dati
     if (item is Book) {
       title = item.title;
       subtitle = item.author;
@@ -33,10 +33,10 @@ class SearchResultTile extends StatelessWidget {
     } else if (item is Movie) {
       title = item.title;
       subtitle = item.releaseDate.isNotEmpty
-          ? "Film (${item.releaseDate.split('-')[0]})"
+          ? "Film • ${item.releaseDate.split('-')[0]}"
           : "Film";
       imageUrl = item.fullPosterUrl;
-      defaultIcon = Icons.movie_outlined;
+      defaultIcon = Icons.movie_creation_rounded;
       onTap = () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
@@ -44,84 +44,88 @@ class SearchResultTile extends StatelessWidget {
     } else if (item is TvSeries) {
       title = item.name;
       subtitle = item.firstAirDate.isNotEmpty
-          ? "Serie TV (${item.firstAirDate.split('-')[0]})"
+          ? "Serie TV • ${item.firstAirDate.split('-')[0]}"
           : "Serie TV";
       imageUrl = item.fullPosterUrl;
-      defaultIcon = Icons.tv_outlined;
+      defaultIcon = Icons.live_tv_rounded;
       onTap = () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
       );
     }
 
-    final activeColor = mode == AppMode.books
-        ? Colors.orangeAccent
-        : Colors.cyanAccent;
+    return InkWell(
+      onTap: onTap,
+      splashColor: Colors.white.withOpacity(0.1),
+      highlightColor: Colors.transparent,
+      child: Container(
+        color: Colors.transparent, // Niente card grigie, nero totale sotto
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            // 1. LOCANDINA (Netflix Style 2:3)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(
+                6,
+              ), // Bordo leggermente arrotondato
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      width: 70,
+                      height: 105, // Proporzione esatta locandine
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          _buildPlaceholder(defaultIcon),
+                    )
+                  : _buildPlaceholder(defaultIcon),
+            ),
 
-    return Card(
-      color: const Color(0xFF1E1E1E),
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.white.withOpacity(0.05)),
-      ),
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        width: 55,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _buildPlaceholder(defaultIcon),
-                      )
-                    : _buildPlaceholder(defaultIcon),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 16),
+
+            // 2. TESTI (Titolo Bianco Bold, Sottotitolo Grigio)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 0.2,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: activeColor.withOpacity(0.8),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5), // Grigio elegante
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: Colors.white.withOpacity(0.2),
+            ),
+
+            // 3. ICONA PLAY (Stile ricerca Netflix)
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Icon(
+                mode == AppMode.books
+                    ? Icons.menu_book_rounded
+                    : Icons.play_circle_outline_rounded,
+                size: 32,
+                color: Colors.white,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -129,10 +133,10 @@ class SearchResultTile extends StatelessWidget {
 
   Widget _buildPlaceholder(IconData icon) {
     return Container(
-      width: 55,
-      height: 80,
-      color: Colors.grey[900],
-      child: Icon(icon, color: Colors.white24, size: 24),
+      width: 70,
+      height: 105,
+      color: Colors.white.withOpacity(0.05), // Grigio scuro placeholder
+      child: Center(child: Icon(icon, color: Colors.white24, size: 30)),
     );
   }
 }

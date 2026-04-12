@@ -54,6 +54,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     }
   }
 
+  // --- LOGICA INTATTA ---
   void _generateDailyRotation() {
     if (widget.items.isEmpty) {
       setState(() => _dailyItems = []);
@@ -82,19 +83,15 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     super.dispose();
   }
 
-  // --- IL FIX È QUI ---
   void _startAutoScroll() {
     _timer?.cancel();
     if (_dailyItems.isEmpty) return;
 
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      // 1. Se abbiamo cambiato pagina e il widget non c'è più, uccidi il timer
       if (!mounted) {
         timer.cancel();
         return;
       }
-
-      // 2. FIX FINALE: Giriamo pagina SOLO se il widget è pronto e ha una dimensione fisica
       if (_pageController.hasClients &&
           _pageController.position.haveDimensions) {
         try {
@@ -103,7 +100,6 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
             curve: Curves.fastOutSlowIn,
           );
         } catch (e) {
-          // Silenziamo qualsiasi errore di transizione grafica
           debugPrint("Scorrimento banner saltato: ricalcolo layout.");
         }
       }
@@ -135,7 +131,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
         'image': item.fullBackdropUrl.isNotEmpty
             ? item.fullBackdropUrl
             : item.fullPosterUrl,
-        'subtitle': "SERIE TV DEL GIORNO",
+        'subtitle': "SERIE TV IN TRENDENZA",
       };
     }
     return {'title': '', 'image': '', 'subtitle': ''};
@@ -145,15 +141,19 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
   Widget build(BuildContext context) {
     if (_dailyItems.isEmpty) return const SizedBox();
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 350,
-          child: GestureDetector(
-            onPanDown: (_) => _stopAutoScroll(),
-            onPanCancel: () => _startAutoScroll(),
-            onPanEnd: (_) => _startAutoScroll(),
-            child: PageView.builder(
+    // L'altezza ora è dinamica: 65% dello schermo per un vero effetto "Hero"
+    final double bannerHeight = MediaQuery.of(context).size.height * 0.65;
+
+    return SizedBox(
+      height: bannerHeight,
+      child: GestureDetector(
+        onPanDown: (_) => _stopAutoScroll(),
+        onPanCancel: () => _startAutoScroll(),
+        onPanEnd: (_) => _startAutoScroll(),
+        child: Stack(
+          children: [
+            // 1. IL CAROSELLO
+            PageView.builder(
               controller: _pageController,
               onPageChanged: (index) {
                 if (mounted) {
@@ -177,6 +177,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
+                      // Immagine con Parallasse
                       ClipRRect(
                         child: Transform(
                           transform: Matrix4.identity()
@@ -188,72 +189,133 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                             fit: BoxFit.cover,
                             alignment: Alignment(delta * 0.5, 0),
                             errorBuilder: (ctx, err, stack) =>
-                                Container(color: const Color(0xFF1E1E1E)),
+                                Container(color: Colors.black),
                           ),
                         ),
                       ),
+
+                      // Gradiente Cinematico Netflix-Style
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              Colors.black.withOpacity(0.2),
+                              Colors.black.withOpacity(
+                                0.5,
+                              ), // Scurisce l'header sopra
                               Colors.transparent,
-                              Colors.black.withOpacity(0.6),
-                              const Color(0xFF121212),
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.7),
+                              Colors.black, // Si fonde col vuoto sotto!
                             ],
-                            stops: const [0.0, 0.4, 0.8, 1.0],
+                            stops: const [0.0, 0.2, 0.6, 0.85, 1.0],
                           ),
                         ),
                       ),
+
+                      // Testi e Badge
                       Positioned(
-                        bottom: 40,
+                        bottom: 40, // Lascia spazio per i dot
                         left: 20,
                         right: 20,
                         child: Opacity(
                           opacity: (1 - delta.abs()).clamp(0.0, 1.0),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              // Badge Glassmorphism
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
+                                  horizontal: 12,
+                                  vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.6),
-                                  borderRadius: BorderRadius.circular(4),
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: Colors.orangeAccent.withOpacity(0.5),
+                                    color: Colors.white.withOpacity(0.2),
                                     width: 1,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
                                 ),
-                                child: Text(
-                                  data['subtitle']!.toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.orangeAccent,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.2,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.local_fire_department_rounded,
+                                      color: Colors.orangeAccent,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      data['subtitle']!.toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 12),
+
+                              // Titolo
                               Text(
                                 data['title']!,
+                                textAlign: TextAlign.center,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 28,
+                                  fontSize: 36,
                                   fontWeight: FontWeight.w900,
                                   height: 1.1,
+                                  letterSpacing: -0.5,
                                   shadows: [
                                     Shadow(
-                                      color: Colors.black87,
-                                      offset: Offset(2, 2),
-                                      blurRadius: 4,
+                                      color: Colors.black,
+                                      offset: Offset(0, 4),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 15),
+
+                              // Tasto Finto Netflix (Scopri di più)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      color: Colors.black,
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      "Maggiori Info",
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -267,30 +329,34 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                 );
               },
             ),
-          ),
-        ),
-        Transform.translate(
-          offset: const Offset(0, -25),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              _dailyItems.length,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 4,
-                width: _realIndex == index ? 24 : 4,
-                decoration: BoxDecoration(
-                  color: _realIndex == index
-                      ? Colors.orangeAccent
-                      : Colors.white.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
+
+            // 2. INDICATORI INTEGRATI (Dot pagination)
+            Positioned(
+              bottom: 15,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  _dailyItems.length,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    height: 5,
+                    width: _realIndex == index ? 20 : 5,
+                    decoration: BoxDecoration(
+                      color: _realIndex == index
+                          ? Colors.orangeAccent
+                          : Colors.white.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

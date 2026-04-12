@@ -6,7 +6,7 @@ import 'package:library_ai/models/app_mode.dart';
 // Entities
 import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
-import 'package:library_ai/domain/entities/tv_series.dart'; // Importa TvSeries
+import 'package:library_ai/domain/entities/tv_series.dart';
 
 // Use Cases
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
@@ -28,17 +28,8 @@ class LibraryGrid extends StatelessWidget {
       stream: sl<AuthRepository>().userStream,
       builder: (context, userSnapshot) {
         final user = userSnapshot.data;
-        if (user == null) {
-          return const Center(
-            child: Text(
-              "Accesso richiesto",
-              style: TextStyle(color: Colors.white24),
-            ),
-          );
-        }
+        if (user == null) return const SizedBox.shrink();
 
-        // Recuperiamo lo stream. Per i Film/Serie usiamo GetWatchlistUseCase
-        // che restituisce una lista mista di Movie e TvSeries
         final dynamic dataStream = (mode == AppMode.books)
             ? sl<GetUserBooksUseCase>().call(user.id, status)
             : sl<GetWatchlistUseCase>().call(user.id, status);
@@ -59,13 +50,19 @@ class LibraryGrid extends StatelessWidget {
             }
 
             return GridView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+              // Padding che si fonde col bordo nero del telefono
+              padding: const EdgeInsets.only(
+                top: 20,
+                left: 15,
+                right: 15,
+                bottom: 120,
+              ),
               itemCount: items.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.68,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 20,
+                crossAxisCount: 3, // 3 Colonne Stile Netflix!
+                childAspectRatio: 0.68, // Proporzione esatta della locandina
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
               ),
               itemBuilder: (context, index) {
                 final item = items[index];
@@ -79,21 +76,16 @@ class LibraryGrid extends StatelessWidget {
   }
 
   Widget _buildItemCard(BuildContext context, dynamic item) {
-    String title = "";
     String imageUrl = "";
     String heroTag = "";
 
-    // GESTIONE POLIMORFICA COMPLETA
     if (item is Book) {
-      title = item.title;
       imageUrl = item.thumbnailUrl;
       heroTag = item.id;
     } else if (item is Movie) {
-      title = item.title;
       imageUrl = item.fullPosterUrl;
       heroTag = item.id.toString();
     } else if (item is TvSeries) {
-      title = item.name; // TvSeries usa 'name'
       imageUrl = item.fullPosterUrl;
       heroTag = item.id.toString();
     }
@@ -105,47 +97,35 @@ class LibraryGrid extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => (item is Book)
                 ? BookDetailPage(book: item)
-                : MovieDetailPage(media: item), // Accetta anche TvSeries
+                : MovieDetailPage(media: item),
           ),
         );
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Hero(
-              tag: heroTag,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                  image: DecorationImage(
+      child: Hero(
+        tag: heroTag,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(
+              8,
+            ), // Curvatura stretta ed elegante
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            image: imageUrl.isNotEmpty
+                ? DecorationImage(
                     image: NetworkImage(imageUrl),
                     fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
+                  )
+                : null,
           ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ],
+          // Se per caso manca l'immagine, mostriamo un'icona centrata
+          child: imageUrl.isEmpty
+              ? Icon(
+                  mode == AppMode.books ? Icons.book : Icons.movie,
+                  color: Colors.white24,
+                  size: 30,
+                )
+              : null,
+        ),
       ),
     );
   }
@@ -156,16 +136,18 @@ class LibraryGrid extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.inventory_2_outlined,
-            size: 64,
+            mode == AppMode.books
+                ? Icons.auto_stories
+                : Icons.movie_filter_rounded,
+            size: 80,
             color: Colors.white.withOpacity(0.05),
           ),
           const SizedBox(height: 16),
           Text(
-            "ARCHIVIO VUOTO",
+            "NESSUN ELEMENTO",
             style: TextStyle(
               color: Colors.white.withOpacity(0.2),
-              letterSpacing: 2,
+              letterSpacing: 2.5,
               fontWeight: FontWeight.bold,
             ),
           ),

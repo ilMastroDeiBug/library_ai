@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../injection_container.dart';
-import '../../domain/use_cases/auth_use_cases.dart'; // Metti il percorso giusto
-import '../../pages/login_page.dart'; // Metti il percorso della tua pagina iniziale
+import '../../domain/use_cases/auth_use_cases.dart';
+import '../../main.dart'; // <-- IMPORTIAMO MAIN.DART PER AVERE AUTHGATE
 
 class DeleteAccountDialog extends StatefulWidget {
   const DeleteAccountDialog({super.key});
@@ -16,16 +16,15 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
   Future<void> _handleDelete(BuildContext context) async {
     setState(() => _isLoading = true);
     try {
-      // Chiamiamo il nostro purissimo Use Case!
       await sl<DeleteAccountUseCase>().call();
 
       if (context.mounted) {
-        // Rimuove tutte le pagine e riporta l'utente alla schermata di Login
+        // FIX BUG: Rimettiamo il "Portiere" alla radice dell'app.
+        // Lui vedrà subito che l'utente non c'è più e caricherà la LoginPage
+        // riattivando però il listener reattivo!
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(
-            builder: (_) => const LoginPage(),
-          ), // O SplashScreen
+          MaterialPageRoute(builder: (_) => const AuthGate()),
           (route) => false,
         );
       }
@@ -34,7 +33,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Errore durante l'eliminazione.")),
         );
-        Navigator.pop(context); // Chiude il dialog in caso di errore
+        Navigator.pop(context);
       }
     }
   }

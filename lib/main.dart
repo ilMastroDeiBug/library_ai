@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // <-- NUOVO IMPORT
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:library_ai/Pages/splash_screen.dart';
 import 'firebase_options.dart';
 
@@ -17,15 +17,12 @@ import 'package:library_ai/domain/entities/app_user.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Manteniamo Firebase acceso per ora (non rompiamo il sistema attuale)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await Supabase.initialize(
-    url:
-        'https://vmbshnrphkmuqtjjfdah.supabase.co', //https://vmbshnrphkmuqtjjfdah.supabase.co
+    url: 'https://vmbshnrphkmuqtjjfdah.supabase.co',
     anonKey: 'sb_publishable_MiRYZsjKtlT68nNzn2S-JQ_g-bBj_Gu',
   );
 
-  // 3. INIZIALIZZA IL SERVICE LOCATOR (Fondamentale!)
   await di.init();
 
   runApp(const MyApp());
@@ -37,16 +34,16 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Library AI',
+      title: 'CineShare',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        primaryColor: Colors.cyanAccent,
-        scaffoldBackgroundColor: const Color(0xFF121212),
+        primaryColor: Colors.orangeAccent, // BRAND COLOR
+        scaffoldBackgroundColor: Colors.black, // NERO TIKTOK/NETFLIX
         colorScheme: const ColorScheme.dark(
-          primary: Colors.cyanAccent,
-          secondary: Colors.deepPurpleAccent,
-          surface: Color(0xFF1E1E1E),
+          primary: Colors.orangeAccent,
+          secondary: Colors.orangeAccent,
+          surface: Color(0xFF0A0A0C), // Grigio scurissimo
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
@@ -66,15 +63,14 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ASCOLTA LO STREAM DEL REPOSITORY
-    // Quando passeremo a Supabase, questo codice rimarrà IDENTICO.
     return StreamBuilder<AppUser?>(
       stream: di.sl<AuthRepository>().userStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
+            backgroundColor: Colors.black,
             body: Center(
-              child: CircularProgressIndicator(color: Colors.cyanAccent),
+              child: CircularProgressIndicator(color: Colors.orangeAccent),
             ),
           );
         }
@@ -82,16 +78,13 @@ class AuthGate extends StatelessWidget {
         if (snapshot.hasData) {
           final user = snapshot.data;
 
-          // Se il nome è vuoto, manda al Profile Setup
           if (user?.displayName == null || user!.displayName!.isEmpty) {
             return const ProfileSetupPage();
           }
 
-          // Utente completo -> Home
           return const NavigationHub();
         }
 
-        // Nessun utente -> Login
         return const LoginPage();
       },
     );

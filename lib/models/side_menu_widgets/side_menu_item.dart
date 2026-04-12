@@ -18,77 +18,39 @@ class SideMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(25), // Pillola
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
+            duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
-            height: 55,
+            height: 50, // Più compatto e moderno
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
-              gradient: isSelected
-                  ? LinearGradient(
-                      colors: [
-                        activeColor.withOpacity(0.15),
-                        Colors.transparent,
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    )
-                  : null,
-              borderRadius: BorderRadius.circular(16),
+              color: isSelected
+                  ? activeColor.withOpacity(0.15)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(25),
             ),
-            child: Stack(
+            child: Row(
               children: [
-                // Indicatore laterale per lo stato attivo
-                if (isSelected)
-                  Positioned(
-                    left: 0,
-                    top: 10,
-                    bottom: 10,
-                    child: Container(
-                      width: 4,
-                      decoration: BoxDecoration(
-                        color: activeColor,
-                        borderRadius: const BorderRadius.horizontal(
-                          right: Radius.circular(4),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: activeColor.withOpacity(0.6),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                // Contenuto
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Icon(
-                        icon,
-                        color: isSelected ? activeColor : Colors.white38,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        text,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.white70,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          fontSize: 15,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
+                Icon(
+                  icon,
+                  color: isSelected ? activeColor : Colors.white54,
+                  size: 24,
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: isSelected ? activeColor : Colors.white70,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    fontSize: 15,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],

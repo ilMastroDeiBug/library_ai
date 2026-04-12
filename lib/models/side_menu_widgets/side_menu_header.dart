@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
-import '../../pages/settings_page.dart';
+import '../../Pages/settings_page.dart';
 
 class SideMenuHeader extends StatelessWidget {
   final AppUser? user;
@@ -15,87 +15,82 @@ class SideMenuHeader extends StatelessWidget {
               : (user!.email.isNotEmpty ? user!.email[0].toUpperCase() : 'A'))
         : '?';
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SettingsPage()),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 60, 16, 20),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Avatar con Glow
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.orangeAccent.withOpacity(0.3),
-                    blurRadius: 15,
-                    spreadRadius: 1,
-                  ),
-                ],
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.of(context).padding.top + 20,
+        20,
+        20,
+      ),
+      child: Row(
+        children: [
+          // Avatar Premium (Bordo Arancione)
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.orangeAccent.withOpacity(0.5),
+                width: 2,
               ),
-              child: CircleAvatar(
-                radius: 26,
-                backgroundColor: const Color(0xFF2C2C2C),
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                  ),
+            ),
+            child: CircleAvatar(
+              radius: 24,
+              backgroundColor: const Color(0xFF1E1E1E),
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
                 ),
               ),
             ),
-            const SizedBox(width: 16),
-            // Testi
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user?.displayName ?? "Architect",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
+          ),
+          const SizedBox(width: 16),
+          // Testi
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user?.displayName ?? "Architect",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user?.email ?? "user@cineshare.com",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.4),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  user?.email ?? "user@cineshare.com",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.4),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-              ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          // Tasto Impostazioni Integrato
+          IconButton(
+            icon: const Icon(Icons.settings_rounded, color: Colors.white54),
+            splashRadius: 24,
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

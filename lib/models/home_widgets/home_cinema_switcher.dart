@@ -3,7 +3,7 @@ import '../app_mode.dart';
 
 class HomeCinemaSwitcher extends StatelessWidget {
   final CinemaType selectedType;
-  final Function(CinemaType) onTypeChanged;
+  final ValueChanged<CinemaType> onTypeChanged;
 
   const HomeCinemaSwitcher({
     super.key,
@@ -11,78 +11,63 @@ class HomeCinemaSwitcher extends StatelessWidget {
     required this.onTypeChanged,
   });
 
-  static const Color _accentColor = Color(0xFFFFB300);
-
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildTab("FILM", CinemaType.movies),
-            _buildTab("SERIE TV", CinemaType.tvSeries),
-          ],
-        ),
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildTab(context, "Film", CinemaType.movies),
+        const SizedBox(width: 25),
+        _buildTab(context, "Serie TV", CinemaType.tvSeries),
+      ],
     );
   }
 
-  Widget _buildTab(String label, CinemaType type) {
-    final isSelected = selectedType == type;
+  Widget _buildTab(BuildContext context, String text, CinemaType type) {
+    final isActive = selectedType == type;
 
     return GestureDetector(
       onTap: () => onTypeChanged(type),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white.withOpacity(0.08)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 300),
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white38,
-                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
-                fontSize: 13,
-                letterSpacing: 1.5,
-              ),
-              child: Text(label),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // TESTO ANIMATO
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.white.withOpacity(0.5),
+              fontSize: isActive ? 18 : 16,
+              fontWeight: isActive ? FontWeight.w900 : FontWeight.w600,
+              letterSpacing: 0.5,
+              shadows: isActive
+                  ? [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 10,
+                      ),
+                    ]
+                  : [],
             ),
-            const SizedBox(height: 4),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: 4,
-              width: isSelected ? 4 : 0,
-              decoration: BoxDecoration(
-                color: _accentColor,
-                shape: BoxShape.circle,
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: _accentColor.withOpacity(0.6),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : [],
-              ),
+            child: Text(text),
+          ),
+          const SizedBox(height: 4),
+          // TRATTINO SOTTOSTANTE ANIMATO
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            height: 3,
+            width: isActive ? 20 : 0,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: [
+                BoxShadow(color: Colors.white.withOpacity(0.5), blurRadius: 5),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
