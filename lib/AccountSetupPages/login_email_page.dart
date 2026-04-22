@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
+import '../models/login_widgets/cascading_background.dart'; // IMPORT AGGIUNTO
 
 class LoginEmailPage extends StatefulWidget {
   const LoginEmailPage({super.key});
@@ -57,87 +58,100 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Container(
-        color: const Color(0xFF0A0A0C), // TEMA CINESHARE
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(30.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Bentornato.",
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "Accedi a CineShare per continuare.",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 50),
-                _buildGlassInput(
-                  _emailController,
-                  "Email",
-                  Icons.email_outlined,
-                  false,
-                ),
-                const SizedBox(height: 20),
-                _buildGlassInput(
-                  _passwordController,
-                  "Password",
-                  Icons.lock_outline,
-                  true,
-                ),
-                const SizedBox(height: 40),
-                _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.orangeAccent,
-                        ),
-                      )
-                    : Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.orangeAccent.withOpacity(0.2),
-                              blurRadius: 15,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orangeAccent,
-                            foregroundColor: Colors.black87,
-                            minimumSize: const Size(double.infinity, 55),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          onPressed: _signIn,
-                          child: const Text(
-                            'ACCEDI',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                      ),
-              ],
+      body: Stack(
+        children: [
+          // SFONDO A CASCATA
+          const Positioned.fill(
+            child: CascadingBackground(
+              speed1: 140,
+              speed2: 110,
+              speed3: 115,
+              speed4: 130,
             ),
           ),
-        ),
+          // CONTENUTO UI
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(30.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Bentornato.",
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Accedi a CineShare per continuare.",
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                    _buildGlassInput(
+                      _emailController,
+                      "Email",
+                      Icons.email_outlined,
+                      false,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildGlassInput(
+                      _passwordController,
+                      "Password",
+                      Icons.lock_outline,
+                      true,
+                    ),
+                    const SizedBox(height: 40),
+                    _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.orangeAccent,
+                            ),
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.orangeAccent.withOpacity(0.2),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orangeAccent,
+                                foregroundColor: Colors.black87,
+                                minimumSize: const Size(double.infinity, 55),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              onPressed: _signIn,
+                              child: const Text(
+                                'ACCEDI',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

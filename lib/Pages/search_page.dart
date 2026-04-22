@@ -9,7 +9,7 @@ import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 
 // Widget
-import '../models/search_widgets/search_result_tile.dart'; // <-- IMPORTANTE!
+import '../models/search_widgets/search_result_tile.dart';
 
 class UniversalSearchDelegate extends SearchDelegate {
   final AppMode mode;
@@ -22,7 +22,6 @@ class UniversalSearchDelegate extends SearchDelegate {
     final activeColor = Colors.orangeAccent; // TEMA CINESHARE
 
     return theme.copyWith(
-      // NERO ASSOLUTO, stile Netflix
       scaffoldBackgroundColor: Colors.black,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.black,
@@ -75,11 +74,18 @@ class UniversalSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) {
+    // 🔒 BLOCCO LIBRI: Se siamo in modalità libri, mostriamo subito il Coming Soon
+    if (mode == AppMode.books) {
+      return _buildMessage(
+        Icons.auto_stories_rounded,
+        "Ricerca disabilitata.\nIl Vault dei Libri è in arrivo!",
+      );
+    }
+
     if (query.trim().length < 3) {
       return _buildInitialSuggestions();
     }
 
-    // Mostriamo i risultati completi E le immagini in TEMPO REALE
     return _DebouncedSearchList(
       query: query,
       mode: mode,
@@ -89,6 +95,14 @@ class UniversalSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
+    // 🔒 BLOCCO LIBRI: Sicurezza extra per evitare che l'utente forzi l'invio
+    if (mode == AppMode.books) {
+      return _buildMessage(
+        Icons.auto_stories_rounded,
+        "Ricerca disabilitata.\nIl Vault dei Libri è in arrivo!",
+      );
+    }
+
     if (query.trim().length < 3) {
       return _buildMessage(Icons.keyboard, "Digita almeno 3 caratteri...");
     }
@@ -139,8 +153,16 @@ class UniversalSearchDelegate extends SearchDelegate {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 60, color: Colors.white.withOpacity(0.1)),
-            const SizedBox(height: 10),
-            Text(text, style: TextStyle(color: Colors.white.withOpacity(0.5))),
+            const SizedBox(height: 15),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 16,
+                height: 1.4,
+              ),
+            ),
           ],
         ),
       ),
@@ -208,7 +230,8 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
 
     try {
       if (widget.mode == AppMode.books) {
-        fetchResults = await sl<SearchBooksUseCase>().call(queryStr);
+        // 🔒 BLOCCO LIBRI: Il UseCase dei libri NON viene più chiamato
+        fetchResults = [];
       } else {
         final responses = await Future.wait([
           sl<SearchMoviesUseCase>().call(queryStr),
@@ -281,7 +304,6 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
         physics: const BouncingScrollPhysics(),
         itemCount: _results.length,
         itemBuilder: (context, index) {
-          // Deleghiamo tutta l'estetica al Tile!
           return SearchResultTile(item: _results[index], mode: widget.mode);
         },
       ),

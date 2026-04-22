@@ -16,24 +16,21 @@ class MovieDetailLogic {
   ) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Accedi per salvare."),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (context.mounted) _showMinimalSnackBar(context, "Accedi per salvare.");
       return;
     }
 
     // Toggle logico: se clicchi su uno già attivo, lo spengi ('none')
-    final newStatus = (currentStatus == action) ? 'none' : action;
+    final isRemoving = currentStatus == action;
+    final newStatus = isRemoving ? 'none' : action;
 
     try {
       if (media is Movie) {
         final updatedMovie = media.copyWith(status: newStatus);
-        await sl<SaveMovieUseCase>().call(updatedMovie, user.id);
+        await sl<SaveMovieUseCase>().call(
+          updatedMovie,
+          user.id,
+        ); // <-- Ora usa Supabase/Repository!
       } else if (media is TvSeries) {
         final updatedSeries = TvSeries(
           id: media.id,
@@ -49,12 +46,20 @@ class MovieDetailLogic {
         );
         await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
       }
-    } catch (e) {
+
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Errore nel salvataggio. Riprova.")),
+        _showMinimalSnackBar(
+          context,
+          isRemoving
+              ? "Rimosso dalla Watchlist"
+              : (action == 'watched'
+                    ? "Segnato come Visto"
+                    : "Aggiunto ai Da Vedere"),
         );
       }
+    } catch (e) {
+      if (context.mounted)
+        _showMinimalSnackBar(context, "Errore nel salvataggio. Riprova.");
     }
   }
 
@@ -70,8 +75,7 @@ class MovieDetailLogic {
       final analysis = await aiService.analyzeMedia(
         title: title,
         type: type,
-        userProfile:
-            "16 anni, Architect, Developer, MMA", // Il tuo fantastico prompt AI
+        userProfile: "16 anni, Architect, Developer, MMA",
         creator: "",
       );
 
@@ -88,7 +92,7 @@ class MovieDetailLogic {
           voteAverage: media.voteAverage,
           voteCount: media.voteCount,
           firstAirDate: media.firstAirDate,
-          status: media.status, // Manteniamo lo status originale!
+          status: media.status,
           aiAnalysis: analysis,
         );
         await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
@@ -99,5 +103,24 @@ class MovieDetailLogic {
       debugPrint("AI Error: $e");
       return null;
     }
+  }
+
+  void _showMinimalSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: const Color(0xFF333333),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 }

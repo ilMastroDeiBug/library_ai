@@ -36,20 +36,22 @@ class _ExplorePageState extends State<ExplorePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Caricamento categorie in tempo reale dal Service Locator
-    final categories = sl<GetExploreCategoriesUseCase>().call(
-      widget.mode,
-      isTvSeries: isTvSeries,
-    );
+    // 🔒 BLOCCO LIBRI: Evitiamo di chiamare il Service Locator se siamo nei libri
+    final categories = widget.mode == AppMode.books
+        ? []
+        : sl<GetExploreCategoriesUseCase>().call(
+            widget.mode,
+            isTvSeries: isTvSeries,
+          );
 
     final topPadding = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: Colors.black, // NERO ASSOLUTO STILE CINESHARE
+      backgroundColor: Colors.black,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // HEADER IMMERSIVO (Senza l'orribile SliverAppBar statica)
+          // HEADER IMMERSIVO
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 10),
@@ -60,7 +62,6 @@ class _ExplorePageState extends State<ExplorePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Tasto Menu Glassmorphism coerente col resto dell'app
                       GestureDetector(
                         onTap: widget.onOpenDrawer,
                         child: Container(
@@ -79,7 +80,6 @@ class _ExplorePageState extends State<ExplorePage> {
                           ),
                         ),
                       ),
-                      // Icona decorativa
                       Icon(
                         widget.mode == AppMode.books
                             ? Icons.auto_stories_rounded
@@ -106,7 +106,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
                   const SizedBox(height: 30),
 
-                  // 3. BARRA DI RICERCA (Vetro Semitrasparente)
+                  // 3. BARRA DI RICERCA
                   GestureDetector(
                     onTap: () => showSearch(
                       context: context,
@@ -131,7 +131,9 @@ class _ExplorePageState extends State<ExplorePage> {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            "Cerca un titolo, regista o autore...",
+                            widget.mode == AppMode.books
+                                ? "Ricerca libri sospesa..."
+                                : "Cerca un titolo, regista o autore...",
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.3),
                               fontSize: 15,
@@ -145,7 +147,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
                   const SizedBox(height: 25),
 
-                  // 4. SWITCHER FILM/SERIE TV (Allineato a sinistra)
+                  // 4. SWITCHER FILM/SERIE TV
                   if (widget.mode == AppMode.movies)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -163,29 +165,74 @@ class _ExplorePageState extends State<ExplorePage> {
             ),
           ),
 
-          // GRIGLIA CATEGORIE
-          SliverPadding(
-            // Padding bottom a 120 per non far coprire le ultime card dalla barra di navigazione fluttuante
-            padding: const EdgeInsets.fromLTRB(20, 15, 20, 120),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio:
-                    1.3, // Proporzione leggermente più "wide" e moderna
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => CategoryCard(
-                  category: categories[index],
-                  mode: widget.mode,
-                  isTvSeries: isTvSeries,
+          // 🔒 BLOCCO LIBRI: Sostituiamo la griglia con il messaggio Coming Soon
+          if (widget.mode == AppMode.books)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _buildComingSoonBooks(context),
+            )
+          else
+            // GRIGLIA CATEGORIE CINEMA/TV
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 15, 20, 120),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.3,
+                  crossAxisSpacing: 15,
+                  mainAxisSpacing: 15,
                 ),
-                childCount: categories.length,
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => CategoryCard(
+                    category: categories[index],
+                    mode: widget.mode,
+                    isTvSeries: isTvSeries,
+                  ),
+                  childCount: categories.length,
+                ),
               ),
             ),
-          ),
         ],
+      ),
+    );
+  }
+
+  // --- LEVA MARKETING: Coming Soon specifico per l'Esplora ---
+  Widget _buildComingSoonBooks(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.explore_off_rounded,
+              size: 70,
+              color: Colors.white.withOpacity(0.2),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              "Esplorazione in Pausa",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 15),
+            const Text(
+              "Stiamo mappando i generi letterari perfetti per garantirti risultati precisi e in lingua italiana.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 15,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 80), // Spazio extra per staccare dal fondo
+          ],
+        ),
       ),
     );
   }

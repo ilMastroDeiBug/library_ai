@@ -7,6 +7,15 @@ import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
 
 // --- DB USE CASES (SERIE TV) ---
 
+// <-- FIX: Caso d'uso specifico per la UI delle Serie TV
+class GetSingleTvSeriesUseCase {
+  final MovieRepository repository;
+  GetSingleTvSeriesUseCase(this.repository);
+
+  Stream<dynamic> call(String userId, String seriesId) =>
+      repository.getSingleMediaStream(userId, int.parse(seriesId));
+}
+
 class SaveTvSeriesUseCase {
   final MovieRepository repository;
   SaveTvSeriesUseCase(this.repository);
@@ -48,7 +57,6 @@ class GetTvSeriesByCategoryUseCase {
   final MovieRepository repository;
   GetTvSeriesByCategoryUseCase(this.repository);
 
-  // FIX: Aggiunto il parametro opzionale 'page'
   Future<List<TvSeries>> call(String path, {int page = 1}) =>
       repository.getTvSeriesByCategory(path, page: page);
 }

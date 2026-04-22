@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../domain/entities/book.dart'; // Assicurati che il path sia giusto
+import '../../domain/entities/book.dart';
 
 class OpenLibraryService {
   static const String _baseUrl = 'https://openlibrary.org/search.json';
@@ -16,8 +16,9 @@ class OpenLibraryService {
     if (sortBy == 'new') apiSortParam = '&sort=new';
     if (sortBy == 'old') apiSortParam = '&sort=old';
 
+    // FIX 1: Aggiunto "language" alla lista dei fields nell'URL
     final url = Uri.parse(
-      '$_baseUrl?q=$sanitizedQuery$apiSortParam&limit=25&fields=key,title,author_name,cover_i,ratings_average,ratings_count,number_of_pages_median,first_sentence,subject',
+      '$_baseUrl?q=$sanitizedQuery+language:ita$apiSortParam&limit=25&fields=key,title,author_name,cover_i,ratings_average,ratings_count,number_of_pages_median,first_sentence,subject,language',
     );
 
     try {
@@ -33,6 +34,14 @@ class OpenLibraryService {
         final List<dynamic> docs = data['docs'] ?? [];
 
         List<Book> books = docs
+            .where((json) {
+              // FIX 2: IL FILTRO SPIETATO (Doppia Mandata)
+              // Controlliamo che l'array delle lingue contenga effettivamente 'ita'
+              final langs = json['language'] as List<dynamic>?;
+              if (langs == null)
+                return false; // Se non ha la lingua definita, lo scartiamo
+              return langs.contains('ita');
+            })
             .map((json) => _mapOpenLibraryToBook(json))
             .where(
               (book) =>
@@ -59,7 +68,6 @@ class OpenLibraryService {
     }
   }
 
-  // --- MAPPATURA CORRETTA ---
   Book _mapOpenLibraryToBook(Map<String, dynamic> json) {
     String coverUrl = "";
     if (json['cover_i'] != null) {
@@ -95,8 +103,6 @@ class OpenLibraryService {
       description: description,
       thumbnailUrl: coverUrl,
       pageCount: json['number_of_pages_median'],
-
-      // CORREZIONE 2: Parametro 'rating' invece di 'averageRating'
       rating: (json['ratings_average'] as num?)?.toDouble() ?? 0.0,
       ratingsCount: json['ratings_count'] ?? 0,
     );

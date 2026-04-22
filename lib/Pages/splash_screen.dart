@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../main.dart'; // Importa il main per accedere ad AuthGate
+import 'package:flutter_svg/flutter_svg.dart';
+import '../main.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,25 +19,19 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 1. Setup Animazione (Effetto Respiro/Pulsazione del logo)
+    // Effetto respiro morbido
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
 
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-
-    // 2. Avvia il Timer
     _startTimer();
   }
 
   _startTimer() async {
-    // Aspettiamo 3 secondi per godersi il logo e caricare Firebase
     await Future.delayed(const Duration(seconds: 3));
-
     if (!mounted) return;
-
-    // 3. PASSA LA PALLA AL PORTIERE (AuthGate)
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const AuthGate()),
     );
@@ -50,57 +45,45 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Leggiamo la larghezza dello schermo
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: const Color(
         0xFF0A0A0C,
-      ), // Sfondo Dark che matcha il tuo logo
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // IL TUO VERO LOGO ANIMATO
-            ScaleTransition(
-              scale: Tween<double>(begin: 0.95, end: 1.05).animate(_animation),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.orangeAccent.withOpacity(
-                        0.15,
-                      ), // Glow arancione
-                      blurRadius: 50,
-                      spreadRadius: 10,
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(
-                    20,
-                  ), // Arrotondiamo un po' i bordi del jpg
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    width: 200, // Grandezza del logo
-                    height: 200,
-                    fit: BoxFit.cover,
-                  ),
+      ), // Il nero/grigio scuro di sfondo
+      body: Stack(
+        children: [
+          // 🖼️ LIVELLO 1: IL LOGO CENTRATO PROPORZIONALE
+          Center(
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.98, end: 1.02).animate(_animation),
+              child: SizedBox(
+                // Usa il 60% della larghezza dello schermo (puoi portarlo a 0.7 o 0.5 se lo vuoi più grande/piccolo)
+                width: screenWidth * 0.60,
+                child: SvgPicture.asset(
+                  'assets/images/cinelogo.svg',
+                  // BoxFit.contain dice: "Stai tutto dentro il SizedBox senza tagliarti"
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
+          ),
 
-            const SizedBox(height: 60),
-
-            // Un piccolo loader elegante sotto il logo
-            SizedBox(
+          // 🌀 LIVELLO 2: IL LOADER IN BASSO
+          Align(
+            alignment: const Alignment(0, 0.8), // 80% verso il basso
+            child: SizedBox(
               width: 40,
               height: 40,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.orangeAccent.withOpacity(0.5),
+                color: Colors.orangeAccent.withOpacity(0.8),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

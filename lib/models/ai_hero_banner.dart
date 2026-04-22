@@ -131,7 +131,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
         'image': item.fullBackdropUrl.isNotEmpty
             ? item.fullBackdropUrl
             : item.fullPosterUrl,
-        'subtitle': "SERIE TV IN TRENDENZA",
+        'subtitle': "SERIE TV IN TENDENZA",
       };
     }
     return {'title': '', 'image': '', 'subtitle': ''};

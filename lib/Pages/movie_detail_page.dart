@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
+import 'package:library_ai/domain/repositories/auth_repository.dart';
+import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
+import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+
 import '../services/pages_services/movie_detail_logic.dart';
 import '../models/ai_analysis_section.dart';
 import '../models/movie_widget/movie_stats_bar.dart';
 import '../models/movie_widget/movie_reviews_section.dart';
 import '../models/movie_widget/movie_cast_section.dart';
 import '../models/movie_widget/trailer_player_widget.dart';
-import '../models/movie_widget/watch_provider_widgets.dart'; // <-- IMPORT WIDGET PROVIDERS
+import '../models/movie_widget/watch_provider_widgets.dart';
 
 class MovieDetailPage extends StatefulWidget {
   final dynamic media; // Movie o TvSeries
@@ -27,29 +30,33 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   bool get _isTv => widget.media is TvSeries;
   int get _id => widget.media.id;
 
+  // FIX: Determina il giusto UseCase per lo Stream in base al tipo di Media
+  Stream<dynamic>? _getMediaStream(String userId) {
+    try {
+      if (_isTv) {
+        return sl<GetSingleTvSeriesUseCase>().call(userId, _id.toString());
+      } else {
+        return sl<GetSingleMovieUseCase>().call(userId, _id.toString());
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    // FIX: Ora usiamo Supabase/AuthRepository, non più FirebaseAuth!
+    final user = sl<AuthRepository>().currentUser;
 
-    return StreamBuilder<DocumentSnapshot>(
-      stream: user != null
-          ? FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .collection('watchlist')
-                .doc(_id.toString())
-                .snapshots()
-          : null,
+    return StreamBuilder<dynamic>(
+      stream: user != null ? _getMediaStream(user.id) : null,
       builder: (context, snapshot) {
         dynamic liveMedia = widget.media;
 
-        if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          if (_isTv) {
-            liveMedia = TvSeries.fromFirestore(data, _id);
-          } else {
-            liveMedia = Movie.fromFirestore(data, _id);
-          }
+        // FIX: I tuoi UseCase restituiscono già l'entità (Movie/TvSeries),
+        // non più un DocumentSnapshot di Firebase. Addio codice sporco!
+        if (snapshot.hasData && snapshot.data != null) {
+          liveMedia = snapshot.data;
         }
 
         final String currentStatus = liveMedia.status ?? 'none';
@@ -172,7 +179,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      // 6. WATCH PROVIDERS WIDGET (I loghi di Netflix, Amazon, ecc.)
+                      // 6. WATCH PROVIDERS WIDGET
                       WatchProvidersWidget(mediaId: _id, isTvSeries: _isTv),
 
                       // 7. TRAILER WIDGET

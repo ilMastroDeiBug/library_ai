@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
+import '../models/login_widgets/cascading_background.dart'; // IMPORT AGGIUNTO
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
@@ -89,82 +90,95 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Container(
-        color: const Color(0xFF0A0A0C), // TEMA CINESHARE
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(30.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Nuovo\nAccount.",
-                  style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Text(
-                  "Unisciti a CineShare.",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 50),
-                _buildModernTextField(
-                  _emailController,
-                  "Email",
-                  Icons.alternate_email,
-                  false,
-                ),
-                const SizedBox(height: 20),
-                _buildModernTextField(
-                  _passwordController,
-                  "Password",
-                  Icons.lock_outline_rounded,
-                  true,
-                ),
-                const SizedBox(height: 40),
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.orangeAccent.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orangeAccent,
-                      foregroundColor: Colors.black87,
-                      minimumSize: const Size(double.infinity, 55),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: _register,
-                    child: const Text(
-                      'CREA ACCOUNT',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+      body: Stack(
+        children: [
+          // SFONDO A CASCATA
+          const Positioned.fill(
+            child: CascadingBackground(
+              speed1: 85,
+              speed2: 75,
+              speed3: 95,
+              speed4: 80,
             ),
           ),
-        ),
+          // CONTENUTO UI
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(30.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Nuovo\nAccount.",
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Text(
+                      "Unisciti a CineShare.",
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                    _buildModernTextField(
+                      _emailController,
+                      "Email",
+                      Icons.alternate_email,
+                      false,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildModernTextField(
+                      _passwordController,
+                      "Password",
+                      Icons.lock_outline_rounded,
+                      true,
+                    ),
+                    const SizedBox(height: 40),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orangeAccent.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orangeAccent,
+                          foregroundColor: Colors.black87,
+                          minimumSize: const Size(double.infinity, 55),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: _register,
+                        child: const Text(
+                          'CREA ACCOUNT',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

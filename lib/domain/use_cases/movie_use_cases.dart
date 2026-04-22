@@ -15,13 +15,14 @@ class GetWatchlistUseCase {
       repository.getWatchlistStream(userId, status);
 }
 
-// <-- NUOVO: Use Case dedicato alla pagina di Dettaglio
-class GetSingleMediaStreamUseCase {
+// <-- FIX: Caso d'uso specifico per la UI dei Film
+class GetSingleMovieUseCase {
   final MovieRepository repository;
-  GetSingleMediaStreamUseCase(this.repository);
+  GetSingleMovieUseCase(this.repository);
 
-  Stream<dynamic> call(String userId, int id) =>
-      repository.getSingleMediaStream(userId, id);
+  // Trasforma la Stringa della UI nell'Int del Repository
+  Stream<dynamic> call(String userId, String movieId) =>
+      repository.getSingleMediaStream(userId, int.parse(movieId));
 }
 
 class ToggleMovieStatusUseCase {
@@ -60,7 +61,6 @@ class DeleteMovieUseCase {
 }
 
 // --- API USE CASES (FILM) ---
-// Questi non necessitano di userId perché usano TMDb (pubblico)
 
 class GetMoviesByCategoryUseCase {
   final MovieRepository repository;

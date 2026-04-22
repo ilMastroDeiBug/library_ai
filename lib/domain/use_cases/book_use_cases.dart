@@ -23,7 +23,6 @@ class DeleteBookUseCase {
   final BookRepository repository;
   DeleteBookUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId per il path users/{id}/library
   Future<void> call(String userId, String bookId) =>
       repository.deleteBook(userId, bookId);
 }
@@ -32,7 +31,6 @@ class ToggleBookStatusUseCase {
   final BookRepository repository;
   ToggleBookStatusUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId
   Future<String> call(
     String userId,
     String bookId,
@@ -57,7 +55,6 @@ class SaveBookAnalysisUseCase {
   final BookRepository repository;
   SaveBookAnalysisUseCase(this.repository);
 
-  // CORRETTO: Aggiunto userId
   Future<void> call(String userId, String bookId, String analysis) =>
       repository.saveAnalysis(userId, bookId, analysis);
 }
@@ -77,4 +74,12 @@ class GetBooksByCategoryUseCase {
 
   Future<List<Book>> call(String categoryId) =>
       repository.getBooksByCategory(categoryId);
+}
+
+// NUOVO: IL CECCHINO (Merge Dati)
+class GetFullBookDetailsUseCase {
+  final BookRepository repository;
+  GetFullBookDetailsUseCase(this.repository);
+
+  Future<Book> call(Book partialBook) => repository.getBookDetails(partialBook);
 }

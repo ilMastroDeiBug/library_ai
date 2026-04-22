@@ -1,10 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import '../models/app_mode.dart';
-import '../models/book_widgets/add_book_sheet.dart';
-import '../models/user_books_section.dart';
 import '../models/home_widgets/home_content_builders.dart';
 import '../models/home_widgets/home_cinema_switcher.dart';
 import 'search_page.dart';
+
+// --- IMPORT SOSPESI TEMPORANEAMENTE PER IL REFACTORING ---
+// import '../models/book_widgets/add_book_sheet.dart';
+// import '../models/user_books_section.dart';
 
 class HomePage extends StatefulWidget {
   final AppMode mode;
@@ -34,6 +36,7 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  /* SOSPESO: Tasto Aggiungi Libro
   void _showAddSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -45,20 +48,14 @@ class _HomePageState extends State<HomePage> {
       builder: (context) => const AddBookSheet(),
     );
   }
+  */
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black, // NERO ASSOLUTO
-      // Niente AppBar statica! La UI si estende fino in cima.
-      floatingActionButton: widget.mode == AppMode.books
-          ? FloatingActionButton(
-              heroTag: 'fab_home',
-              onPressed: () => _showAddSheet(context),
-              backgroundColor: _brandColor,
-              child: const Icon(Icons.add, color: Colors.black),
-            )
-          : null,
+      // Il FAB dei libri è disattivato per il lancio MVP
+      floatingActionButton: null,
 
       // LO STACK È IL SEGRETO PER L'EFFETTO TIKTOK
       body: Stack(
@@ -66,7 +63,9 @@ class _HomePageState extends State<HomePage> {
           // LIVELLO 1: I CONTENUTI (Base)
           Positioned.fill(
             child: widget.mode == AppMode.books
-                ? _buildStaticScroll(HomeContentBuilder.buildBookContent())
+                ? _buildComingSoonBooks(
+                    context,
+                  ) // <-- LEVA MARKETING: Sostituisce la vecchia UI
                 : PageView(
                     controller: _cinemaPageController,
                     physics: const BouncingScrollPhysics(),
@@ -103,7 +102,6 @@ class _HomePageState extends State<HomePage> {
   // --- IL NUOVO HEADER STILE TIKTOK ---
   Widget _buildModernHeader(BuildContext context) {
     return Container(
-      // Sfumatura nera verso il basso per rendere le icone sempre leggibili
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -116,7 +114,6 @@ class _HomePageState extends State<HomePage> {
           stops: const [0.0, 0.6, 1.0],
         ),
       ),
-      // Padding dinamico: rispetta il Notch/Isola dinamica dell'iPhone
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 10,
         bottom: 25,
@@ -152,7 +149,7 @@ class _HomePageState extends State<HomePage> {
             )
           else
             const Text(
-              "Il tuo Vault",
+              "La Biblioteca",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -162,26 +159,107 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-          // Tasto Ricerca a scomparsa
-          GestureDetector(
-            onTap: () => showSearch(
-              context: context,
-              delegate: UniversalSearchDelegate(mode: widget.mode),
-            ),
-            child: const Icon(
-              Icons.search_rounded,
-              color: Colors.white,
-              size: 28,
-              shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
-            ),
-          ),
+          // Tasto Ricerca a scomparsa (Disabilitato nei libri per non innescare query)
+          if (widget.mode == AppMode.movies)
+            GestureDetector(
+              onTap: () => showSearch(
+                context: context,
+                delegate: UniversalSearchDelegate(mode: widget.mode),
+              ),
+              child: const Icon(
+                Icons.search_rounded,
+                color: Colors.white,
+                size: 28,
+                shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
+              ),
+            )
+          else
+            const SizedBox(width: 28), // Spazio vuoto per bilanciare la Row
         ],
       ),
     );
   }
 
-  // --- COSTRUZIONE LISTE OTTIMIZZATE ---
+  // --- 🔒 LA LEVA MARKETING (Coming Soon Books) ---
+  Widget _buildComingSoonBooks(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+              child: const Icon(
+                Icons.auto_stories_rounded,
+                size: 80,
+                color: Colors.white30,
+              ),
+            ),
+            const SizedBox(height: 30),
+            const Text(
+              "Il Vault Definitivo",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 15),
+            const Text(
+              "Stiamo costruendo un ecosistema perfetto per i tuoi libri: dati curati, copertine in HD e analisi IA avanzate.\n\nNon scendiamo a compromessi sulla qualità. In arrivo nei prossimi aggiornamenti.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 16,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "🚀 Grazie! Ti avviseremo non appena il Vault dei libri sarà sbloccato.",
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Color(0xFF2C2C2C),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.notifications_active_rounded),
+              label: const Text(
+                "Avvisami al rilascio",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _brandColor,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                elevation: 10,
+                shadowColor: _brandColor.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
+  // --- COSTRUZIONE LISTE OTTIMIZZATE (CINEMA) ---
   Widget _buildCinemaPage(CinemaType type) {
     final Set<int> seenIds = {};
     final sections = HomeContentBuilder.buildCinemaContent(
@@ -190,7 +268,6 @@ class _HomePageState extends State<HomePage> {
     );
 
     return ListView.builder(
-      // ATTENZIONE: top: 0 è fondamentale per il Full-Bleed!
       padding: const EdgeInsets.only(top: 0, bottom: 100),
       physics: const BouncingScrollPhysics(),
       itemCount: sections.length + 1,
@@ -200,7 +277,6 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Tolto il SizedBox superiore, il banner attacca il tetto!
                 HomeContentBuilder.buildHeroBanner(
                   widget.mode,
                   cinemaType: type,
@@ -216,6 +292,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /* SOSPESO: La vecchia UI dei libri
   Widget _buildStaticScroll(List<Widget> content) {
     return ListView.builder(
       padding: const EdgeInsets.only(top: 0, bottom: 100),
@@ -241,6 +318,7 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
+  */
 }
 
 // --- IL WIDGET MAGICO PER LA CACHE ---
