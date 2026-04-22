@@ -13,6 +13,11 @@ class TmdbService {
       "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NmU3NmMyMGZiZjE2ZDFjYTMxZGM1NWM0YjQ5MTA4YyIsIm5iZiI6MTc3MDkxNjMzMC42MjEsInN1YiI6IjY5OGUwOWVhN2M5ZjE4Y2M2NGRjZGQ2NSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.LJL0sBW1eiY3GEw81O-RyD2L-DXqbl7sCwVPxEisabE";
   static const String _baseUrl = 'https://api.themoviedb.org/3';
 
+  // 1. DEPENDENCY INJECTION: Il client HTTP è ora iniettabile
+  final http.Client _client;
+
+  TmdbService({http.Client? client}) : _client = client ?? http.Client();
+
   Map<String, String> get _headers => {
     'Authorization': 'Bearer $_accessToken',
     'Content-Type': 'application/json;charset=utf-8',
@@ -39,7 +44,6 @@ class TmdbService {
   }
 
   Future<List<Movie>> fetchTrendingMovies({int page = 1}) async {
-    // TMDB Trending supporta la lingua, la uniformiamo con il service
     final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
       '$_baseUrl/trending/movie/week?language=$lang&page=$page',
@@ -96,8 +100,9 @@ class TmdbService {
     final endpoint = isTv ? 'tv' : 'movie';
     final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse('$_baseUrl/$endpoint/$id/credits?language=$lang');
+
     try {
-      final response = await http.get(url, headers: _headers);
+      final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List castList = data['cast'] ?? [];
@@ -105,10 +110,12 @@ class TmdbService {
             .map((json) => CastMember.fromJson(json))
             .take(10)
             .toList();
+      } else {
+        // 2. LANCIO ECCEZIONE REALE
+        throw Exception('Errore TMDB fetchCast: ${response.statusCode}');
       }
-      return [];
     } catch (e) {
-      return [];
+      throw Exception('Errore connessione fetchCast: $e');
     }
   }
 
@@ -117,24 +124,27 @@ class TmdbService {
     final url = Uri.parse(
       '$_baseUrl/$endpoint/$id/reviews?language=en-US&page=1',
     );
+
     try {
-      final response = await http.get(url, headers: _headers);
+      final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List results = data['results'] ?? [];
         return results.map((json) => Review.fromJson(json)).take(5).toList();
+      } else {
+        throw Exception('Errore TMDB fetchReviews: ${response.statusCode}');
       }
-      return [];
     } catch (e) {
-      return [];
+      throw Exception('Errore connessione fetchReviews: $e');
     }
   }
 
   Future<String?> fetchTrailerKey(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final url = Uri.parse('$_baseUrl/$endpoint/$id/videos?language=it-IT');
+
     try {
-      final response = await http.get(url, headers: _headers);
+      final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List results = data['results'] ?? [];
@@ -145,10 +155,12 @@ class TmdbService {
         if (trailer != null) {
           return trailer['key'];
         }
+        return null;
+      } else {
+        throw Exception('Errore TMDB fetchTrailerKey: ${response.statusCode}');
       }
-      return null;
     } catch (e) {
-      return null;
+      throw Exception('Errore connessione fetchTrailerKey: $e');
     }
   }
 
@@ -160,19 +172,22 @@ class TmdbService {
     final url = Uri.parse('$_baseUrl/$endpoint/$id/watch/providers');
 
     try {
-      final response = await http.get(url, headers: _headers);
+      final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'];
 
-        // Estraiamo solo i dati per l'Italia ('IT')
         if (results != null && results.containsKey('IT')) {
           return WatchProvidersResult.fromJson(results['IT']);
         }
+        return null;
+      } else {
+        throw Exception(
+          'Errore TMDB fetchWatchProviders: ${response.statusCode}',
+        );
       }
-      return null;
     } catch (e) {
-      return null;
+      throw Exception('Errore connessione fetchWatchProviders: $e');
     }
   }
 
@@ -180,32 +195,36 @@ class TmdbService {
   Future<List<Movie>> _fetchMovies(Uri url) async {
     try {
       print('🌐 Request Movie: $url');
-      final response = await http.get(url, headers: _headers);
+      final response = await _client.get(url, headers: _headers);
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return (data['results'] as List)
             .map((item) => Movie.fromTmdb(item))
             .toList();
+      } else {
+        throw Exception('Errore HTTP TMDB (Movies): ${response.statusCode}');
       }
-      return [];
     } catch (e) {
-      return [];
+      throw Exception('Errore di Rete TMDB (Movies): $e');
     }
   }
 
   Future<List<TvSeries>> _fetchTvSeries(Uri url) async {
     try {
       print('🌐 Request TV: $url');
-      final response = await http.get(url, headers: _headers);
+      final response = await _client.get(url, headers: _headers);
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return (data['results'] as List)
             .map((item) => TvSeries.fromTmdb(item))
             .toList();
+      } else {
+        throw Exception('Errore HTTP TMDB (TV): ${response.statusCode}');
       }
-      return [];
     } catch (e) {
-      return [];
+      throw Exception('Errore di Rete TMDB (TV): $e');
     }
   }
 }
