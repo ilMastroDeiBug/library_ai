@@ -6,6 +6,11 @@ import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import '../../services/utility_services/ai_service.dart';
 
 class BookDetailLogic {
+  final AIService _aiService;
+
+  BookDetailLogic({AIService? aiService})
+    : _aiService = aiService ?? AIService();
+
   // Gestisce il click sui tasti (Aggiungi/Rimuovi/Sposta)
   Future<void> handleStatusAction(
     BuildContext context,
@@ -81,8 +86,7 @@ class BookDetailLogic {
     }
 
     try {
-      final aiService = AIService();
-      final analysis = await aiService.analyzeMedia(
+      final analysis = await _aiService.analyzeMedia(
         title: liveBook.title,
         type: 'book',
         userProfile: "16 anni, Architect, Developer, MMA",

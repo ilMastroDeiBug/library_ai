@@ -4,7 +4,17 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../domain/entities/app_user.dart';
 
 class SupabaseAuthRepositoryImpl implements AuthRepository {
-  final supa.SupabaseClient _supabase = supa.Supabase.instance.client;
+  final supa.SupabaseClient _supabase;
+  final GoogleSignIn _googleSignIn;
+
+  SupabaseAuthRepositoryImpl({
+    supa.SupabaseClient? supabaseClient,
+    GoogleSignIn? googleSignIn,
+    String webClientId =
+        '474613371614-gjgpn9354i52qo7msde01vuq2s54k2d2.apps.googleusercontent.com',
+  }) : _supabase = supabaseClient ?? supa.Supabase.instance.client,
+       _googleSignIn =
+           googleSignIn ?? GoogleSignIn(serverClientId: webClientId);
 
   AppUser? _mapUser(supa.User? user) {
     if (user == null) return null;
@@ -37,16 +47,9 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signInWithGoogle() async {
-    const webClientId =
-        '474613371614-gjgpn9354i52qo7msde01vuq2s54k2d2.apps.googleusercontent.com';
+    await _googleSignIn.signOut();
 
-    final GoogleSignIn googleSignIn = GoogleSignIn(serverClientId: webClientId);
-
-    // FIX GOOGLE: Sloggiamo localmente prima di iniziare.
-    // Forza Google a mostrare sempre la tendina di scelta account!
-    await googleSignIn.signOut();
-
-    final googleUser = await googleSignIn.signIn();
+    final googleUser = await _googleSignIn.signIn();
     if (googleUser == null) {
       throw Exception('Login annullato.');
     }
@@ -68,7 +71,7 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    await GoogleSignIn().signOut(); // Sloggiamo anche da Google
+    await _googleSignIn.signOut();
     await _supabase.auth.signOut();
   }
 

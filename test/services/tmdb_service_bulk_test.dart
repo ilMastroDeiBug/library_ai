@@ -269,5 +269,69 @@ void main() {
         expect(() async => await tc.run(), throwsException);
       });
     }
+
+    test('fetchCast throws on HTTP != 200', () async {
+      when(
+        () => client.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('err', 503));
+
+      expect(() => service.fetchCast(10), throwsException);
+    });
+
+    test('fetchReviews throws on HTTP != 200', () async {
+      when(
+        () => client.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('err', 503));
+
+      expect(() => service.fetchReviews(10), throwsException);
+    });
+
+    test('fetchTrailerKey throws on HTTP != 200', () async {
+      when(
+        () => client.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('err', 503));
+
+      expect(() => service.fetchTrailerKey(10), throwsException);
+    });
+
+    test('fetchWatchProviders throws on HTTP != 200', () async {
+      when(
+        () => client.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('err', 503));
+
+      expect(() => service.fetchWatchProviders(10), throwsException);
+    });
+
+    test('fetchCast wraps network exception', () async {
+      when(
+        () => client.get(any(), headers: any(named: 'headers')),
+      ).thenThrow(Exception('network down'));
+
+      expect(() => service.fetchCast(10), throwsException);
+    });
+
+    test('fetchReviews wraps network exception', () async {
+      when(
+        () => client.get(any(), headers: any(named: 'headers')),
+      ).thenThrow(Exception('network down'));
+
+      expect(() => service.fetchReviews(10), throwsException);
+    });
+
+    test('fetchTrailerKey wraps network exception', () async {
+      when(
+        () => client.get(any(), headers: any(named: 'headers')),
+      ).thenThrow(Exception('network down'));
+
+      expect(() => service.fetchTrailerKey(10), throwsException);
+    });
+
+    test('fetchWatchProviders wraps network exception', () async {
+      when(
+        () => client.get(any(), headers: any(named: 'headers')),
+      ).thenThrow(Exception('network down'));
+
+      expect(() => service.fetchWatchProviders(10), throwsException);
+    });
   });
 }

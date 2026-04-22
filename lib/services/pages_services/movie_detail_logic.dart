@@ -8,6 +8,11 @@ import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import '../../services/utility_services/ai_service.dart';
 
 class MovieDetailLogic {
+  final AIService _aiService;
+
+  MovieDetailLogic({AIService? aiService})
+    : _aiService = aiService ?? AIService();
+
   Future<void> handleStatusAction(
     BuildContext context,
     dynamic media,
@@ -68,11 +73,10 @@ class MovieDetailLogic {
     if (user == null) return null;
 
     try {
-      final aiService = AIService();
       final type = (media is TvSeries) ? 'tv' : 'movie';
       final title = (media is TvSeries) ? media.name : (media as Movie).title;
 
-      final analysis = await aiService.analyzeMedia(
+      final analysis = await _aiService.analyzeMedia(
         title: title,
         type: type,
         userProfile: "16 anni, Architect, Developer, MMA",

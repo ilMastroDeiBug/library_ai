@@ -8,10 +8,16 @@ import 'package:library_ai/services/utility_services/tmdb_service.dart';
 import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
 
 class SupabaseMovieRepositoryImpl implements MovieRepository {
-  final SupabaseClient _supabase = Supabase.instance.client;
-  final TmdbService _tmdbService = TmdbService();
+  final SupabaseClient _supabase;
+  final TmdbService _tmdbService;
 
   static const String _tableName = 'user_watchlist';
+
+  SupabaseMovieRepositoryImpl({
+    SupabaseClient? supabaseClient,
+    TmdbService? tmdbService,
+  }) : _supabase = supabaseClient ?? Supabase.instance.client,
+       _tmdbService = tmdbService ?? TmdbService();
 
   @override
   Stream<List<dynamic>> getWatchlistStream(String userId, String status) {
@@ -21,20 +27,15 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .eq('user_id', userId)
         .order('timestamp', ascending: false)
         .map((snapshot) {
-          // 1. Filtriamo per status
           final filteredRows = snapshot
               .where((row) => row['status'] == status)
               .toList();
 
-          // 2. Mappiamo i dati SQL nelle tue Entities
           return filteredRows.map((row) {
             final type = row['type'] as String;
             final int mediaId = row['media_id'] as int;
 
-            // Estraiamo il JSON originale salvato
             final Map<String, dynamic> rawData = row['raw_data'] ?? {};
-
-            // Reiniettiamo i valori controllati dal Database dentro la mappa
             rawData['status'] = row['status'];
             rawData['aiAnalysis'] = row['ai_analysis'];
             rawData['type'] = type;
@@ -46,15 +47,13 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         });
   }
 
-  // <-- NUOVO: Implementazione dello stream per la pagina di dettaglio
   @override
   Stream<dynamic> getSingleMediaStream(String userId, int id) {
     return _supabase
         .from(_tableName)
         .stream(primaryKey: ['id'])
-        .eq('user_id', userId) // <-- Usiamo l'unico .eq() permesso dallo stream
+        .eq('user_id', userId)
         .map((snapshot) {
-          // <-- FIX: Filtriamo il media_id localmente in Dart!
           final filteredSnapshot = snapshot.where((row) {
             final rowMediaId = int.tryParse(row['media_id'].toString()) ?? 0;
             return rowMediaId == id;
@@ -65,7 +64,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
           final row = filteredSnapshot.first;
           final type = row['type'] as String;
 
-          // Copia sicura e tipizzata
           final Map<String, dynamic> rawData = Map<String, dynamic>.from(
             row['raw_data'] as Map? ?? {},
           );
@@ -88,7 +86,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       'type': 'movie',
       'status': movie.status,
       'ai_analysis': movie.aiAnalysis,
-      'raw_data': movie.toMap(), // Salviamo l'intero film in formato JSON
+      'raw_data': movie.toMap(),
       'timestamp': DateTime.now().toIso8601String(),
     }, onConflict: 'user_id, media_id, type');
   }
@@ -136,10 +134,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .eq('media_id', id);
   }
 
-  // =========================================================
-  // --- METODI API TMDB (Identici a prima, non toccano DB) --
-  // =========================================================
-
   @override
   Future<List<Movie>> getMoviesByCategory(
     String categoryPath, {
@@ -157,6 +151,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         page: page,
       );
     }
+
     return rawList
         .where((movie) => movie.posterPath.isNotEmpty && movie.voteCount > 0)
         .toList();
@@ -179,34 +174,42 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         page: page,
       );
     }
+
     return rawList
         .where((tv) => tv.posterPath.isNotEmpty && tv.voteCount > 0)
         .toList();
   }
 
   @override
-  Future<List<Review>> getReviews(int id, {bool isTv = false}) async =>
-      _tmdbService.fetchReviews(id, isTv: isTv);
+  Future<List<Review>> getReviews(int id, {bool isTv = false}) async {
+    return _tmdbService.fetchReviews(id, isTv: isTv);
+  }
 
   @override
-  Future<List<CastMember>> getCast(int id, {bool isTv = false}) async =>
-      _tmdbService.fetchCast(id, isTv: isTv);
+  Future<List<CastMember>> getCast(int id, {bool isTv = false}) async {
+    return _tmdbService.fetchCast(id, isTv: isTv);
+  }
 
   @override
-  Future<List<Movie>> searchMovies(String query) async =>
-      _tmdbService.searchMovies(query);
+  Future<List<Movie>> searchMovies(String query) async {
+    return _tmdbService.searchMovies(query);
+  }
 
   @override
-  Future<List<TvSeries>> searchTvSeries(String query) async =>
-      _tmdbService.searchTvSeries(query);
+  Future<List<TvSeries>> searchTvSeries(String query) async {
+    return _tmdbService.searchTvSeries(query);
+  }
 
   @override
-  Future<String?> getTrailerKey(int id, {bool isTv = false}) async =>
-      await _tmdbService.fetchTrailerKey(id, isTv: isTv);
+  Future<String?> getTrailerKey(int id, {bool isTv = false}) async {
+    return _tmdbService.fetchTrailerKey(id, isTv: isTv);
+  }
 
   @override
   Future<WatchProvidersResult?> getWatchProviders(
     int id, {
     bool isTv = false,
-  }) async => await _tmdbService.fetchWatchProviders(id, isTv: isTv);
+  }) async {
+    return _tmdbService.fetchWatchProviders(id, isTv: isTv);
+  }
 }
