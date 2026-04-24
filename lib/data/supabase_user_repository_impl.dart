@@ -15,11 +15,12 @@ class SupabaseUserRepositoryImpl implements UserRepository {
           .single();
 
       return AppUser(
-        id: data['id'], // <-- CORRETTO
+        id: data['id'],
         email: data['email'] ?? '',
         displayName: data['display_name'] ?? 'Utente',
-        bio: data['bio'], // <-- AGGIUNTO
-        isPublic: data['is_public'] ?? true, // <-- AGGIUNTO
+        bio: data['bio'],
+        isPublic: data['is_public'] ?? true,
+        photoUrl: data['photo_url'], // <-- Estrazione dell'avatar aggiunta
       );
     } catch (e) {
       print("Errore Supabase getUserData: $e");
@@ -40,6 +41,24 @@ class SupabaseUserRepositoryImpl implements UserRepository {
 
     if (updates.isNotEmpty) {
       await _supabase.from('profiles').update(updates).eq('id', uid);
+    }
+  }
+
+  @override
+  Future<void> updateAvatar(String userId, String avatarUrl) async {
+    try {
+      // 1. Aggiorna la tabella profiles (coerente con getUserData)
+      await _supabase
+          .from('profiles')
+          .update({'photo_url': avatarUrl})
+          .eq('id', userId);
+
+      // 2. Aggiorna i metadati di autenticazione usando la sintassi corretta
+      await _supabase.auth.updateUser(
+        UserAttributes(data: {'avatar_url': avatarUrl}),
+      );
+    } catch (e) {
+      throw Exception('Errore durante il salvataggio dell\'avatar: $e');
     }
   }
 }

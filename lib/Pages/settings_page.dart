@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
@@ -6,11 +7,13 @@ import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 
-import '../../main.dart'; // <-- IMPORT AGGIUNTO PER AUTHGATE
+import '../../main.dart';
 import '../models/settings_widgets/settings_header.dart';
 import '../models/settings_widgets/settings_tile.dart';
 import '../models/settings_widgets/edit_profile_dialogs.dart';
 import '../models/settings_widgets/delete_account_dialog.dart';
+// IMPORT DEL NUOVO POPUP DEGLI AVATAR
+import '../models/settings_widgets/avatar_selection_sheet.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -42,7 +45,8 @@ class _SettingsPageState extends State<SettingsPage> {
         if (mounted) {
           setState(() {
             _currentUser = userData ?? userAuth;
-            _isLoading = false;
+            _isLoading =
+                false; // Questo ricaricherà il widget SettingsHeader all'istante
           });
         }
       } catch (e) {
@@ -62,39 +66,63 @@ class _SettingsPageState extends State<SettingsPage> {
     final langService = sl<LanguageService>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: _surfaceColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.only(bottom: 20, top: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Pillola superiore per lo swipe
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(10),
-              ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: _surfaceColor.withOpacity(0.95),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
             ),
-            const Text(
-              "LINGUA APP",
-              style: TextStyle(
-                color: Colors.white54,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2.0,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildLangOption(langService, "Italiano", "it-IT", Icons.flag),
-            _buildLangOption(langService, "English", "en-US", Icons.public),
-            const SizedBox(height: 10),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 40, top: 15),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 50,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                  const Text(
+                    "SELEZIONA LINGUA",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Applica a interfaccia e risultati di ricerca",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  _buildLangOption(langService, "Italiano", "it-IT", '🇮🇹'),
+                  const SizedBox(height: 12),
+                  _buildLangOption(langService, "English", "en-US", '🇬🇧'),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -104,40 +132,57 @@ class _SettingsPageState extends State<SettingsPage> {
     LanguageService service,
     String title,
     String code,
-    IconData icon,
+    String emoji,
   ) {
     final isSelected = service.currentLanguage == code;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? _brandColor.withOpacity(0.15)
-              : Colors.white.withOpacity(0.05),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? _brandColor : Colors.white54,
-          size: 20,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            service.updateLanguage(code);
+            Navigator.pop(context);
+            setState(() {});
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? _brandColor.withOpacity(0.15)
+                  : Colors.white.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected
+                    ? _brandColor.withOpacity(0.5)
+                    : Colors.white.withOpacity(0.05),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(Icons.check_circle_rounded, color: _brandColor),
+              ],
+            ),
+          ),
         ),
       ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.white70,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-        ),
-      ),
-      trailing: isSelected
-          ? const Icon(Icons.check_circle, color: _brandColor)
-          : null,
-      onTap: () {
-        service.updateLanguage(code);
-        Navigator.pop(context);
-        setState(() {});
-      },
     );
   }
 
@@ -155,151 +200,259 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       backgroundColor: _bgColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "IMPOSTAZIONI",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 13,
-            letterSpacing: 2,
-          ),
-        ),
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: _surfaceColor,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new,
-              color: Colors.white,
-              size: 16,
-            ),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      body: Stack(
         children: [
-          SettingsHeader(
-            user: _currentUser,
-            bio: _currentUser?.bio ?? "Nessuna biografia",
-            onPhotoTap: () {},
-          ),
-          const SizedBox(height: 30),
-
-          _buildSectionTitle("PREFERENZE"),
-          _buildSettingsGroup([
-            SettingsTile(
-              icon: Icons.translate_rounded,
-              title: "Lingua dei risultati",
-              subtitle: _getLanguageName(sl<LanguageService>().currentLanguage),
-              onTap: _showLanguagePicker,
-              isTop: true,
-              isBottom: true,
-            ),
-          ]),
-
-          const SizedBox(height: 25),
-          _buildSectionTitle("ACCOUNT"),
-          _buildSettingsGroup([
-            SettingsTile(
-              icon: Icons.badge_rounded,
-              title: "Nome Visualizzato",
-              subtitle: _currentUser?.displayName ?? "Imposta nome",
-              isTop: true,
-              onTap: () => EditProfileDialogs.showNameDialog(
-                context,
-                _currentUser?.displayName,
-                (name) => sl<UpdateProfileUseCase>()
-                    .call(name)
-                    .then((_) => _loadData()),
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _brandColor.withOpacity(0.1),
               ),
-            ),
-            SettingsTile(
-              icon: Icons.text_snippet_rounded,
-              title: "Biografia",
-              subtitle: _currentUser?.bio ?? "Raccontaci di te",
-              onTap: () => EditProfileDialogs.showBioDialog(
-                context,
-                _currentUser?.bio ?? "",
-                (bio) => sl<UpdateBioUseCase>()
-                    .call(_currentUser!.id, bio)
-                    .then((_) => _loadData()),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                child: Container(color: Colors.transparent),
               ),
-            ),
-            SettingsTile(
-              icon: Icons.delete_forever_rounded,
-              title: "Elimina Account",
-              subtitle: "Azione irreversibile",
-              iconColor: Colors.redAccent,
-              textColor: Colors.redAccent,
-              isBottom: true,
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => const DeleteAccountDialog(),
-                );
-              },
-            ),
-          ]),
-
-          const SizedBox(height: 40),
-
-          // Tasto Logout Premium AGGIORNATO
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(
-                color: Colors.redAccent.withOpacity(0.3),
-                width: 1.5,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              foregroundColor: Colors.redAccent,
-            ),
-            // FIX LOGICA: Resetta la navigazione e rimette in gioco AuthGate
-            onPressed: () async {
-              await sl<LogoutUseCase>().call();
-              if (context.mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AuthGate()),
-                  (route) => false,
-                );
-              }
-            },
-            icon: const Icon(Icons.power_settings_new_rounded),
-            label: const Text(
-              "DISCONNETTI",
-              style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
             ),
           ),
-          const SizedBox(height: 40),
+
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                pinned: true,
+                centerTitle: true,
+                expandedHeight: 80,
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding: const EdgeInsets.only(bottom: 16),
+                  centerTitle: true,
+                  title: Text(
+                    "IL MIO PROFILO",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+                leading: IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SettingsHeader(
+                        user: _currentUser,
+                        bio:
+                            _currentUser?.bio ??
+                            "Nessuna biografia impostata. Racconta chi sei.",
+                        onPhotoTap: () {
+                          // Lancia il popup di selezione avatar integrato
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            isScrollControlled: true,
+                            builder: (context) => AvatarSelectionSheet(
+                              userId: _currentUser!.id,
+                              currentAvatarUrl: _currentUser?.photoUrl,
+                              onAvatarUpdated: () {
+                                _loadData(); // Ricarica la UI quando l'avatar viene salvato
+                              },
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      _buildSectionTitle("ESPERIENZA", Icons.tune_rounded),
+                      _buildSettingsGroup([
+                        SettingsTile(
+                          icon: Icons.translate_rounded,
+                          title: "Lingua Contenuti",
+                          subtitle:
+                              "Attualmente ${_getLanguageName(sl<LanguageService>().currentLanguage)}",
+                          onTap: _showLanguagePicker,
+                          isTop: true,
+                          isBottom: true,
+                          iconColor: Colors.blueAccent,
+                        ),
+                      ]),
+
+                      const SizedBox(height: 30),
+
+                      _buildSectionTitle(
+                        "GESTIONE ACCOUNT",
+                        Icons.manage_accounts_rounded,
+                      ),
+                      _buildSettingsGroup([
+                        SettingsTile(
+                          icon: Icons.badge_rounded,
+                          title: "Nome Visualizzato",
+                          subtitle:
+                              _currentUser?.displayName ??
+                              "Tocca per impostare",
+                          isTop: true,
+                          iconColor: Colors.greenAccent,
+                          onTap: () => EditProfileDialogs.showNameDialog(
+                            context,
+                            _currentUser?.displayName,
+                            (name) => sl<UpdateProfileUseCase>()
+                                .call(name)
+                                .then((_) => _loadData()),
+                          ),
+                        ),
+                        SettingsTile(
+                          icon: Icons.format_quote_rounded,
+                          title: "Biografia",
+                          subtitle: "Modifica la tua descrizione",
+                          iconColor: Colors.purpleAccent,
+                          onTap: () => EditProfileDialogs.showBioDialog(
+                            context,
+                            _currentUser?.bio ?? "",
+                            (bio) => sl<UpdateBioUseCase>()
+                                .call(_currentUser!.id, bio)
+                                .then((_) => _loadData()),
+                          ),
+                        ),
+                        SettingsTile(
+                          icon: Icons.delete_outline_rounded,
+                          title: "Elimina Account",
+                          subtitle: "Rimuovi permanentemente i dati",
+                          iconColor: Colors.redAccent,
+                          textColor: Colors.redAccent,
+                          isBottom: true,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => const DeleteAccountDialog(),
+                            );
+                          },
+                        ),
+                      ]),
+
+                      const SizedBox(height: 50),
+
+                      Center(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 18,
+                            ),
+                            side: BorderSide(
+                              color: Colors.redAccent.withOpacity(0.5),
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            backgroundColor: Colors.redAccent.withOpacity(0.05),
+                            foregroundColor: Colors.redAccent,
+                            elevation: 0,
+                          ),
+                          onPressed: () async {
+                            await sl<LogoutUseCase>().call();
+                            if (context.mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AuthGate(),
+                                ),
+                                (route) => false,
+                              );
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.power_settings_new_rounded,
+                            size: 22,
+                          ),
+                          label: const Text(
+                            "DISCONNETTI",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      Center(
+                        child: Column(
+                          children: [
+                            Image.asset(
+                              'assets/images/logoCine.png', // Stesso nome indicato nel codice originale
+                              width: 40,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              "CineShare v1.0",
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.2),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 50),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 10),
-      child: Text(
-        title,
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.3),
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.5,
-        ),
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white.withOpacity(0.4), size: 16),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.4),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.0,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -308,8 +461,15 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       decoration: BoxDecoration(
         color: _surfaceColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(children: children),
     );

@@ -95,16 +95,26 @@ class LibraryHeader extends StatelessWidget {
           child: CircleAvatar(
             radius: 20,
             backgroundColor: const Color(0xFF1E1E1E),
-            child: Text(
-              user?.displayName != null && user!.displayName!.isNotEmpty
-                  ? user!.displayName![0].toUpperCase()
-                  : 'A',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+            // LOGICA AVATAR AGGIORNATA
+            child: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
+                ? ClipOval(
+                    child: Image.network(
+                      user!.photoUrl!,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : Text(
+                    user?.displayName != null && user!.displayName!.isNotEmpty
+                        ? user!.displayName![0].toUpperCase()
+                        : 'U', // 'U' per Utente se non ha ancora il nome
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
           ),
         ),
       ),

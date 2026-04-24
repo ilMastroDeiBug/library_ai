@@ -65,6 +65,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
   sl.registerLazySingleton(() => DeleteAccountUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateAvatarUseCase(sl()));
 
   // Use Cases (User)
   sl.registerLazySingleton(() => GetUserDataUseCase(sl()));

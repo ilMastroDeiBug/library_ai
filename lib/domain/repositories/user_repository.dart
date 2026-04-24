@@ -10,4 +10,5 @@ abstract class UserRepository {
     String? bio,
     bool? isPublic,
   });
+  Future<void> updateAvatar(String userId, String avatarUrl);
 }

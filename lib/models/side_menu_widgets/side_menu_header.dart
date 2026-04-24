@@ -9,6 +9,7 @@ class SideMenuHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Calcolo dell'iniziale di riserva (fallback)
     final String initial = user != null
         ? ((user!.displayName?.isNotEmpty ?? false)
               ? user!.displayName![0].toUpperCase()
@@ -37,14 +38,33 @@ class SideMenuHeader extends StatelessWidget {
             child: CircleAvatar(
               radius: 24,
               backgroundColor: const Color(0xFF1E1E1E),
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                ),
-              ),
+              // LOGICA IN TEMPO REALE: Mostra la foto se esiste, altrimenti l'iniziale
+              child: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
+                  ? ClipOval(
+                      child: Image.network(
+                        user!.photoUrl!,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        // Se l'immagine non si carica per problemi di rete, mostra l'iniziale
+                        errorBuilder: (context, error, stackTrace) => Text(
+                          initial,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -54,7 +74,7 @@ class SideMenuHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user?.displayName ?? "Architect",
+                  user?.displayName ?? "Esploratore Ignoto",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,

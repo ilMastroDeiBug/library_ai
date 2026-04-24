@@ -3,79 +3,92 @@ import 'package:flutter/material.dart';
 class SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String? subtitle;
+  final String subtitle;
   final VoidCallback onTap;
   final bool isTop;
   final bool isBottom;
-
-  // 1. AGGIUNGIAMO LE VARIABILI OPZIONALI
-  final Color? iconColor;
+  final Color iconColor;
   final Color? textColor;
 
   const SettingsTile({
     super.key,
     required this.icon,
     required this.title,
-    this.subtitle,
+    required this.subtitle,
     required this.onTap,
     this.isTop = false,
     this.isBottom = false,
-    this.iconColor, // <-- Aggiunto al costruttore
-    this.textColor, // <-- Aggiunto al costruttore
+    this.iconColor = Colors.orangeAccent,
+    this.textColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      // La logica per mantenere i bordi curvi del contenitore
-      borderRadius: BorderRadius.vertical(
-        top: isTop ? const Radius.circular(20) : Radius.zero,
-        bottom: isBottom ? const Radius.circular(20) : Radius.zero,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              // 2. USIAMO IL COLORE SE C'È, ALTRIMENTI GRIGIO STANDARD
-              color: iconColor ?? Colors.white54,
-              size: 22,
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      // 3. USIAMO IL COLORE SE C'È, ALTRIMENTI BIANCO
-                      color: textColor ?? Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.vertical(
+          top: isTop ? const Radius.circular(24) : Radius.zero,
+          bottom: isBottom ? const Radius.circular(24) : Radius.zero,
+        ),
+        highlightColor: Colors.white.withOpacity(0.05),
+        splashColor: iconColor.withOpacity(0.1),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            border: !isBottom
+                ? Border(
+                    bottom: BorderSide(
+                      color: Colors.white.withOpacity(0.05),
+                      width: 1,
                     ),
-                  ),
-                  if (subtitle != null) ...[
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: textColor ?? Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                      subtitle!,
+                      subtitle,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.4),
+                        color:
+                            textColor?.withOpacity(0.7) ??
+                            Colors.white.withOpacity(0.5),
                         fontSize: 13,
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white.withOpacity(0.2),
-              size: 14,
-            ),
-          ],
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withOpacity(0.2),
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );

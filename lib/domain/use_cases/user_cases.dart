@@ -20,3 +20,13 @@ class UpdatePrivacyUseCase {
   Future<void> call(String uid, bool isPublic) =>
       repository.updateProfile(uid: uid, isPublic: isPublic);
 }
+
+class UpdateAvatarUseCase {
+  final UserRepository repository;
+
+  UpdateAvatarUseCase(this.repository);
+
+  Future<void> call(String userId, String avatarUrl) async {
+    return await repository.updateAvatar(userId, avatarUrl);
+  }
+}

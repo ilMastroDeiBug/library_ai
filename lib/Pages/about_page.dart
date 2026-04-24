@@ -18,7 +18,7 @@ class AboutPage extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Caricamento sponsor... (Integrazione AdMob in arrivo)"),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.white,
       ),
     );
     // TODO: Integra Google Mobile Ads (Rewarded Video Ad)
@@ -123,11 +123,7 @@ class AboutPage extends StatelessWidget {
                     ),
                     TextSpan(
                       text:
-                          ".\n\nHo costruito questa piattaforma da solo, scrivendo il codice di notte per creare il Vault definitivo per l'intrattenimento, unendo gestione dei media e Intelligenza Artificiale.\n\n",
-                    ),
-                    TextSpan(
-                      text:
-                          "Non ci sono grandi aziende dietro questa app, solo pura passione per l'informatica e server da mantenere attivi.",
+                          ".\n\nHo costruito questa piattaforma da solo, unendo gestione dei media e Intelligenza Artificiale.\n\n",
                     ),
                   ],
                 ),
@@ -178,7 +174,7 @@ class AboutPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          "L'account sviluppatore Apple costa 99\$/anno. Con il tuo supporto porterò CineShare su iPhone e sbloccherò l'intera sezione Libri!",
+                          "L'account sviluppatore Apple costa 99\$/anno. Con il tuo supporto porterò CineShare su iPhone e sbloccherò l'intera sezione Libri, grazie al servizio di ISBN!",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.7),
                             fontSize: 13,
@@ -207,7 +203,7 @@ class AboutPage extends StatelessWidget {
             _buildSupportButton(
               icon: Icons.local_cafe_rounded,
               title: "Offrimi un Caffè (Server)",
-              subtitle: "Aiutami a pagare i costi del database",
+              subtitle: "Supporta questo progetto",
               color: Colors.orangeAccent,
               onTap: () => _openDonation(context),
             ),
@@ -216,7 +212,7 @@ class AboutPage extends StatelessWidget {
               icon: Icons.play_circle_outline_rounded,
               title: "Guarda uno Sponsor",
               subtitle: "Supportami gratis guardando un video di 30s",
-              color: Colors.blueAccent,
+              color: const Color.fromARGB(255, 248, 248, 248),
               onTap: () => _showRewardedAd(context),
             ),
             const SizedBox(height: 12),
