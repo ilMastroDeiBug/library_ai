@@ -9,6 +9,7 @@ abstract class UserRepository {
     required String uid,
     String? bio,
     bool? isPublic,
+    String? languagePreference,
   });
   Future<void> updateAvatar(String userId, String avatarUrl);
 }

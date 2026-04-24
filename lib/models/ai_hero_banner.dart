@@ -19,7 +19,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
   late PageController _pageController;
   int _realIndex = 0;
   Timer? _timer;
-  double _currentPageValue = 0.0;
+  double _currentPageValue = _infiniteStart.toDouble();
 
   List<dynamic> _dailyItems = [];
   static const int _infiniteStart = 10000;
@@ -29,6 +29,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     super.initState();
     _generateDailyRotation();
     _pageController = PageController(initialPage: _infiniteStart);
+    _currentPageValue = _pageController.initialPage.toDouble();
 
     _pageController.addListener(() {
       if (mounted) {
@@ -50,6 +51,8 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
       if (_pageController.hasClients) {
         _pageController.jumpToPage(_infiniteStart);
       }
+      _currentPageValue = _infiniteStart.toDouble();
+      _realIndex = 0;
       _startAutoScroll();
     }
   }

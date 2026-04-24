@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/services/utility_services/language_service.dart';
 import 'review_model.dart';
 import '../../pages/all_reviews_page.dart';
 
@@ -23,34 +24,38 @@ class MovieReviewsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Review>>(
-      future: isTvSeries
-          ? sl<GetTvSeriesReviewsUseCase>().call(id)
-          : sl<GetMovieReviewsUseCase>().call(id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(
-              color: _brandAmber,
-              strokeWidth: 2,
-            ),
+    return ListenableBuilder(
+      listenable: sl<LanguageService>(),
+      builder: (context, _) => FutureBuilder<List<Review>>(
+        key: ValueKey('reviews_${id}_${isTvSeries}_${sl<LanguageService>().currentLanguage}'),
+        future: isTvSeries
+            ? sl<GetTvSeriesReviewsUseCase>().call(id)
+            : sl<GetMovieReviewsUseCase>().call(id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: _brandAmber,
+                strokeWidth: 2,
+              ),
+            );
+          }
+
+          final allReviews = snapshot.data ?? [];
+          if (allReviews.isEmpty) return _buildEmptyState();
+
+          final previewReviews = allReviews.take(2).toList();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context, allReviews),
+              const SizedBox(height: 15),
+              ...previewReviews.map((r) => _buildReviewCard(r)),
+            ],
           );
-        }
-
-        final allReviews = snapshot.data ?? [];
-        if (allReviews.isEmpty) return _buildEmptyState();
-
-        final previewReviews = allReviews.take(2).toList();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context, allReviews),
-            const SizedBox(height: 15),
-            ...previewReviews.map((r) => _buildReviewCard(r)),
-          ],
-        );
-      },
+        },
+      ),
     );
   }
 

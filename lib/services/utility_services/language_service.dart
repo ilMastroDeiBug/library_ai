@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageService extends ChangeNotifier {
-  String _currentLanguage = 'it-IT';
+  static const String defaultLanguage = 'it-IT';
+
+  String _currentLanguage = defaultLanguage;
 
   String get currentLanguage => _currentLanguage;
 
@@ -15,15 +17,41 @@ class LanguageService extends ChangeNotifier {
 
   Future<void> _loadLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    _currentLanguage = prefs.getString('app_language') ?? 'it-IT';
+    _currentLanguage = _normalizeLanguage(
+      prefs.getString('app_language'),
+    );
     notifyListeners();
   }
 
   Future<void> updateLanguage(String newLang) async {
-    if (_currentLanguage == newLang) return;
-    _currentLanguage = newLang;
+    final normalized = _normalizeLanguage(newLang);
+    if (_currentLanguage == normalized) return;
+    _currentLanguage = normalized;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('app_language', newLang);
+    await prefs.setString('app_language', normalized);
     notifyListeners();
+  }
+
+  Future<void> syncLanguage(String? newLang, {bool notify = true}) async {
+    final normalized = _normalizeLanguage(newLang);
+    if (_currentLanguage == normalized) return;
+    _currentLanguage = normalized;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_language', normalized);
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  String _normalizeLanguage(String? language) {
+    switch (language) {
+      case 'en':
+      case 'en-US':
+        return 'en-US';
+      case 'it':
+      case 'it-IT':
+      default:
+        return defaultLanguage;
+    }
   }
 }

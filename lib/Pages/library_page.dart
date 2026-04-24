@@ -1,9 +1,10 @@
-﻿import 'package:flutter/material.dart';
-import 'package:library_ai/injection_container.dart';
+import 'package:flutter/material.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
+import 'package:library_ai/domain/use_cases/user_cases.dart';
+import 'package:library_ai/injection_container.dart';
 import '../models/app_mode.dart';
-import '../models/library_widgets/library_header.dart';
 import '../models/library_widgets/library_grid.dart';
+import '../models/library_widgets/library_header.dart';
 
 class LibraryPage extends StatefulWidget {
   final AppMode mode;
@@ -23,11 +24,9 @@ class _LibraryPageState extends State<LibraryPage> {
   bool get _isBooks => widget.mode == AppMode.books;
   static const Color _brandColor = Colors.orangeAccent;
 
-  // FIX: Invertiti i label - I completati ora sono a sinistra (Tab 1)
   String get _tab1Label => _isBooks ? "LETTI" : "VISTI";
   String get _tab2Label => _isBooks ? "DA LEGGERE" : "DA VEDERE";
 
-  // FIX: Invertiti gli stati - Il database caricherà i completati per il primo Tab
   String get _status1 => _isBooks ? "read" : "watched";
   String get _status2 => _isBooks ? "toread" : "towatch";
 
@@ -39,25 +38,34 @@ class _LibraryPageState extends State<LibraryPage> {
       body: StreamBuilder(
         stream: sl<AuthRepository>().userStream,
         builder: (context, snapshot) {
-          final user = snapshot.data;
+          final authUser = snapshot.data;
 
-          return DefaultTabController(
-            length: 2,
-            child: NestedScrollView(
-              physics: const BouncingScrollPhysics(),
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                return [_buildSliverAppBar(user)];
-              },
-              body: TabBarView(
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  // Tab 1: Visti/Letti (Aperto di default)
-                  LibraryGrid(mode: widget.mode, status: _status1),
-                  // Tab 2: Da Vedere/Leggere
-                  LibraryGrid(mode: widget.mode, status: _status2),
-                ],
-              ),
-            ),
+          if (authUser == null) {
+            return const SizedBox.shrink();
+          }
+
+          return FutureBuilder(
+            future: sl<GetUserDataUseCase>().call(authUser.id),
+            builder: (context, profileSnapshot) {
+              final user = profileSnapshot.data ?? authUser;
+
+              return DefaultTabController(
+                length: 2,
+                child: NestedScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  headerSliverBuilder: (context, innerBoxIsScrolled) {
+                    return [_buildSliverAppBar(user)];
+                  },
+                  body: TabBarView(
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      LibraryGrid(mode: widget.mode, status: _status1),
+                      LibraryGrid(mode: widget.mode, status: _status2),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),

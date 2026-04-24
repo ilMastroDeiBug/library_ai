@@ -14,6 +14,7 @@ import '../../models/app_mode.dart';
 import '../../models/movie_widget/movie_card.dart';
 import '../../domain/entities/movie.dart';
 import '../../domain/entities/tv_series.dart';
+import '../../services/utility_services/language_service.dart';
 
 class HomeContentBuilder {
   static List<Widget> buildBookContent() {
@@ -55,8 +56,10 @@ class HomeContentBuilder {
     CinemaType cinemaType = CinemaType.movies,
     Set<int>? seenIds, // <-- RICEVE IL REGISTRO
   }) {
+    final languageCode = sl<LanguageService>().currentLanguage;
+
     return FutureBuilder<List<dynamic>>(
-      key: ValueKey('hero_${mode.index}_${cinemaType.index}'),
+      key: ValueKey('hero_${mode.index}_${cinemaType.index}_$languageCode'),
       future: _fetchHeroItems(mode, cinemaType, seenIds),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -140,12 +143,26 @@ class CinemaHorizontalList extends StatefulWidget {
 
 class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
   late Future<List<dynamic>> _future;
+  final LanguageService _languageService = sl<LanguageService>();
 
   @override
   void initState() {
     super.initState();
-    // Spariamo il razzo una volta sola!
     _future = _fetchAndFilter();
+    _languageService.addListener(_handleLanguageChanged);
+  }
+
+  @override
+  void dispose() {
+    _languageService.removeListener(_handleLanguageChanged);
+    super.dispose();
+  }
+
+  void _handleLanguageChanged() {
+    if (!mounted) return;
+    setState(() {
+      _future = _fetchAndFilter();
+    });
   }
 
   Future<List<dynamic>> _fetchAndFilter() async {

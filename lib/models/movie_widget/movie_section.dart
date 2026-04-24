@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/services/utility_services/language_service.dart';
 import 'movie_card.dart';
 import '../../pages/movie_detail_page.dart';
 
@@ -22,16 +23,33 @@ class MovieSection extends StatefulWidget {
 }
 
 class _MovieSectionState extends State<MovieSection> {
-  // CONGELIAMO LA CHIAMATA API QUI
   late Future<List<dynamic>> _future;
+  final LanguageService _languageService = sl<LanguageService>();
 
   @override
   void initState() {
     super.initState();
-    // La chiamata parte una volta sola all'inizializzazione del widget
-    _future = widget.isTvSeries
+    _future = _fetchItems();
+    _languageService.addListener(_handleLanguageChanged);
+  }
+
+  @override
+  void dispose() {
+    _languageService.removeListener(_handleLanguageChanged);
+    super.dispose();
+  }
+
+  Future<List<dynamic>> _fetchItems() {
+    return widget.isTvSeries
         ? sl<GetTvSeriesByCategoryUseCase>().call(widget.categoryPath)
         : sl<GetMoviesByCategoryUseCase>().call(widget.categoryPath);
+  }
+
+  void _handleLanguageChanged() {
+    if (!mounted) return;
+    setState(() {
+      _future = _fetchItems();
+    });
   }
 
   @override
@@ -67,8 +85,7 @@ class _MovieSectionState extends State<MovieSection> {
         SizedBox(
           height: 180,
           child: FutureBuilder<List<dynamic>>(
-            future:
-                _future, // Usiamo la variabile salvata! Nessun loop infinito.
+            future: _future,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(

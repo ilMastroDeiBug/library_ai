@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
+import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/Pages/about_page.dart'; // Aggiusta il path se necessario
 import '../../models/app_mode.dart';
 
@@ -31,119 +32,113 @@ class SideMenu extends StatelessWidget {
     return StreamBuilder(
       stream: sl<AuthRepository>().userStream,
       builder: (context, snapshot) {
-        final user = snapshot.data;
+        final authUser = snapshot.data;
 
-        return Theme(
-          data: Theme.of(context).copyWith(
-            drawerTheme: const DrawerThemeData(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-            ),
-          ),
-          child: Drawer(
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.45),
-                    border: Border(
-                      right: BorderSide(
-                        color: Colors.white.withOpacity(0.1),
-                        width: 1,
+        if (authUser == null) {
+          return const SizedBox.shrink();
+        }
+
+        return FutureBuilder(
+          future: sl<GetUserDataUseCase>().call(authUser.id),
+          builder: (context, profileSnapshot) {
+            final user = profileSnapshot.data ?? authUser;
+
+            return Theme(
+              data: Theme.of(context).copyWith(
+                drawerTheme: const DrawerThemeData(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                ),
+              ),
+              child: Drawer(
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.45),
+                        border: Border(
+                          right: BorderSide(
+                            color: Colors.white.withOpacity(0.1),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          SideMenuHeader(user: user),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: ListView(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              physics: const BouncingScrollPhysics(),
+                              children: [
+                                _buildSectionLabel("ESPLORA"),
+                                const SizedBox(height: 10),
+                                SideMenuItem(
+                                  icon: Icons.movie_filter_rounded,
+                                  text: "Cinema & Serie TV",
+                                  isSelected: !isSocialActive,
+                                  activeColor: _brandColor,
+                                  onTap: () {
+                                    onModeChanged(AppMode.movies);
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                                const SizedBox(height: 30),
+                                _buildSectionLabel("COMMUNITY"),
+                                const SizedBox(height: 10),
+                                SideMenuItem(
+                                  icon: Icons.public_rounded,
+                                  text: "CineShare Social",
+                                  isSelected: isSocialActive,
+                                  activeColor: _brandColor,
+                                  onTap: () {
+                                    onSocialTap();
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                                const SizedBox(height: 30),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  child: Divider(
+                                    color: Colors.white.withOpacity(0.05),
+                                    height: 1,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                _buildSectionLabel("IL PROGETTO"),
+                                const SizedBox(height: 10),
+                                SideMenuItem(
+                                  icon: Icons.info_outline_rounded,
+                                  text: "Info & Supporto",
+                                  isSelected: false,
+                                  activeColor: _brandColor,
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const AboutPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(20, 0, 20, 40),
+                            child: LogoutButton(),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      // 1. HEADER
-                      SideMenuHeader(user: user),
-
-                      const SizedBox(height: 10),
-
-                      // 2. LISTA MENU
-                      Expanded(
-                        child: ListView(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          physics: const BouncingScrollPhysics(),
-                          children: [
-                            _buildSectionLabel("ESPLORA"),
-                            const SizedBox(height: 10),
-
-                            SideMenuItem(
-                              icon: Icons.movie_filter_rounded,
-                              text: "Cinema & Serie TV",
-                              isSelected:
-                                  !isSocialActive, // Selezionato se non siamo nel Social
-                              activeColor: _brandColor,
-                              onTap: () {
-                                onModeChanged(AppMode.movies);
-                                Navigator.pop(context);
-                              },
-                            ),
-
-                            const SizedBox(height: 30),
-
-                            _buildSectionLabel("COMMUNITY"),
-                            const SizedBox(height: 10),
-
-                            SideMenuItem(
-                              icon: Icons.public_rounded,
-                              text: "CineShare Social",
-                              isSelected: isSocialActive,
-                              activeColor: _brandColor,
-                              onTap: () {
-                                onSocialTap();
-                                Navigator.pop(context);
-                              },
-                            ),
-
-                            const SizedBox(height: 30),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                              ),
-                              child: Divider(
-                                color: Colors.white.withOpacity(0.05),
-                                height: 1,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Nuova sezione per le info, separata logicamente
-                            _buildSectionLabel("IL PROGETTO"),
-                            const SizedBox(height: 10),
-
-                            SideMenuItem(
-                              icon: Icons.info_outline_rounded,
-                              text: "Info & Supporto",
-                              isSelected: false, // Non è una tab principale
-                              activeColor: _brandColor,
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const AboutPage(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // 3. FOOTER LOGOUT
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(20, 0, 20, 40),
-                        child: LogoutButton(),
-                      ),
-                    ],
-                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

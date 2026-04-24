@@ -4,7 +4,8 @@ class AppUser {
   final String? displayName;
   final String? bio;
   final String? photoUrl;
-  final bool isPublic; // <--- NUOVO CAMPO
+  final bool isPublic;
+  final String languagePreference;
 
   AppUser({
     required this.id,
@@ -12,6 +13,7 @@ class AppUser {
     this.displayName,
     this.photoUrl,
     this.bio,
-    this.isPublic = true, // Default true
+    this.isPublic = true,
+    this.languagePreference = 'it-IT',
   });
 }

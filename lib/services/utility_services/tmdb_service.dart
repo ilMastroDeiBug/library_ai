@@ -23,39 +23,37 @@ class TmdbService {
     'Content-Type': 'application/json;charset=utf-8',
   };
 
+  String get _language => sl<LanguageService>().currentLanguage;
+
   // --- FILM ---
   Future<List<Movie>> fetchMoviesByCategory(
     String endpoint, {
     int page = 1,
   }) async {
-    final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/movie/$endpoint?language=$lang&page=$page',
+      '$_baseUrl/movie/$endpoint?language=$_language&page=$page',
     );
     return _fetchMovies(url);
   }
 
   Future<List<Movie>> fetchMoviesByGenre(String genreId, {int page = 1}) async {
-    final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/discover/movie?with_genres=$genreId&language=$lang&page=$page',
+      '$_baseUrl/discover/movie?with_genres=$genreId&language=$_language&page=$page',
     );
     return _fetchMovies(url);
   }
 
   Future<List<Movie>> fetchTrendingMovies({int page = 1}) async {
-    final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/trending/movie/week?language=$lang&page=$page',
+      '$_baseUrl/trending/movie/week?language=$_language&page=$page',
     );
     return _fetchMovies(url);
   }
 
   Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
     if (query.isEmpty) return [];
-    final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/search/movie?query=$query&language=$lang&include_adult=false&page=$page',
+      '$_baseUrl/search/movie?query=$query&language=$_language&include_adult=false&page=$page',
     );
     return _fetchMovies(url);
   }
@@ -65,32 +63,28 @@ class TmdbService {
     String endpoint, {
     int page = 1,
   }) async {
-    final lang = sl<LanguageService>().currentLanguage;
-    final url = Uri.parse('$_baseUrl/tv/$endpoint?language=$lang&page=$page');
+    final url = Uri.parse('$_baseUrl/tv/$endpoint?language=$_language&page=$page');
     return _fetchTvSeries(url);
   }
 
   Future<List<TvSeries>> fetchTvByGenre(String genreId, {int page = 1}) async {
-    final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/discover/tv?with_genres=$genreId&language=$lang&page=$page',
+      '$_baseUrl/discover/tv?with_genres=$genreId&language=$_language&page=$page',
     );
     return _fetchTvSeries(url);
   }
 
   Future<List<TvSeries>> fetchTvTrending({int page = 1}) async {
-    final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/trending/tv/week?language=$lang&page=$page',
+      '$_baseUrl/trending/tv/week?language=$_language&page=$page',
     );
     return _fetchTvSeries(url);
   }
 
   Future<List<TvSeries>> searchTvSeries(String query, {int page = 1}) async {
     if (query.isEmpty) return [];
-    final lang = sl<LanguageService>().currentLanguage;
     final url = Uri.parse(
-      '$_baseUrl/search/tv?query=$query&language=$lang&include_adult=false&page=$page',
+      '$_baseUrl/search/tv?query=$query&language=$_language&include_adult=false&page=$page',
     );
     return _fetchTvSeries(url);
   }
@@ -98,8 +92,7 @@ class TmdbService {
   // --- COMMON (Cast, Reviews, Trailers, Providers) ---
   Future<List<CastMember>> fetchCast(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
-    final lang = sl<LanguageService>().currentLanguage;
-    final url = Uri.parse('$_baseUrl/$endpoint/$id/credits?language=$lang');
+    final url = Uri.parse('$_baseUrl/$endpoint/$id/credits?language=$_language');
 
     try {
       final response = await _client.get(url, headers: _headers);
@@ -122,7 +115,7 @@ class TmdbService {
   Future<List<Review>> fetchReviews(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final url = Uri.parse(
-      '$_baseUrl/$endpoint/$id/reviews?language=en-US&page=1',
+      '$_baseUrl/$endpoint/$id/reviews?language=$_language&page=1',
     );
 
     try {
@@ -141,7 +134,7 @@ class TmdbService {
 
   Future<String?> fetchTrailerKey(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
-    final url = Uri.parse('$_baseUrl/$endpoint/$id/videos?language=it-IT');
+    final url = Uri.parse('$_baseUrl/$endpoint/$id/videos?language=$_language');
 
     try {
       final response = await _client.get(url, headers: _headers);

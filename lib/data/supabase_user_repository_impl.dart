@@ -20,7 +20,8 @@ class SupabaseUserRepositoryImpl implements UserRepository {
         displayName: data['display_name'] ?? 'Utente',
         bio: data['bio'],
         isPublic: data['is_public'] ?? true,
-        photoUrl: data['photo_url'], // <-- Estrazione dell'avatar aggiunta
+        photoUrl: data['photo_url'],
+        languagePreference: data['language_preference'] ?? 'it-IT',
       );
     } catch (e) {
       print("Errore Supabase getUserData: $e");
@@ -33,11 +34,15 @@ class SupabaseUserRepositoryImpl implements UserRepository {
     required String uid,
     String? bio,
     bool? isPublic,
+    String? languagePreference,
   }) async {
     final updates = <String, dynamic>{};
 
     if (bio != null) updates['bio'] = bio;
     if (isPublic != null) updates['is_public'] = isPublic;
+    if (languagePreference != null) {
+      updates['language_preference'] = languagePreference;
+    }
 
     if (updates.isNotEmpty) {
       await _supabase.from('profiles').update(updates).eq('id', uid);

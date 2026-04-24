@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/models/app_mode.dart';
+import 'package:library_ai/services/utility_services/language_service.dart';
 
 // Use Cases
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
@@ -191,10 +192,12 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
   List<dynamic> _results = [];
   bool _isLoading = false;
   String _lastSearchedQuery = "";
+  final LanguageService _languageService = sl<LanguageService>();
 
   @override
   void initState() {
     super.initState();
+    _languageService.addListener(_handleLanguageChanged);
     _queueSearch();
   }
 
@@ -208,7 +211,16 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
 
   void _queueSearch() {
     final currentQuery = widget.query.trim();
-    if (currentQuery.length < 3) return;
+    if (currentQuery.length < 3) {
+      if (mounted) {
+        setState(() {
+          _results = [];
+          _isLoading = false;
+          _lastSearchedQuery = "";
+        });
+      }
+      return;
+    }
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
@@ -220,12 +232,15 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
   }
 
   Future<void> _performSearch(String queryStr) async {
-    if (queryStr == _lastSearchedQuery) {
+    final requestKey =
+        '$queryStr::${_languageService.currentLanguage}::${widget.mode.name}';
+
+    if (requestKey == _lastSearchedQuery) {
       setState(() => _isLoading = false);
       return;
     }
 
-    _lastSearchedQuery = queryStr;
+    _lastSearchedQuery = requestKey;
     List<dynamic> fetchResults = [];
 
     try {
@@ -253,8 +268,14 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
 
   @override
   void dispose() {
+    _languageService.removeListener(_handleLanguageChanged);
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _handleLanguageChanged() {
+    _lastSearchedQuery = "";
+    _queueSearch();
   }
 
   @override

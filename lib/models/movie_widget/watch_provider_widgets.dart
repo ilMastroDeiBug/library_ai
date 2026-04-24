@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/services/utility_services/language_service.dart';
 import 'watch_provider_model.dart';
 
 class WatchProvidersWidget extends StatefulWidget {
@@ -22,11 +23,26 @@ class WatchProvidersWidget extends StatefulWidget {
 
 class _WatchProvidersWidgetState extends State<WatchProvidersWidget> {
   late Future<WatchProvidersResult?> _providersFuture;
+  final LanguageService _languageService = sl<LanguageService>();
 
   @override
   void initState() {
     super.initState();
     _providersFuture = _fetchProviders();
+    _languageService.addListener(_handleLanguageChanged);
+  }
+
+  @override
+  void dispose() {
+    _languageService.removeListener(_handleLanguageChanged);
+    super.dispose();
+  }
+
+  void _handleLanguageChanged() {
+    if (!mounted) return;
+    setState(() {
+      _providersFuture = _fetchProviders();
+    });
   }
 
   Future<WatchProvidersResult?> _fetchProviders() async {

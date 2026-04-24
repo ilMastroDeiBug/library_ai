@@ -4,6 +4,7 @@ import '../../domain/use_cases/movie_use_cases.dart';
 import '../../domain/use_cases/tv_series_use_cases.dart';
 import '../../pages/movie_detail_page.dart';
 import '../movie_widget/movie_card.dart';
+import '../../services/utility_services/language_service.dart';
 
 // ... (import precedenti)
 
@@ -21,6 +22,8 @@ class CinemaHorizontalList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final languageCode = sl<LanguageService>().currentLanguage;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -38,7 +41,7 @@ class CinemaHorizontalList extends StatelessWidget {
         SizedBox(
           height: 220,
           child: FutureBuilder<List<dynamic>>(
-            // Chiamata al UseCase corretto in base a isTv
+            key: ValueKey('cinema_horizontal_${title}_${path}_${isTv}_$languageCode'),
             future: isTv
                 ? sl<GetTvSeriesByCategoryUseCase>().call(path)
                 : sl<GetMoviesByCategoryUseCase>().call(path),

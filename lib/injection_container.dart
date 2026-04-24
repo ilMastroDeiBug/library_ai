@@ -16,6 +16,7 @@ import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
+import 'package:library_ai/services/utility_services/network_status_service.dart';
 
 // Import Services Libri (DORMIENTI)
 import 'package:library_ai/services/utility_services/open_library_service.dart';
@@ -72,6 +73,8 @@ Future<void> init() async {
   sl.registerLazySingleton(() => UpdateBioUseCase(sl()));
   sl.registerLazySingleton(() => UpdatePrivacyUseCase(sl()));
   sl.registerLazySingleton(() => LanguageService());
+  sl.registerLazySingleton(() => UpdateLanguagePreferenceUseCase(sl()));
+  sl.registerLazySingleton(() => NetworkStatusService());
 
   // 🔒 Use Cases (Books) - DORMIENTI
   sl.registerLazySingleton(() => GetUserBooksUseCase(sl()));

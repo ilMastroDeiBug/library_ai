@@ -3,6 +3,7 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/services/utility_services/language_service.dart';
 
 class TrailerPlayerWidget extends StatefulWidget {
   final int mediaId;
@@ -21,11 +22,13 @@ class TrailerPlayerWidget extends StatefulWidget {
 class _TrailerPlayerWidgetState extends State<TrailerPlayerWidget> {
   late Future<String?> _trailerFuture;
   YoutubePlayerController? _controller;
+  final LanguageService _languageService = sl<LanguageService>();
 
   @override
   void initState() {
     super.initState();
     _trailerFuture = _fetchTrailer();
+    _languageService.addListener(_handleLanguageChanged);
   }
 
   Future<String?> _fetchTrailer() async {
@@ -38,10 +41,20 @@ class _TrailerPlayerWidgetState extends State<TrailerPlayerWidget> {
 
   @override
   void dispose() {
-    // Dobbiamo forzare la pausa e lo smaltimento profondo della webview
+    _languageService.removeListener(_handleLanguageChanged);
     _controller?.pause();
     _controller?.dispose();
     super.dispose();
+  }
+
+  void _handleLanguageChanged() {
+    if (!mounted) return;
+    _controller?.pause();
+    _controller?.dispose();
+    _controller = null;
+    setState(() {
+      _trailerFuture = _fetchTrailer();
+    });
   }
 
   @override

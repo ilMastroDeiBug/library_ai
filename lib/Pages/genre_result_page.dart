@@ -10,6 +10,7 @@ import '../domain/entities/movie.dart';
 import '../domain/entities/tv_series.dart';
 import 'movie_detail_page.dart';
 import 'book_detail_page.dart';
+import '../services/utility_services/language_service.dart';
 
 class GenreResultPage extends StatefulWidget {
   final CategoryEntity category;
@@ -29,6 +30,7 @@ class GenreResultPage extends StatefulWidget {
 
 class _GenreResultPageState extends State<GenreResultPage> {
   final ScrollController _scrollController = ScrollController();
+  final LanguageService _languageService = sl<LanguageService>();
 
   List<dynamic> _items = [];
   int _currentPage = 1;
@@ -41,12 +43,26 @@ class _GenreResultPageState extends State<GenreResultPage> {
     super.initState();
     _fetchInitialData();
     _scrollController.addListener(_onScroll);
+    _languageService.addListener(_handleLanguageChanged);
   }
 
   @override
   void dispose() {
+    _languageService.removeListener(_handleLanguageChanged);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _handleLanguageChanged() {
+    if (!mounted) return;
+    setState(() {
+      _items = [];
+      _currentPage = 1;
+      _isLoadingFirstTime = true;
+      _isFetchingMore = false;
+      _hasReachedMax = false;
+    });
+    _fetchInitialData();
   }
 
   void _onScroll() {

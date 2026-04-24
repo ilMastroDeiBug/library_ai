@@ -3,6 +3,8 @@ import '../models/app_mode.dart';
 import '../models/home_widgets/home_content_builders.dart';
 import '../models/home_widgets/home_cinema_switcher.dart';
 import 'search_page.dart';
+import '../injection_container.dart';
+import '../services/utility_services/language_service.dart';
 
 // --- IMPORT SOSPESI TEMPORANEAMENTE PER IL REFACTORING ---
 // import '../models/book_widgets/add_book_sheet.dart';
@@ -52,50 +54,51 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black, // NERO ASSOLUTO
-      // Il FAB dei libri è disattivato per il lancio MVP
-      floatingActionButton: null,
+    return ListenableBuilder(
+      listenable: sl<LanguageService>(),
+      builder: (context, _) {
+        final languageCode = sl<LanguageService>().currentLanguage;
 
-      // LO STACK È IL SEGRETO PER L'EFFETTO TIKTOK
-      body: Stack(
-        children: [
-          // LIVELLO 1: I CONTENUTI (Base)
-          Positioned.fill(
-            child: widget.mode == AppMode.books
-                ? _buildComingSoonBooks(
-                    context,
-                  ) // <-- LEVA MARKETING: Sostituisce la vecchia UI
-                : PageView(
-                    controller: _cinemaPageController,
-                    physics: const BouncingScrollPhysics(),
-                    onPageChanged: (index) {
-                      setState(() {
-                        _selectedCinemaType = index == 0
-                            ? CinemaType.movies
-                            : CinemaType.tvSeries;
-                      });
-                    },
-                    children: [
-                      _KeepAliveSection(
-                        child: _buildCinemaPage(CinemaType.movies),
+        return Scaffold(
+          backgroundColor: Colors.black,
+          floatingActionButton: null,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: widget.mode == AppMode.books
+                    ? _buildComingSoonBooks(context)
+                    : PageView(
+                        controller: _cinemaPageController,
+                        physics: const BouncingScrollPhysics(),
+                        onPageChanged: (index) {
+                          setState(() {
+                            _selectedCinemaType = index == 0
+                                ? CinemaType.movies
+                                : CinemaType.tvSeries;
+                          });
+                        },
+                        children: [
+                          _KeepAliveSection(
+                            key: ValueKey('home_movies_$languageCode'),
+                            child: _buildCinemaPage(CinemaType.movies),
+                          ),
+                          _KeepAliveSection(
+                            key: ValueKey('home_tv_$languageCode'),
+                            child: _buildCinemaPage(CinemaType.tvSeries),
+                          ),
+                        ],
                       ),
-                      _KeepAliveSection(
-                        child: _buildCinemaPage(CinemaType.tvSeries),
-                      ),
-                    ],
-                  ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _buildModernHeader(context),
+              ),
+            ],
           ),
-
-          // LIVELLO 2: L'HEADER FLUTTUANTE (Top)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: _buildModernHeader(context),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -140,6 +143,9 @@ class _HomePageState extends State<HomePage> {
             HomeCinemaSwitcher(
               selectedType: _selectedCinemaType,
               onTypeChanged: (newType) {
+                setState(() {
+                  _selectedCinemaType = newType;
+                });
                 _cinemaPageController.animateToPage(
                   newType == CinemaType.movies ? 0 : 1,
                   duration: const Duration(milliseconds: 400),
@@ -324,7 +330,7 @@ class _HomePageState extends State<HomePage> {
 // --- IL WIDGET MAGICO PER LA CACHE ---
 class _KeepAliveSection extends StatefulWidget {
   final Widget child;
-  const _KeepAliveSection({required this.child});
+  const _KeepAliveSection({super.key, required this.child});
 
   @override
   State<_KeepAliveSection> createState() => _KeepAliveSectionState();

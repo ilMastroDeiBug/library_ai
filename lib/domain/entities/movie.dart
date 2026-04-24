@@ -7,6 +7,7 @@ class Movie {
   final double voteAverage;
   final int voteCount;
   final String releaseDate;
+  final String originalLanguage;
 
   // Campi locali (Database)
   final String status;
@@ -21,6 +22,7 @@ class Movie {
     required this.voteAverage,
     required this.voteCount,
     required this.releaseDate,
+    this.originalLanguage = '',
     this.status = 'none',
     this.aiAnalysis,
   });
@@ -47,6 +49,7 @@ class Movie {
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
       voteCount: json['vote_count'] ?? 0,
       releaseDate: json['release_date'] ?? '',
+      originalLanguage: json['original_language'] ?? '',
       status: 'none',
     );
   }
@@ -61,6 +64,7 @@ class Movie {
       voteAverage: (data['voteAverage'] as num?)?.toDouble() ?? 0.0,
       voteCount: (data['voteCount'] as num?)?.toInt() ?? 0,
       releaseDate: data['releaseDate'] ?? '',
+      originalLanguage: data['originalLanguage'] ?? '',
       status: data['status'] ?? 'none',
       aiAnalysis: data['aiAnalysis'],
     );
@@ -75,6 +79,7 @@ class Movie {
       'voteAverage': voteAverage,
       'voteCount': voteCount,
       'releaseDate': releaseDate,
+      'originalLanguage': originalLanguage,
       'status': status,
       'aiAnalysis': aiAnalysis,
     };
@@ -89,6 +94,7 @@ class Movie {
     double? voteAverage,
     int? voteCount,
     String? releaseDate,
+    String? originalLanguage,
     String? status,
     String? aiAnalysis,
   }) {
@@ -101,6 +107,7 @@ class Movie {
       voteAverage: voteAverage ?? this.voteAverage,
       voteCount: voteCount ?? this.voteCount,
       releaseDate: releaseDate ?? this.releaseDate,
+      originalLanguage: originalLanguage ?? this.originalLanguage,
       status: status ?? this.status,
       aiAnalysis: aiAnalysis ?? this.aiAnalysis,
     );

@@ -21,6 +21,17 @@ class UpdatePrivacyUseCase {
       repository.updateProfile(uid: uid, isPublic: isPublic);
 }
 
+class UpdateLanguagePreferenceUseCase {
+  final UserRepository repository;
+  UpdateLanguagePreferenceUseCase(this.repository);
+
+  Future<void> call(String uid, String languagePreference) =>
+      repository.updateProfile(
+        uid: uid,
+        languagePreference: languagePreference,
+      );
+}
+
 class UpdateAvatarUseCase {
   final UserRepository repository;
 

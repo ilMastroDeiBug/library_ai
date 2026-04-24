@@ -42,6 +42,10 @@ class _SettingsPageState extends State<SettingsPage> {
     if (userAuth != null) {
       try {
         final userData = await sl<GetUserDataUseCase>().call(userAuth.id);
+        await sl<LanguageService>().syncLanguage(
+          userData?.languagePreference ?? userAuth.languagePreference,
+          notify: false,
+        );
         if (mounted) {
           setState(() {
             _currentUser = userData ?? userAuth;
@@ -59,6 +63,50 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     } else {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updateLanguagePreference(String code) async {
+    final normalizedCode = code == 'en-US' ? 'en-US' : 'it-IT';
+    final previousLanguage = sl<LanguageService>().currentLanguage;
+
+    try {
+      await sl<LanguageService>().updateLanguage(normalizedCode);
+
+      if (_currentUser != null) {
+        await sl<UpdateLanguagePreferenceUseCase>().call(
+          _currentUser!.id,
+          normalizedCode,
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          if (_currentUser != null) {
+            _currentUser = AppUser(
+              id: _currentUser!.id,
+              email: _currentUser!.email,
+              displayName: _currentUser!.displayName,
+              bio: _currentUser!.bio,
+              photoUrl: _currentUser!.photoUrl,
+              isPublic: _currentUser!.isPublic,
+              languagePreference: normalizedCode,
+            );
+          }
+        });
+      }
+    } catch (e) {
+      await sl<LanguageService>().syncLanguage(previousLanguage);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Impossibile salvare la lingua: ${e.toString().replaceAll("Exception: ", "")}',
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -140,10 +188,11 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            service.updateLanguage(code);
-            Navigator.pop(context);
-            setState(() {});
+          onTap: () async {
+            await _updateLanguagePreference(code);
+            if (mounted) {
+              Navigator.pop(context);
+            }
           },
           borderRadius: BorderRadius.circular(16),
           child: AnimatedContainer(
