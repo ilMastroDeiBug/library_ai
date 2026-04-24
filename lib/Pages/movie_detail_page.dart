@@ -131,7 +131,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               label: "VISTO",
                               icon: Icons.check_circle_outline,
                               isActive: currentStatus == 'watched',
-                              activeColor: Colors.green,
+                              activeColor: _brandColor,
                               onTap: () => _logic.handleStatusAction(
                                 context,
                                 liveMedia,

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
+import 'package:library_ai/Pages/about_page.dart'; // Aggiusta il path se necessario
 import '../../models/app_mode.dart';
 
 // Import Widget Modulari
@@ -42,17 +43,13 @@ class SideMenu extends StatelessWidget {
           child: Drawer(
             child: ClipRect(
               child: BackdropFilter(
-                // FIX: Blur leggermente ridotto per far passare meglio i colori
                 filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Container(
                   decoration: BoxDecoration(
-                    // FIX: Opacità abbassata a 0.45 per un effetto molto più "vetro" e meno "muro"
                     color: Colors.black.withOpacity(0.45),
                     border: Border(
                       right: BorderSide(
-                        color: Colors.white.withOpacity(
-                          0.1,
-                        ), // Leggermente più visibile per staccare dal fondo
+                        color: Colors.white.withOpacity(0.1),
                         width: 1,
                       ),
                     ),
@@ -75,26 +72,12 @@ class SideMenu extends StatelessWidget {
 
                             SideMenuItem(
                               icon: Icons.movie_filter_rounded,
-                              text: "Cinema & TV",
+                              text: "Cinema & Serie TV",
                               isSelected:
-                                  !isSocialActive &&
-                                  currentMode == AppMode.movies,
+                                  !isSocialActive, // Selezionato se non siamo nel Social
                               activeColor: _brandColor,
                               onTap: () {
                                 onModeChanged(AppMode.movies);
-                                Navigator.pop(context);
-                              },
-                            ),
-
-                            SideMenuItem(
-                              icon: Icons.auto_stories_rounded,
-                              text: "Vault Libri",
-                              isSelected:
-                                  !isSocialActive &&
-                                  currentMode == AppMode.books,
-                              activeColor: _brandColor,
-                              onTap: () {
-                                onModeChanged(AppMode.books);
                                 Navigator.pop(context);
                               },
                             ),
@@ -126,6 +109,26 @@ class SideMenu extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 20),
+
+                            // Nuova sezione per le info, separata logicamente
+                            _buildSectionLabel("IL PROGETTO"),
+                            const SizedBox(height: 10),
+
+                            SideMenuItem(
+                              icon: Icons.info_outline_rounded,
+                              text: "Info & Supporto",
+                              isSelected: false, // Non è una tab principale
+                              activeColor: _brandColor,
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const AboutPage(),
+                                  ),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ),

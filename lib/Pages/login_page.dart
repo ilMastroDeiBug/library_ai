@@ -121,7 +121,7 @@ class _LoginPageState extends State<LoginPage>
                             color: Colors.black,
                             padding: const EdgeInsets.all(15),
                             child: Image.asset(
-                              'assets/images/cinelogo.png',
+                              'assets/images/logoCine.png',
                               fit: BoxFit.contain,
                             ),
                           ),

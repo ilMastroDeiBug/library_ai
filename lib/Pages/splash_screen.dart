@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:flutter_svg/flutter_svg.dart';
+// RIMOSSO: import 'package:flutter_svg/flutter_svg.dart'; (Non serve più per JPG/PNG)
 import '../main.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -47,7 +47,6 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     // Leggiamo la larghezza dello schermo
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: const Color(
@@ -60,12 +59,13 @@ class _SplashScreenState extends State<SplashScreen>
             child: ScaleTransition(
               scale: Tween<double>(begin: 0.98, end: 1.02).animate(_animation),
               child: SizedBox(
-                // Usa il 60% della larghezza dello schermo (puoi portarlo a 0.7 o 0.5 se lo vuoi più grande/piccolo)
+                // Usa il 60% della larghezza dello schermo
                 width: screenWidth * 0.60,
-                child: SvgPicture.asset(
-                  'assets/images/cinelogo.svg',
-                  // BoxFit.contain dice: "Stai tutto dentro il SizedBox senza tagliarti"
-                  fit: BoxFit.contain,
+                // FIX APPLICATO QUI: Usiamo Image.asset per leggere correttamente i JPG o PNG
+                child: Image.asset(
+                  'assets/images/cinelogo.jpg', // ATTENZIONE: Controlla che il nome sia esattamente questo
+                  fit: BoxFit
+                      .contain, // "Stai tutto dentro il SizedBox senza tagliarti"
                 ),
               ),
             ),
