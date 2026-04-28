@@ -1,6 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
+import 'package:library_ai/domain/use_cases/user_cases.dart'; // Aggiunto per UpdateAvatarUseCase
+import '../models/login_widgets/onboarding_avatar_carousel.dart';
+import '../navigation_hub.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -11,14 +16,43 @@ class ProfileSetupPage extends StatefulWidget {
 
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final _usernameController = TextEditingController();
+  String _selectedAvatar = "";
   bool _isLoading = false;
 
+  // I Seeds originali che generano i Bottts/Micah più belli
+  final List<String> _avatarSeeds = [
+    'Felix',
+    'Jude',
+    'Aneka',
+    'Milo',
+    'Luna',
+    'Leo',
+    'Avery',
+    'Eden',
+    'Riley',
+    'Cleo',
+    'Oliver',
+    'Jasper',
+    'Harper',
+    'Quinn',
+    'Rowan',
+  ];
+
+  // Genera dinamicamente le URL per il carosello
+  late final List<String> _premiumAvatars = _avatarSeeds
+      .map(
+        (seed) =>
+            'https://api.dicebear.com/9.x/micah/png?seed=$seed&backgroundColor=transparent&size=150',
+      )
+      .toList();
+
   Future<void> _saveProfile() async {
-    if (_usernameController.text.trim().isEmpty) {
+    final name = _usernameController.text.trim();
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Inserisci un nome valido."),
-          backgroundColor: Colors.redAccent,
+          backgroundColor: Colors.orangeAccent,
         ),
       );
       return;
@@ -27,7 +61,16 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     setState(() => _isLoading = true);
 
     try {
-      await sl<UpdateProfileUseCase>().call(_usernameController.text.trim());
+      // 1. Salva il Nome Visualizzato
+      await sl<UpdateProfileUseCase>().call(name);
+
+      // 2. Salva l'Avatar
+      if (_selectedAvatar.isNotEmpty) {
+        final user = sl<AuthRepository>().currentUser;
+        if (user != null) {
+          await sl<UpdateAvatarUseCase>().call(user.id, _selectedAvatar);
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -41,6 +84,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             ),
             backgroundColor: Colors.orangeAccent,
           ),
+        );
+
+        // Naviga alla home eliminando lo stack di navigazione
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const NavigationHub()),
+          (route) => false,
         );
       }
     } catch (e) {
@@ -60,118 +110,158 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        color: const Color(0xFF0A0A0C), // TEMA CINESHARE
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(30.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Stack(
-                  alignment: Alignment.center,
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // EFFETTO GLOWING ORB SULLO SFONDO
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.orangeAccent.withOpacity(0.15),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+
+          // CONTENUTO PRINCIPALE
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      height: 120,
-                      width: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.orangeAccent.withOpacity(0.1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.orangeAccent.withOpacity(0.2),
-                            blurRadius: 40,
-                            spreadRadius: 10,
+                    const Text(
+                      "Il tuo Profilo",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Scegli un avatar e un nome visualizzato\nper farti riconoscere nella community.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white.withOpacity(0.6),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+
+                    // Carosello Avatar
+                    OnboardingAvatarCarousel(
+                      avatars: _premiumAvatars,
+                      onAvatarSelected: (url) {
+                        _selectedAvatar = url;
+                      },
+                    ),
+
+                    const SizedBox(height: 50),
+
+                    // Input Nome
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
                           ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.person_rounded,
-                      size: 60,
-                      color: Colors.orangeAccent,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 40),
-                const Text(
-                  "Il tuo Profilo",
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "Come vuoi essere chiamato dagli altri?",
-                  style: TextStyle(color: Colors.white.withOpacity(0.5)),
-                ),
-                const SizedBox(height: 40),
-                TextField(
-                  controller: _usernameController,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    hintText: 'Es. MarioRossi',
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.2)),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(
-                        color: Colors.white.withOpacity(0.1),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: Colors.orangeAccent,
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.orangeAccent,
+                        ),
+                        child: TextField(
+                          controller: _usernameController,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
                           ),
-                        )
-                      : ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orangeAccent,
-                            foregroundColor: Colors.black87,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                          textAlign: TextAlign.center,
+                          decoration: InputDecoration(
+                            hintText: "Es. Cinefilo99",
+                            hintStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.3),
+                              fontWeight: FontWeight.normal,
                             ),
-                            elevation: 10,
-                            shadowColor: Colors.orangeAccent.withOpacity(0.4),
-                          ),
-                          onPressed: _saveProfile,
-                          child: const Text(
-                            'INIZIA AVVENTURA',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1.5,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 20,
                             ),
                           ),
                         ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Pulsante di Completamento
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orangeAccent.withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orangeAccent,
+                            foregroundColor: Colors.black,
+                            minimumSize: const Size(double.infinity, 60),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: _isLoading ? null : _saveProfile,
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.black,
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : const Text(
+                                  'INIZIA AVVENTURA',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

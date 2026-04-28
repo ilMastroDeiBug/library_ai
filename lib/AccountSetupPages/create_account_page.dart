@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
-import '../models/login_widgets/cascading_background.dart'; // IMPORT AGGIUNTO
+import '../models/login_widgets/cascading_background.dart';
+import 'profile_setup_page.dart'; // <-- IMPORT AGGIUNTO
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
@@ -17,9 +18,9 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   Future<void> _register() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Compila tutti i campi"),
-          backgroundColor: Colors.redAccent.shade700,
+        const SnackBar(
+          content: Text("Compila tutti i campi"),
+          backgroundColor: Colors.orangeAccent,
         ),
       );
       return;
@@ -40,14 +41,12 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       );
 
       if (mounted) Navigator.pop(context); // Chiudi loading
-      if (mounted) Navigator.pop(context); // Torna alla pagina login
 
+      // ROTTA AGGIORNATA: Vai al Setup del Profilo invece di tornare al Login
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Account creato! Esegui l'accesso per continuare."),
-            backgroundColor: Colors.green, // Verde successo
-          ),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfileSetupPage()),
         );
       }
     } catch (e) {
@@ -70,7 +69,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMsg),
-            backgroundColor: Colors.redAccent.shade700,
+            backgroundColor: Colors.orangeAccent,
             behavior: SnackBarBehavior.floating,
           ),
         );
