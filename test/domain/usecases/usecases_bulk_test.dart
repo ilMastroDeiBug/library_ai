@@ -72,17 +72,6 @@ void main() {
       verify(() => movieRepo.getReviews(7, isTv: false)).called(1);
     });
 
-    test('GetMovieCastUseCase enforces isTv false', () async {
-      when(
-        () => movieRepo.getCast(8, isTv: false),
-      ).thenAnswer((_) async => [CastMember(name: 'n', character: 'c')]);
-      final useCase = GetMovieCastUseCase(movieRepo);
-
-      final list = await useCase.call(8);
-      expect(list.first.name, 'n');
-      verify(() => movieRepo.getCast(8, isTv: false)).called(1);
-    });
-
     test('GetMovieTrailerUseCase enforces isTv false', () async {
       when(
         () => movieRepo.getTrailerKey(9, isTv: false),

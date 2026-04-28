@@ -13,7 +13,6 @@ class TmdbService {
       "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NmU3NmMyMGZiZjE2ZDFjYTMxZGM1NWM0YjQ5MTA4YyIsIm5iZiI6MTc3MDkxNjMzMC42MjEsInN1YiI6IjY5OGUwOWVhN2M5ZjE4Y2M2NGRjZGQ2NSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.LJL0sBW1eiY3GEw81O-RyD2L-DXqbl7sCwVPxEisabE";
   static const String _baseUrl = 'https://api.themoviedb.org/3';
 
-  // 1. DEPENDENCY INJECTION: Il client HTTP è ora iniettabile
   final http.Client _client;
 
   TmdbService({http.Client? client}) : _client = client ?? http.Client();
@@ -63,7 +62,9 @@ class TmdbService {
     String endpoint, {
     int page = 1,
   }) async {
-    final url = Uri.parse('$_baseUrl/tv/$endpoint?language=$_language&page=$page');
+    final url = Uri.parse(
+      '$_baseUrl/tv/$endpoint?language=$_language&page=$page',
+    );
     return _fetchTvSeries(url);
   }
 
@@ -89,10 +90,38 @@ class TmdbService {
     return _fetchTvSeries(url);
   }
 
-  // --- COMMON (Cast, Reviews, Trailers, Providers) ---
+  // --- ATTORI / PERSONE ---
+  Future<List<CastMember>> searchActors(String query, {int page = 1}) async {
+    if (query.isEmpty) return [];
+    final url = Uri.parse(
+      '$_baseUrl/search/person?query=$query&language=$_language&page=$page',
+    );
+
+    try {
+      final response = await _client.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return (data['results'] as List).map((json) {
+          return CastMember(
+            id: json['id'] ?? 0,
+            name: json['name'] ?? 'Sconosciuto',
+            character: json['known_for_department'] ?? 'Attore',
+            profilePath: json['profile_path'],
+          );
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Errore ricerca attori: $e');
+    }
+  }
+
+  // --- COMMON ---
   Future<List<CastMember>> fetchCast(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
-    final url = Uri.parse('$_baseUrl/$endpoint/$id/credits?language=$_language');
+    final url = Uri.parse(
+      '$_baseUrl/$endpoint/$id/credits?language=$_language',
+    );
 
     try {
       final response = await _client.get(url, headers: _headers);
@@ -104,7 +133,6 @@ class TmdbService {
             .take(10)
             .toList();
       } else {
-        // 2. LANCIO ECCEZIONE REALE
         throw Exception('Errore TMDB fetchCast: ${response.statusCode}');
       }
     } catch (e) {
@@ -145,10 +173,7 @@ class TmdbService {
           (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
           orElse: () => null,
         );
-        if (trailer != null) {
-          return trailer['key'];
-        }
-        return null;
+        return trailer?['key'];
       } else {
         throw Exception('Errore TMDB fetchTrailerKey: ${response.statusCode}');
       }
@@ -169,7 +194,6 @@ class TmdbService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'];
-
         if (results != null && results.containsKey('IT')) {
           return WatchProvidersResult.fromJson(results['IT']);
         }
@@ -184,12 +208,30 @@ class TmdbService {
     }
   }
 
+  // --- PERSON/ACTOR DETAILS CORRETTO ---
+  Future<Map<String, dynamic>> getPersonDetails(int personId) async {
+    final url = Uri.parse(
+      '$_baseUrl/person/$personId?language=$_language&append_to_response=combined_credits',
+    );
+
+    try {
+      final response = await _client.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception(
+          'Failed to load person details: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Errore di Rete TMDB (Person): $e');
+    }
+  }
+
   // --- HELPERS ---
   Future<List<Movie>> _fetchMovies(Uri url) async {
     try {
-      print('🌐 Request Movie: $url');
       final response = await _client.get(url, headers: _headers);
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return (data['results'] as List)
@@ -205,9 +247,7 @@ class TmdbService {
 
   Future<List<TvSeries>> _fetchTvSeries(Uri url) async {
     try {
-      print('🌐 Request TV: $url');
       final response = await _client.get(url, headers: _headers);
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return (data['results'] as List)

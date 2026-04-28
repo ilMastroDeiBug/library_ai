@@ -26,11 +26,11 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   final MovieDetailLogic _logic = MovieDetailLogic();
   bool _isAnalyzing = false;
   static const Color _brandColor = Colors.orangeAccent;
+  static const Color _backgroundColor = Colors.black; // NERO PURO
 
   bool get _isTv => widget.media is TvSeries;
   int get _id => widget.media.id;
 
-  // FIX: Determina il giusto UseCase per lo Stream in base al tipo di Media
   Stream<dynamic>? _getMediaStream(String userId) {
     try {
       if (_isTv) {
@@ -45,7 +45,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // FIX: Ora usiamo Supabase/AuthRepository, non più FirebaseAuth!
     final user = sl<AuthRepository>().currentUser;
 
     return StreamBuilder<dynamic>(
@@ -53,8 +52,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       builder: (context, snapshot) {
         dynamic liveMedia = widget.media;
 
-        // FIX: I tuoi UseCase restituiscono già l'entità (Movie/TvSeries),
-        // non più un DocumentSnapshot di Firebase. Addio codice sporco!
         if (snapshot.hasData && snapshot.data != null) {
           liveMedia = snapshot.data;
         }
@@ -81,7 +78,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             : liveMedia as Movie;
 
         return Scaffold(
-          backgroundColor: const Color(0xFF121212),
+          backgroundColor: _backgroundColor, // NERO PURO
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -211,7 +208,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     return SliverAppBar(
       expandedHeight: 450,
       pinned: true,
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: _backgroundColor, // NERO PURO
       leading: IconButton(
         icon: Container(
           padding: const EdgeInsets.all(8),
@@ -234,7 +231,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             Image.network(
               backdrop.isNotEmpty ? backdrop : poster,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+              errorBuilder: (_, __, ___) => Container(color: _backgroundColor),
             ),
             Container(
               decoration: BoxDecoration(
@@ -243,8 +240,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    const Color(0xFF121212).withOpacity(0.8),
-                    const Color(0xFF121212),
+                    _backgroundColor.withOpacity(0.8),
+                    _backgroundColor, // Sfumatura nel nero puro
                   ],
                   stops: const [0.5, 0.8, 1.0],
                 ),

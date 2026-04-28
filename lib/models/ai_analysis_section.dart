@@ -5,6 +5,11 @@ class AIAnalysisSection extends StatelessWidget {
   final bool isAnalyzing;
   final VoidCallback onAnalyzeTap;
 
+  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _cardColor = Color(
+    0xFF1A1A1A,
+  ); // Grigio scurissimo per staccare dal nero puro
+
   const AIAnalysisSection({
     super.key,
     this.analysisText,
@@ -20,14 +25,11 @@ class AIAnalysisSection extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: _cardColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+          border: Border.all(color: _brandColor.withOpacity(0.5)),
           boxShadow: [
-            BoxShadow(
-              color: Colors.cyanAccent.withOpacity(0.1),
-              blurRadius: 20,
-            ),
+            BoxShadow(color: _brandColor.withOpacity(0.1), blurRadius: 20),
           ],
         ),
         child: Column(
@@ -35,7 +37,7 @@ class AIAnalysisSection extends StatelessWidget {
           children: [
             const Row(
               children: [
-                Icon(Icons.psychology, color: Colors.cyanAccent),
+                Icon(Icons.psychology, color: _brandColor),
                 SizedBox(width: 10),
                 Text(
                   "VERDETTO DELL'ARCHITETTO",
@@ -65,14 +67,21 @@ class AIAnalysisSection extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-          ),
+          color: _brandColor, // Sfondo Arancione
+          boxShadow: [
+            BoxShadow(
+              color: _brandColor.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
+            foregroundColor:
+                Colors.black, // Testo e icone neri per massimo contrasto
             minimumSize: const Size(double.infinity, 55),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
@@ -84,16 +93,17 @@ class AIAnalysisSection extends StatelessWidget {
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                    color: Colors.white,
+                    color: Colors.black,
                     strokeWidth: 2,
                   ),
                 )
-              : const Icon(Icons.psychology, color: Colors.white),
+              : const Icon(Icons.psychology, color: Colors.black),
           label: Text(
             isAnalyzing ? "STO PENSANDO..." : "RICHIEDI ANALISI AI",
             style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
             ),
           ),
         ),

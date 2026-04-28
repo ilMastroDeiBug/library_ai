@@ -17,6 +17,10 @@ import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 import 'package:library_ai/services/utility_services/network_status_service.dart';
+import 'package:library_ai/domain/repositories/actor_repository.dart';
+import 'package:library_ai/data/tmdb_actor_repository_impl.dart';
+import 'package:library_ai/domain/use_cases/actor_use_cases.dart';
+import 'package:library_ai/services/utility_services/tmdb_service.dart';
 
 // Import Services Libri (DORMIENTI)
 import 'package:library_ai/services/utility_services/open_library_service.dart';
@@ -30,8 +34,9 @@ Future<void> init() async {
   // =========================================================================
   // EXTERNAL SERVICES / DATA SOURCES
   // =========================================================================
-  // 🔒 NOTA: I service dei libri sono registrati ma non verranno allocati
-  // finché la UI non li richiederà (Attualmente bloccati).
+  sl.registerLazySingleton<TmdbService>(() => TmdbService());
+
+  // 🔒 Libri (Dormienti)
   sl.registerLazySingleton<OpenLibraryService>(() => OpenLibraryService());
   sl.registerLazySingleton<GoogleBooksService>(() => GoogleBooksService());
 
@@ -41,7 +46,10 @@ Future<void> init() async {
   sl.registerLazySingleton<AuthRepository>(() => SupabaseAuthRepositoryImpl());
   sl.registerLazySingleton<UserRepository>(() => SupabaseUserRepositoryImpl());
 
-  // 🔒 Repo Libri (Dormiente)
+  sl.registerLazySingleton<ActorRepository>(
+    () => TmdbActorRepositoryImpl(tmdbService: sl()),
+  );
+
   sl.registerLazySingleton<BookRepository>(
     () => SupabaseBookRepositoryImpl(
       openLibraryService: sl(),
@@ -58,7 +66,7 @@ Future<void> init() async {
   // USE CASES
   // =========================================================================
 
-  // Use Cases (Auth)
+  // Auth
   sl.registerLazySingleton(() => LoginWithEmailUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
   sl.registerLazySingleton(() => GoogleLoginUseCase(sl()));
@@ -68,7 +76,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => DeleteAccountUseCase(sl()));
   sl.registerLazySingleton(() => UpdateAvatarUseCase(sl()));
 
-  // Use Cases (User)
+  // User
   sl.registerLazySingleton(() => GetUserDataUseCase(sl()));
   sl.registerLazySingleton(() => UpdateBioUseCase(sl()));
   sl.registerLazySingleton(() => UpdatePrivacyUseCase(sl()));
@@ -76,7 +84,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => UpdateLanguagePreferenceUseCase(sl()));
   sl.registerLazySingleton(() => NetworkStatusService());
 
-  // 🔒 Use Cases (Books) - DORMIENTI
+  // Books
   sl.registerLazySingleton(() => GetUserBooksUseCase(sl()));
   sl.registerLazySingleton(() => AddBookUseCase(sl()));
   sl.registerLazySingleton(() => DeleteBookUseCase(sl()));
@@ -87,7 +95,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetSingleBookUseCase(sl()));
   sl.registerLazySingleton(() => GetFullBookDetailsUseCase(sl()));
 
-  // Use Cases (Movies)
+  // Movies
   sl.registerLazySingleton(() => GetWatchlistUseCase(sl()));
   sl.registerLazySingleton(() => ToggleMovieStatusUseCase(sl()));
   sl.registerLazySingleton(() => SaveMovieUseCase(sl()));
@@ -102,8 +110,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetMovieWatchProvidersUseCase(sl()));
   sl.registerLazySingleton(() => GetSingleMovieUseCase(sl()));
 
-  // Use Cases (TV Series)
-  // API
+  // TV Series
   sl.registerLazySingleton(() => GetTvSeriesByCategoryUseCase(sl()));
   sl.registerLazySingleton(() => SearchTvSeriesUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesReviewsUseCase(sl()));
@@ -111,8 +118,6 @@ Future<void> init() async {
   sl.registerLazySingleton(() => AnalyzeTvSeriesUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesTrailerUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesWatchProvidersUseCase(sl()));
-
-  // DB
   sl.registerLazySingleton(() => SaveTvSeriesUseCase(sl()));
   sl.registerLazySingleton(() => ToggleTvSeriesStatusUseCase(sl()));
   sl.registerLazySingleton(() => DeleteTvSeriesUseCase(sl()));
@@ -121,4 +126,8 @@ Future<void> init() async {
 
   // Explore
   sl.registerLazySingleton(() => GetExploreCategoriesUseCase(sl()));
+
+  // Actors (AGGIORNATO CON SEARCH)
+  sl.registerLazySingleton(() => GetActorDetailsUseCase(sl()));
+  sl.registerLazySingleton(() => SearchActorsUseCase(sl()));
 }

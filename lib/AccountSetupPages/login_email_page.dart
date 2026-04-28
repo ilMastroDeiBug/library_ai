@@ -86,14 +86,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                         letterSpacing: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Accedi a CineShare per continuare.",
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
-                        fontSize: 16,
-                      ),
-                    ),
+
                     const SizedBox(height: 50),
                     _buildGlassInput(
                       _emailController,

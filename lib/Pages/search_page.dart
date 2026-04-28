@@ -5,9 +5,9 @@ import 'package:library_ai/models/app_mode.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 
 // Use Cases
-import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/domain/use_cases/actor_use_cases.dart'; // Assicurati che esista o crealo sotto
 
 // Widget
 import '../models/search_widgets/search_result_tile.dart';
@@ -20,7 +20,7 @@ class UniversalSearchDelegate extends SearchDelegate {
   @override
   ThemeData appBarTheme(BuildContext context) {
     final theme = Theme.of(context);
-    final activeColor = Colors.orangeAccent; // TEMA CINESHARE
+    const activeColor = Colors.orangeAccent;
 
     return theme.copyWith(
       scaffoldBackgroundColor: Colors.black,
@@ -75,16 +75,11 @@ class UniversalSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // 🔒 BLOCCO LIBRI: Se siamo in modalità libri, mostriamo subito il Coming Soon
     if (mode == AppMode.books) {
       return _buildMessage(
         Icons.auto_stories_rounded,
         "Ricerca disabilitata.\nIl Vault dei Libri è in arrivo!",
       );
-    }
-
-    if (query.trim().length < 3) {
-      return _buildInitialSuggestions();
     }
 
     return _DebouncedSearchList(
@@ -96,7 +91,6 @@ class UniversalSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    // 🔒 BLOCCO LIBRI: Sicurezza extra per evitare che l'utente forzi l'invio
     if (mode == AppMode.books) {
       return _buildMessage(
         Icons.auto_stories_rounded,
@@ -104,45 +98,10 @@ class UniversalSearchDelegate extends SearchDelegate {
       );
     }
 
-    if (query.trim().length < 3) {
-      return _buildMessage(Icons.keyboard, "Digita almeno 3 caratteri...");
-    }
-
     return _DebouncedSearchList(
       query: query,
       mode: mode,
       closeDelegate: (result) => close(context, result),
-    );
-  }
-
-  Widget _buildInitialSuggestions() {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              mode == AppMode.books
-                  ? Icons.auto_stories_rounded
-                  : Icons.movie_filter_rounded,
-              size: 80,
-              color: Colors.white.withOpacity(0.05),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              mode == AppMode.books
-                  ? "Cerca nel Vault dei Libri"
-                  : "Cerca Film, Serie o Registi",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.3),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -192,6 +151,8 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
   List<dynamic> _results = [];
   bool _isLoading = false;
   String _lastSearchedQuery = "";
+  int _searchType = 0; // 0 = Media (Film/Serie), 1 = Attori
+
   final LanguageService _languageService = sl<LanguageService>();
 
   @override
@@ -223,9 +184,7 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
     }
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-
     setState(() => _isLoading = true);
-
     _debounce = Timer(const Duration(milliseconds: 500), () {
       _performSearch(currentQuery);
     });
@@ -233,7 +192,7 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
 
   Future<void> _performSearch(String queryStr) async {
     final requestKey =
-        '$queryStr::${_languageService.currentLanguage}::${widget.mode.name}';
+        '$queryStr::${_languageService.currentLanguage}::$_searchType';
 
     if (requestKey == _lastSearchedQuery) {
       setState(() => _isLoading = false);
@@ -244,15 +203,16 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
     List<dynamic> fetchResults = [];
 
     try {
-      if (widget.mode == AppMode.books) {
-        // 🔒 BLOCCO LIBRI: Il UseCase dei libri NON viene più chiamato
-        fetchResults = [];
-      } else {
+      if (_searchType == 0) {
+        // Cerca Film & Serie
         final responses = await Future.wait([
           sl<SearchMoviesUseCase>().call(queryStr),
           sl<SearchTvSeriesUseCase>().call(queryStr),
         ]);
         fetchResults = [...responses[0], ...responses[1]];
+      } else {
+        // Cerca Attori
+        fetchResults = await sl<SearchActorsUseCase>().call(queryStr);
       }
     } catch (e) {
       debugPrint("Search Error: $e");
@@ -280,54 +240,116 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Container(
-        color: Colors.black,
-        child: const Center(
-          child: Padding(
-            padding: EdgeInsets.only(top: 50),
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.orangeAccent,
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (_results.isEmpty && _lastSearchedQuery.isNotEmpty) {
-      return Container(
-        color: Colors.black,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.search_off_rounded,
-                size: 60,
-                color: Colors.white.withOpacity(0.1),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "Nessun risultato per '${widget.query}'",
-                style: TextStyle(color: Colors.white.withOpacity(0.5)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Container(
-      color: Colors.black, // Sfondo NERO dietro la lista
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-        physics: const BouncingScrollPhysics(),
-        itemCount: _results.length,
-        itemBuilder: (context, index) {
-          return SearchResultTile(item: _results[index], mode: widget.mode);
-        },
+      color: Colors.black,
+      child: Column(
+        children: [
+          _buildToggleButtons(),
+          Expanded(child: _buildBody()),
+        ],
       ),
+    );
+  }
+
+  Widget _buildToggleButtons() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _buildTabButton(0, "Film & Serie TV")),
+          Expanded(child: _buildTabButton(1, "Attori")),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton(int index, String title) {
+    final isSelected = _searchType == index;
+    return GestureDetector(
+      onTap: () {
+        if (_searchType != index) {
+          setState(() {
+            _searchType = index;
+            _lastSearchedQuery = ""; // Forza nuova ricerca
+          });
+          _queueSearch();
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.orangeAccent : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white70,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (widget.query.trim().length < 3) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: 80,
+              color: Colors.white.withOpacity(0.05),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Cerca ${_searchType == 0 ? 'Film o Serie TV' : 'Attori'}",
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.3),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: Colors.orangeAccent,
+        ),
+      );
+    }
+
+    if (_results.isEmpty) {
+      return Center(
+        child: Text(
+          "Nessun risultato trovato",
+          style: TextStyle(color: Colors.white.withOpacity(0.5)),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      physics: const BouncingScrollPhysics(),
+      itemCount: _results.length,
+      itemBuilder: (context, index) {
+        return SearchResultTile(item: _results[index], mode: widget.mode);
+      },
     );
   }
 }

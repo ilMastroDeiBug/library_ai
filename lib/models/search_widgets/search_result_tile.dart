@@ -3,8 +3,10 @@ import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/models/app_mode.dart';
-import '../../pages/book_detail_page.dart';
-import '../../pages/movie_detail_page.dart';
+import 'package:library_ai/models/movie_widget/cast_model.dart'; // Importa CastMember
+import '../../Pages/book_detail_page.dart';
+import '../../Pages/movie_detail_page.dart';
+import '../../Pages/actor_detail_page.dart'; // Importa la pagina dell'attore
 
 class SearchResultTile extends StatelessWidget {
   final dynamic item;
@@ -52,6 +54,16 @@ class SearchResultTile extends StatelessWidget {
         context,
         MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
       );
+    } else if (item is CastMember) {
+      // GESTIONE ATTORI
+      title = item.name;
+      subtitle = item.character; // Qui inseriremo il ruolo (es. "Acting")
+      imageUrl = item.fullProfileUrl;
+      defaultIcon = Icons.person;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ActorDetailPage(actorId: item.id)),
+      );
     }
 
     return InkWell(
@@ -59,30 +71,27 @@ class SearchResultTile extends StatelessWidget {
       splashColor: Colors.white.withOpacity(0.1),
       highlightColor: Colors.transparent,
       child: Container(
-        color: Colors.transparent, // Niente card grigie, nero totale sotto
+        color: Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Row(
           children: [
-            // 1. LOCANDINA (Netflix Style 2:3)
+            // LOCANDINA / FOTO PROFILO
             ClipRRect(
-              borderRadius: BorderRadius.circular(
-                6,
-              ), // Bordo leggermente arrotondato
+              borderRadius: BorderRadius.circular(6),
               child: imageUrl.isNotEmpty
                   ? Image.network(
                       imageUrl,
                       width: 70,
-                      height: 105, // Proporzione esatta locandine
+                      height: 105,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) =>
                           _buildPlaceholder(defaultIcon),
                     )
                   : _buildPlaceholder(defaultIcon),
             ),
-
             const SizedBox(width: 16),
 
-            // 2. TESTI (Titolo Bianco Bold, Sottotitolo Grigio)
+            // TESTI
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +112,7 @@ class SearchResultTile extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.5), // Grigio elegante
+                      color: Colors.white.withOpacity(0.5),
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -114,15 +123,17 @@ class SearchResultTile extends StatelessWidget {
               ),
             ),
 
-            // 3. ICONA PLAY (Stile ricerca Netflix)
+            // ICONA FRECCIA / PLAY
             Padding(
               padding: const EdgeInsets.only(left: 10),
               child: Icon(
-                mode == AppMode.books
-                    ? Icons.menu_book_rounded
-                    : Icons.play_circle_outline_rounded,
-                size: 32,
-                color: Colors.white,
+                item is CastMember
+                    ? Icons.arrow_forward_ios_rounded
+                    : (mode == AppMode.books
+                          ? Icons.menu_book_rounded
+                          : Icons.play_circle_outline_rounded),
+                size: item is CastMember ? 18 : 32,
+                color: Colors.white54,
               ),
             ),
           ],
@@ -135,7 +146,7 @@ class SearchResultTile extends StatelessWidget {
     return Container(
       width: 70,
       height: 105,
-      color: Colors.white.withOpacity(0.05), // Grigio scuro placeholder
+      color: Colors.white.withOpacity(0.05),
       child: Center(child: Icon(icon, color: Colors.white24, size: 30)),
     );
   }
