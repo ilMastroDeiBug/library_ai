@@ -7,6 +7,7 @@ abstract class UserRepository {
   // Aggiorna campi specifici (bio, privacy, ecc.)
   Future<void> updateProfile({
     required String uid,
+    String? name,
     String? bio,
     bool? isPublic,
     String? languagePreference,

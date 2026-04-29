@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
-import 'package:library_ai/domain/use_cases/user_cases.dart';
+import 'package:library_ai/domain/use_cases/user_cases.dart'; // Contiene UpdateNameUseCase
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 
@@ -25,9 +25,13 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   AppUser? _currentUser;
   bool _isLoading = true;
+
+  // PALETTE UFFICIALE CINELIB
   static const Color _brandColor = Colors.orangeAccent;
-  static const Color _bgColor = Color(0xFF0A0A0C);
-  static const Color _surfaceColor = Color(0xFF161618);
+  static const Color _bgColor = Colors.black; // Nero Puro OLED
+  static const Color _surfaceColor = Color(
+    0xFF1A1A1A,
+  ); // Card leggermente staccate dal fondo
 
   @override
   void initState() {
@@ -49,8 +53,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (mounted) {
           setState(() {
             _currentUser = userData ?? userAuth;
-            _isLoading =
-                false; // Questo ricaricherà il widget SettingsHeader all'istante
+            _isLoading = false;
           });
         }
       } catch (e) {
@@ -122,7 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withOpacity(0.8),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -131,7 +134,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
             child: Padding(
               padding: const EdgeInsets.only(bottom: 40, top: 15),
               child: Column(
@@ -150,7 +153,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     "SELEZIONA LINGUA",
                     style: TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
                       fontSize: 16,
                     ),
@@ -251,6 +254,7 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: _bgColor,
       body: Stack(
         children: [
+          // Effetto Glowing Orb
           Positioned(
             top: -100,
             right: -100,
@@ -294,7 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withOpacity(0.6),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white10),
                     ),
@@ -320,6 +324,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             _currentUser?.bio ??
                             "Nessuna biografia impostata. Racconta chi sei.",
                         onPhotoTap: () {
+                          if (_currentUser == null) return;
                           // Lancia il popup di selezione avatar integrato
                           showModalBottomSheet(
                             context: context,
@@ -366,27 +371,34 @@ class _SettingsPageState extends State<SettingsPage> {
                               _currentUser?.displayName ??
                               "Tocca per impostare",
                           isTop: true,
-                          iconColor: Colors.greenAccent,
-                          onTap: () => EditProfileDialogs.showNameDialog(
-                            context,
-                            _currentUser?.displayName,
-                            (name) => sl<UpdateProfileUseCase>()
-                                .call(name)
-                                .then((_) => _loadData()),
-                          ),
+                          iconColor: Colors.orange,
+                          onTap: () {
+                            if (_currentUser == null) return;
+                            EditProfileDialogs.showNameDialog(
+                              context,
+                              _currentUser?.displayName,
+                              (name) => sl<UpdateNameUseCase>()
+                                  // Passiamo correttamente l'ID e il nome!
+                                  .call(_currentUser!.id, name)
+                                  .then((_) => _loadData()),
+                            );
+                          },
                         ),
                         SettingsTile(
                           icon: Icons.format_quote_rounded,
                           title: "Biografia",
                           subtitle: "Modifica la tua descrizione",
                           iconColor: Colors.purpleAccent,
-                          onTap: () => EditProfileDialogs.showBioDialog(
-                            context,
-                            _currentUser?.bio ?? "",
-                            (bio) => sl<UpdateBioUseCase>()
-                                .call(_currentUser!.id, bio)
-                                .then((_) => _loadData()),
-                          ),
+                          onTap: () {
+                            if (_currentUser == null) return;
+                            EditProfileDialogs.showBioDialog(
+                              context,
+                              _currentUser?.bio ?? "",
+                              (bio) => sl<UpdateBioUseCase>()
+                                  .call(_currentUser!.id, bio)
+                                  .then((_) => _loadData()),
+                            );
+                          },
                         ),
                         SettingsTile(
                           icon: Icons.delete_outline_rounded,
@@ -457,7 +469,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         child: Column(
                           children: [
                             Image.asset(
-                              'assets/images/logoCine.png', // Stesso nome indicato nel codice originale
+                              'assets/images/logoCine.png',
                               width: 40,
                             ),
                             const SizedBox(height: 10),
@@ -514,9 +526,9 @@ class _SettingsPageState extends State<SettingsPage> {
         border: Border.all(color: Colors.white.withOpacity(0.05)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),

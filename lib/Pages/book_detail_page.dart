@@ -119,7 +119,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                               label: "LETTO",
                               icon: Icons.check_circle_outline,
                               isActive: currentStatus == 'read',
-                              activeColor: Colors.green,
+                              activeColor: Colors.orange,
                               onTap: () => _logic.handleStatusAction(
                                 context,
                                 liveBook,

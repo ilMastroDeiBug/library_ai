@@ -14,6 +14,13 @@ class UpdateBioUseCase {
       repository.updateProfile(uid: uid, bio: bio);
 }
 
+class UpdateNameUseCase {
+  final UserRepository repository;
+  UpdateNameUseCase(this.repository);
+  Future<void> call(String uid, String name) =>
+      repository.updateProfile(uid: uid, name: name);
+}
+
 class UpdatePrivacyUseCase {
   final UserRepository repository;
   UpdatePrivacyUseCase(this.repository);
@@ -25,11 +32,8 @@ class UpdateLanguagePreferenceUseCase {
   final UserRepository repository;
   UpdateLanguagePreferenceUseCase(this.repository);
 
-  Future<void> call(String uid, String languagePreference) =>
-      repository.updateProfile(
-        uid: uid,
-        languagePreference: languagePreference,
-      );
+  Future<void> call(String uid, String languagePreference) => repository
+      .updateProfile(uid: uid, languagePreference: languagePreference);
 }
 
 class UpdateAvatarUseCase {

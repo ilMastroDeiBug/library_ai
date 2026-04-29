@@ -83,6 +83,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => LanguageService());
   sl.registerLazySingleton(() => UpdateLanguagePreferenceUseCase(sl()));
   sl.registerLazySingleton(() => NetworkStatusService());
+  sl.registerLazySingleton(() => UpdateNameUseCase(sl()));
 
   // Books
   sl.registerLazySingleton(() => GetUserBooksUseCase(sl()));

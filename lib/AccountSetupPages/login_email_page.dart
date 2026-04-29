@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
-import '../models/login_widgets/cascading_background.dart'; // IMPORT AGGIUNTO
+import '../models/login_widgets/cascading_background.dart';
 
 class LoginEmailPage extends StatefulWidget {
   const LoginEmailPage({super.key});
@@ -14,6 +14,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true; // Stato per l'occhio della password
 
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
@@ -26,7 +27,6 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        // TRADUTTORE ERRORI SUPABASE
         String errorMsg = "Login fallito. Riprova.";
         final errorStr = e.toString();
 
@@ -49,6 +49,44 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
     }
   }
 
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Inserisci la tua email per recuperare la password."),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await sl<ResetPasswordUseCase>().call(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Email di recupero inviata! Controlla la posta."),
+            backgroundColor: Colors.orangeAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Errore: ${e.toString().replaceAll('Exception: ', '')}",
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,7 +98,6 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
       ),
       body: Stack(
         children: [
-          // SFONDO A CASCATA
           const Positioned.fill(
             child: CascadingBackground(
               speed1: 140,
@@ -69,7 +106,6 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
               speed4: 130,
             ),
           ),
-          // CONTENUTO UI
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -86,22 +122,37 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                         letterSpacing: 1.5,
                       ),
                     ),
-
                     const SizedBox(height: 50),
                     _buildGlassInput(
                       _emailController,
                       "Email",
                       Icons.email_outlined,
-                      false,
+                      isPassword: false,
                     ),
                     const SizedBox(height: 20),
                     _buildGlassInput(
                       _passwordController,
                       "Password",
                       Icons.lock_outline,
-                      true,
+                      isPassword: true,
                     ),
-                    const SizedBox(height: 40),
+
+                    // Bottone Recupera Password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _resetPassword,
+                        child: const Text(
+                          "Password dimenticata?",
+                          style: TextStyle(
+                            color: Colors.orangeAccent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
                     _isLoading
                         ? const Center(
                             child: CircularProgressIndicator(
@@ -152,17 +203,30 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
   Widget _buildGlassInput(
     TextEditingController controller,
     String label,
-    IconData icon,
-    bool obscure,
-  ) {
+    IconData icon, {
+    required bool isPassword,
+  }) {
     return TextField(
       controller: controller,
-      obscureText: obscure,
+      obscureText: isPassword ? _obscurePassword : false,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
         prefixIcon: Icon(icon, color: Colors.orangeAccent),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white.withOpacity(0.5),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              )
+            : null,
         filled: true,
         fillColor: Colors.white.withOpacity(0.05),
         enabledBorder: OutlineInputBorder(

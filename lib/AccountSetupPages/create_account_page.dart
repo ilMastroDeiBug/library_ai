@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 import '../models/login_widgets/cascading_background.dart';
-import 'profile_setup_page.dart'; // <-- IMPORT AGGIUNTO
+import 'profile_setup_page.dart';
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
@@ -14,6 +14,7 @@ class CreateAccountPage extends StatefulWidget {
 class _CreateAccountPageState extends State<CreateAccountPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true; // Stato per l'occhio della password
 
   Future<void> _register() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -42,7 +43,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
 
       if (mounted) Navigator.pop(context); // Chiudi loading
 
-      // ROTTA AGGIORNATA: Vai al Setup del Profilo invece di tornare al Login
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -52,7 +52,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     } catch (e) {
       if (mounted) Navigator.pop(context); // Chiudi loading
 
-      // TRADUTTORE ERRORI
       String errorMsg = "Registrazione fallita. Riprova.";
       final errorStr = e.toString();
 
@@ -91,7 +90,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       ),
       body: Stack(
         children: [
-          // SFONDO A CASCATA
           const Positioned.fill(
             child: CascadingBackground(
               speed1: 85,
@@ -100,7 +98,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
               speed4: 80,
             ),
           ),
-          // CONTENUTO UI
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -130,14 +127,14 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       _emailController,
                       "Email",
                       Icons.alternate_email,
-                      false,
+                      isPassword: false,
                     ),
                     const SizedBox(height: 20),
                     _buildModernTextField(
                       _passwordController,
                       "Password",
                       Icons.lock_outline_rounded,
-                      true,
+                      isPassword: true,
                     ),
                     const SizedBox(height: 40),
                     Container(
@@ -185,9 +182,9 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   Widget _buildModernTextField(
     TextEditingController controller,
     String label,
-    IconData icon,
-    bool obscure,
-  ) {
+    IconData icon, {
+    required bool isPassword,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
@@ -196,12 +193,25 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       ),
       child: TextField(
         controller: controller,
-        obscureText: obscure,
+        obscureText: isPassword ? _obscurePassword : false,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
           prefixIcon: Icon(icon, color: Colors.orangeAccent.withOpacity(0.7)),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.white.withOpacity(0.5),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                )
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,

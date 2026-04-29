@@ -2,8 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
-import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
-import 'package:library_ai/domain/use_cases/user_cases.dart'; // Aggiunto per UpdateAvatarUseCase
+// Cambiato import per includere l'Use Case che hai appena creato
+import 'package:library_ai/domain/use_cases/user_cases.dart';
 import '../models/login_widgets/onboarding_avatar_carousel.dart';
 import '../navigation_hub.dart';
 
@@ -61,15 +61,18 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Salva il Nome Visualizzato
-      await sl<UpdateProfileUseCase>().call(name);
+      // 1. Recupera l'utente corrente per avere l'ID
+      final user = sl<AuthRepository>().currentUser;
+      if (user == null) {
+        throw Exception("Sessione non trovata. Effettua nuovamente il login.");
+      }
 
-      // 2. Salva l'Avatar
+      // 2. Salva il Nome Visualizzato usando il TUO nuovo Use Case
+      await sl<UpdateNameUseCase>().call(user.id, name);
+
+      // 3. Salva l'Avatar
       if (_selectedAvatar.isNotEmpty) {
-        final user = sl<AuthRepository>().currentUser;
-        if (user != null) {
-          await sl<UpdateAvatarUseCase>().call(user.id, _selectedAvatar);
-        }
+        await sl<UpdateAvatarUseCase>().call(user.id, _selectedAvatar);
       }
 
       if (mounted) {
