@@ -8,6 +8,7 @@ class Movie {
   final int voteCount;
   final String releaseDate;
   final String originalLanguage;
+  final double popularity;
 
   // Campi locali (Database)
   final String status;
@@ -22,6 +23,7 @@ class Movie {
     required this.voteAverage,
     required this.voteCount,
     required this.releaseDate,
+    required this.popularity,
     this.originalLanguage = '',
     this.status = 'none',
     this.aiAnalysis,
@@ -50,6 +52,7 @@ class Movie {
       voteCount: json['vote_count'] ?? 0,
       releaseDate: json['release_date'] ?? '',
       originalLanguage: json['original_language'] ?? '',
+      popularity: (json['popularity'] as num?)?.toDouble() ?? 0.0,
       status: 'none',
     );
   }
@@ -63,6 +66,7 @@ class Movie {
       backdropPath: data['backdropPath'] ?? '',
       voteAverage: (data['voteAverage'] as num?)?.toDouble() ?? 0.0,
       voteCount: (data['voteCount'] as num?)?.toInt() ?? 0,
+      popularity: (data['popularity'] as num?)?.toDouble() ?? 0,
       releaseDate: data['releaseDate'] ?? '',
       originalLanguage: data['originalLanguage'] ?? '',
       status: data['status'] ?? 'none',
@@ -82,6 +86,7 @@ class Movie {
       'originalLanguage': originalLanguage,
       'status': status,
       'aiAnalysis': aiAnalysis,
+      'popularity': popularity,
     };
   }
 
@@ -93,6 +98,7 @@ class Movie {
     String? backdropPath,
     double? voteAverage,
     int? voteCount,
+    double? popularity,
     String? releaseDate,
     String? originalLanguage,
     String? status,
@@ -108,6 +114,7 @@ class Movie {
       voteCount: voteCount ?? this.voteCount,
       releaseDate: releaseDate ?? this.releaseDate,
       originalLanguage: originalLanguage ?? this.originalLanguage,
+      popularity: popularity ?? this.popularity,
       status: status ?? this.status,
       aiAnalysis: aiAnalysis ?? this.aiAnalysis,
     );

@@ -48,6 +48,7 @@ class MovieDetailLogic {
           firstAirDate: media.firstAirDate,
           status: newStatus,
           aiAnalysis: media.aiAnalysis,
+          popularity: media.popularity,
         );
         await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
       }
@@ -98,6 +99,7 @@ class MovieDetailLogic {
           firstAirDate: media.firstAirDate,
           status: media.status,
           aiAnalysis: analysis,
+          popularity: media.popularity,
         );
         await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
       }

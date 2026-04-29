@@ -1,16 +1,166 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/domain/entities/book.dart';
+import 'package:library_ai/domain/entities/movie.dart';
+import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/models/app_mode.dart';
+import 'package:library_ai/models/movie_widget/cast_model.dart';
+import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 
 // Use Cases
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
-import 'package:library_ai/domain/use_cases/actor_use_cases.dart'; // Assicurati che esista o crealo sotto
+import 'package:library_ai/domain/use_cases/actor_use_cases.dart';
 
-// Widget
-import '../models/search_widgets/search_result_tile.dart';
+// Pages
+import '../../Pages/book_detail_page.dart';
+import '../../Pages/movie_detail_page.dart';
+import '../../Pages/actor_detail_page.dart';
+
+class SearchResultTile extends StatelessWidget {
+  final dynamic item;
+  final AppMode mode;
+
+  const SearchResultTile({super.key, required this.item, required this.mode});
+
+  @override
+  Widget build(BuildContext context) {
+    String title = "";
+    String subtitle = "";
+    String imageUrl = "";
+    IconData defaultIcon = Icons.movie;
+    VoidCallback onTap = () {};
+
+    // Estrazione Dati
+    if (item is Book) {
+      title = item.title;
+      subtitle = item.author;
+      imageUrl = item.thumbnailUrl;
+      defaultIcon = Icons.book;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => BookDetailPage(book: item)),
+      );
+    } else if (item is Movie) {
+      title = item.title;
+      subtitle = item.releaseDate.isNotEmpty
+          ? "Film • ${item.releaseDate.split('-')[0]}"
+          : "Film";
+      imageUrl = item.fullPosterUrl;
+      defaultIcon = Icons.movie_creation_rounded;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
+      );
+    } else if (item is TvSeries) {
+      title = item.name;
+      subtitle = item.firstAirDate.isNotEmpty
+          ? "Serie TV • ${item.firstAirDate.split('-')[0]}"
+          : "Serie TV";
+      imageUrl = item.fullPosterUrl;
+      defaultIcon = Icons.live_tv_rounded;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
+      );
+    } else if (item is CastMember) {
+      // GESTIONE ATTORI
+      title = item.name;
+      subtitle = item.character;
+      imageUrl = item.fullProfileUrl;
+      defaultIcon = Icons.person;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ActorDetailPage(actorId: item.id)),
+      );
+    }
+
+    return InkWell(
+      onTap: onTap,
+      splashColor: Colors.white.withOpacity(0.1),
+      highlightColor: Colors.transparent,
+      child: Container(
+        color: Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            // LOCANDINA / FOTO PROFILO
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      width: 70,
+                      height: 105,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          _buildPlaceholder(defaultIcon),
+                    )
+                  : _buildPlaceholder(defaultIcon),
+            ),
+            const SizedBox(width: 16),
+
+            // TESTI
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 0.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+
+            // ICONA FRECCIA / PLAY
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Icon(
+                item is CastMember
+                    ? Icons.arrow_forward_ios_rounded
+                    : (mode == AppMode.books
+                          ? Icons.menu_book_rounded
+                          : Icons.play_circle_outline_rounded),
+                size: item is CastMember ? 18 : 32,
+                color: Colors.white54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder(IconData icon) {
+    return Container(
+      width: 70,
+      height: 105,
+      color: Colors.white.withOpacity(0.05),
+      child: Center(child: Icon(icon, color: Colors.white24, size: 30)),
+    );
+  }
+}
 
 class UniversalSearchDelegate extends SearchDelegate {
   final AppMode mode;
@@ -204,12 +354,29 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
 
     try {
       if (_searchType == 0) {
-        // Cerca Film & Serie
+        // Cerca Film & Serie in parallelo
         final responses = await Future.wait([
           sl<SearchMoviesUseCase>().call(queryStr),
           sl<SearchTvSeriesUseCase>().call(queryStr),
         ]);
-        fetchResults = [...responses[0], ...responses[1]];
+
+        // Unisce i risultati
+        List<dynamic> combinedResults = [...responses[0], ...responses[1]];
+
+        // Ordina i risultati combinati basandosi sulla popolarità
+        combinedResults.sort((a, b) {
+          // Utilizziamo un fallback a 0.0 per evitare crash
+          // Richiede che a.popularity e b.popularity siano implementati nelle Entity
+          double popA = 0.0;
+          double popB = 0.0;
+
+          if (a is Movie || a is TvSeries) popA = a.popularity ?? 0.0;
+          if (b is Movie || b is TvSeries) popB = b.popularity ?? 0.0;
+
+          return popB.compareTo(popA);
+        });
+
+        fetchResults = combinedResults;
       } else {
         // Cerca Attori
         fetchResults = await sl<SearchActorsUseCase>().call(queryStr);

@@ -57,7 +57,6 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     }
   }
 
-  // --- LOGICA INTATTA ---
   void _generateDailyRotation() {
     if (widget.items.isEmpty) {
       setState(() => _dailyItems = []);
@@ -90,7 +89,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     _timer?.cancel();
     if (_dailyItems.isEmpty) return;
 
-    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -99,7 +98,9 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
           _pageController.position.haveDimensions) {
         try {
           _pageController.nextPage(
-            duration: const Duration(milliseconds: 1000),
+            duration: const Duration(
+              milliseconds: 1200,
+            ), // Più lungo per godersi la transizione
             curve: Curves.fastOutSlowIn,
           );
         } catch (e) {
@@ -144,7 +145,6 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
   Widget build(BuildContext context) {
     if (_dailyItems.isEmpty) return const SizedBox();
 
-    // L'altezza ora è dinamica: 65% dello schermo per un vero effetto "Hero"
     final double bannerHeight = MediaQuery.of(context).size.height * 0.65;
 
     return SizedBox(
@@ -155,9 +155,9 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
         onPanEnd: (_) => _startAutoScroll(),
         child: Stack(
           children: [
-            // 1. IL CAROSELLO
             PageView.builder(
               controller: _pageController,
+              physics: const BouncingScrollPhysics(),
               onPageChanged: (index) {
                 if (mounted) {
                   setState(() {
@@ -172,168 +172,203 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                 final item = _dailyItems[actualIndex];
                 final data = _extractData(item);
 
+                // MATEMATICA TRANSIZIONE
                 double delta = index - _currentPageValue;
-                delta = delta.clamp(-1.0, 1.0);
+                double clampedDelta = delta.clamp(-1.0, 1.0);
+                double absDelta = clampedDelta.abs();
+
+                // 1. Scala morbida per dare profondità
+                double scale = 1.0 - (absDelta * 0.15);
+
+                // 2. L'immagine diventa una card (angoli tondi) appena si stacca dal centro
+                double cornerRadius = absDelta * 32;
+
+                // 3. Opacità per far scomparire le card laterali
+                double cardOpacity = 1.0 - (absDelta * 0.4);
+
+                // 4. Fade ultra-rapido per il testo (sparisce prima dell'immagine)
+                double textOpacity = (1.0 - (absDelta * 2.5)).clamp(0.0, 1.0);
 
                 return GestureDetector(
                   onTap: () => widget.onItemTap(item),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Immagine con Parallasse
-                      ClipRRect(
-                        child: Transform(
-                          transform: Matrix4.identity()
-                            ..translate(delta * 50.0, 0.0, 0.0)
-                            ..scale(1.0 + (delta.abs() * 0.1)),
-                          alignment: Alignment.center,
-                          child: Image.network(
-                            data['image']!,
-                            fit: BoxFit.cover,
-                            alignment: Alignment(delta * 0.5, 0),
-                            errorBuilder: (ctx, err, stack) =>
-                                Container(color: Colors.black),
+                  child: Opacity(
+                    opacity: cardOpacity,
+                    child: Transform.scale(
+                      scale: scale,
+                      alignment: Alignment.center,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Sfondo protettivo (evita flash neri/bianchi durante il render)
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(cornerRadius),
+                            ),
                           ),
-                        ),
-                      ),
 
-                      // Gradiente Cinematico Netflix-Style
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withOpacity(
-                                0.5,
-                              ), // Scurisce l'header sopra
-                              Colors.transparent,
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.7),
-                              Colors.black, // Si fonde col vuoto sotto!
-                            ],
-                            stops: const [0.0, 0.2, 0.6, 0.85, 1.0],
+                          // L'Immagine con Parallasse Interno
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(cornerRadius),
+                            child: Image.network(
+                              data['image']!,
+                              fit: BoxFit.cover,
+                              // Il parallasse fa slittare l'immagine al contrario rispetto allo scroll
+                              alignment: Alignment(clampedDelta * 0.7, 0),
+                              errorBuilder: (ctx, err, stack) =>
+                                  Container(color: const Color(0xFF1A1A1A)),
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.orangeAccent,
+                                      ),
+                                    );
+                                  },
+                            ),
                           ),
-                        ),
-                      ),
 
-                      // Testi e Badge
-                      Positioned(
-                        bottom: 40, // Lascia spazio per i dot
-                        left: 20,
-                        right: 20,
-                        child: Opacity(
-                          opacity: (1 - delta.abs()).clamp(0.0, 1.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Badge Glassmorphism
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
+                          // Il Gradiente (deve avere lo stesso raggio per non sbordare)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(cornerRadius),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.5),
+                                    Colors.transparent,
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.7),
+                                    Colors.black,
+                                  ],
+                                  stops: const [0.0, 0.2, 0.6, 0.85, 1.0],
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.2),
-                                    width: 1,
+                              ),
+                            ),
+                          ),
+
+                          // Testi e Badge
+                          Positioned(
+                            bottom: 40,
+                            left: 20,
+                            right: 20,
+                            child: Opacity(
+                              opacity: textOpacity,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Badge Glassmorphism
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.2),
+                                        width: 1,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 10,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.local_fire_department_rounded,
+                                          color: Colors.orangeAccent,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          data['subtitle']!.toUpperCase(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.local_fire_department_rounded,
-                                      color: Colors.orangeAccent,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      data['subtitle']!.toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
+                                  const SizedBox(height: 12),
 
-                              // Titolo
-                              Text(
-                                data['title']!,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w900,
-                                  height: 1.1,
-                                  letterSpacing: -0.5,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black,
-                                      offset: Offset(0, 4),
-                                      blurRadius: 10,
+                                  // Titolo
+                                  Text(
+                                    data['title']!,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1.1,
+                                      letterSpacing: -0.5,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black,
+                                          offset: Offset(0, 4),
+                                          blurRadius: 10,
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 15),
+                                  ),
+                                  const SizedBox(height: 15),
 
-                              // Tasto Finto Netflix (Scopri di più)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline_rounded,
-                                      color: Colors.black,
-                                      size: 20,
+                                  // Tasto "Maggiori Info" (Finto)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 10,
                                     ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      "Maggiori Info",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                  ],
-                                ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline_rounded,
+                                          color: Colors.black,
+                                          size: 20,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          "Maggiori Info",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 );
               },
             ),
 
-            // 2. INDICATORI INTEGRATI (Dot pagination)
+            // Indicatori (Dots) in basso
             Positioned(
               bottom: 15,
               left: 0,

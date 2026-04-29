@@ -10,6 +10,7 @@ class TvSeries {
   final int voteCount;
   final String firstAirDate; // Invece di releaseDate
   final String originalLanguage;
+  final double popularity;
 
   // Campi locali (Database)
   final String status;
@@ -24,6 +25,7 @@ class TvSeries {
     required this.voteAverage,
     required this.voteCount,
     required this.firstAirDate,
+    required this.popularity,
     this.originalLanguage = '',
     this.status = 'none',
     this.aiAnalysis,
@@ -48,6 +50,7 @@ class TvSeries {
       voteCount: json['vote_count'] ?? 0,
       firstAirDate: json['first_air_date'] ?? '',
       originalLanguage: json['original_language'] ?? '',
+      popularity: (json['popularity'] as num?)?.toDouble() ?? 0.0,
       status: 'none',
     );
   }
@@ -69,6 +72,7 @@ class TvSeries {
           '', // Su DB usiamo releaseDate come campo comune
       originalLanguage: data['originalLanguage'] ?? '',
       status: data['status'] ?? 'none',
+      popularity: (data['popularity'] as num?)?.toDouble() ?? 0,
       aiAnalysis: data['aiAnalysis'],
     );
   }

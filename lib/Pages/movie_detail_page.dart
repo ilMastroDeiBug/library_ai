@@ -73,6 +73,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                 voteAverage: liveMedia.voteAverage,
                 voteCount: liveMedia.voteCount,
                 releaseDate: liveMedia.firstAirDate,
+                popularity: liveMedia.popularity,
                 status: currentStatus,
               )
             : liveMedia as Movie;
