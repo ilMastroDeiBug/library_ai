@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../domain/entities/actor.dart';
 import '../domain/use_cases/actor_use_cases.dart';
+import '../domain/repositories/auth_repository.dart';
+import '../domain/use_cases/favorite_use_cases.dart'; // <-- IMPORT PREFERITI
 import '../injection_container.dart';
 
 class ActorDetailPage extends StatefulWidget {
@@ -53,6 +55,63 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     }
   }
 
+  // --- LOGICA PREFERITI ATTORI ---
+  Future<void> _toggleFavorite() async {
+    if (actor == null) return;
+
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) {
+      if (mounted) {
+        _showMinimalSnackBar("Accedi per aggiungere ai preferiti.");
+      }
+      return;
+    }
+
+    try {
+      // Costruiamo l'URL completo della foto profilo per salvarlo nel DB
+      final String? fullProfileUrl = actor!.profilePath != null
+          ? 'https://image.tmdb.org/t/p/w500${actor!.profilePath}'
+          : null;
+
+      final isAdded = await sl<ToggleFavoriteUseCase>().call(
+        user.id,
+        actor!.id,
+        'person', // <-- Polimorfismo in azione!
+        actor!.name,
+        fullProfileUrl,
+      );
+
+      if (mounted) {
+        _showMinimalSnackBar(
+          isAdded ? "Aggiunto ai Preferiti ❤️" : "Rimosso dai Preferiti 💔",
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showMinimalSnackBar("Errore nell'aggiornamento dei preferiti.");
+      }
+    }
+  }
+
+  void _showMinimalSnackBar(String message) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: const Color(0xFF333333),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -86,6 +145,8 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
       );
     }
 
+    final user = sl<AuthRepository>().currentUser;
+
     return Scaffold(
       backgroundColor: _backgroundColor,
       body: CustomScrollView(
@@ -98,15 +159,56 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    actor!.name.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1.1,
-                      letterSpacing: -0.5,
-                    ),
+                  // --- TITOLO E CUORE PREFERITI ---
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          actor!.name.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            height: 1.1,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      if (user != null)
+                        StreamBuilder<bool>(
+                          stream: sl<CheckFavoriteStatusUseCase>().call(
+                            user.id,
+                            actor!.id,
+                            'person',
+                          ),
+                          builder: (context, favSnapshot) {
+                            final isFavorite = favSnapshot.data ?? false;
+                            return GestureDetector(
+                              onTap: _toggleFavorite,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isFavorite
+                                      ? Colors.redAccent.withOpacity(0.1)
+                                      : Colors.white.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isFavorite
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  color: isFavorite
+                                      ? Colors.redAccent
+                                      : Colors.white,
+                                  size: 26,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(

@@ -5,6 +5,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/domain/use_cases/favorite_use_cases.dart'; // <-- IMPORT PREFERITI
 import '../../services/utility_services/ai_service.dart';
 
 class MovieDetailLogic {
@@ -25,17 +26,13 @@ class MovieDetailLogic {
       return;
     }
 
-    // Toggle logico: se clicchi su uno già attivo, lo spengi ('none')
     final isRemoving = currentStatus == action;
     final newStatus = isRemoving ? 'none' : action;
 
     try {
       if (media is Movie) {
         final updatedMovie = media.copyWith(status: newStatus);
-        await sl<SaveMovieUseCase>().call(
-          updatedMovie,
-          user.id,
-        ); // <-- Ora usa Supabase/Repository!
+        await sl<SaveMovieUseCase>().call(updatedMovie, user.id);
       } else if (media is TvSeries) {
         final updatedSeries = TvSeries(
           id: media.id,
@@ -64,8 +61,52 @@ class MovieDetailLogic {
         );
       }
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         _showMinimalSnackBar(context, "Errore nel salvataggio. Riprova.");
+      }
+    }
+  }
+
+  // --- NUOVA LOGICA PREFERITI ---
+  Future<void> toggleFavorite(BuildContext context, dynamic media) async {
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) {
+      if (context.mounted)
+        _showMinimalSnackBar(context, "Accedi per aggiungere ai preferiti.");
+      return;
+    }
+
+    try {
+      final isTv = media is TvSeries;
+      final int itemId = media.id;
+      final String itemType = isTv ? 'tv' : 'movie';
+      final String title = isTv ? media.name : (media as Movie).title;
+      final String posterUrl = isTv
+          ? media.fullPosterUrl
+          : (media as Movie).fullPosterUrl;
+
+      // Chiama l'Use Case che fa il toggle nel DB
+      final isAdded = await sl<ToggleFavoriteUseCase>().call(
+        user.id,
+        itemId,
+        itemType,
+        title,
+        posterUrl,
+      );
+
+      if (context.mounted) {
+        _showMinimalSnackBar(
+          context,
+          isAdded ? "Aggiunto ai Preferiti ❤️" : "Rimosso dai Preferiti 💔",
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        _showMinimalSnackBar(
+          context,
+          "Errore nell'aggiornamento dei preferiti.",
+        );
+      }
     }
   }
 

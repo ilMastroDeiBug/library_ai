@@ -4,17 +4,20 @@ import 'package:library_ai/domain/repositories/user_repository.dart';
 import 'package:library_ai/domain/repositories/book_repository.dart';
 import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/repositories/explore_repository.dart';
+import 'package:library_ai/domain/repositories/favorite_repository.dart'; // <-- NUOVO
 import 'package:library_ai/data/supabase_book_repository_impl.dart';
 import 'package:library_ai/data/supabase_auth_repository_impl.dart';
 import 'package:library_ai/data/supabase_user_repository_impl.dart';
 import 'package:library_ai/data/explore_repository_impl.dart';
 import 'package:library_ai/data/supabase_movie_repository_impl.dart';
+import 'package:library_ai/data/supabase_favorites_repository_impl.dart'; // <-- NUOVO
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 import 'package:library_ai/domain/use_cases/explore_use_cases.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/domain/use_cases/favorite_use_cases.dart'; // <-- NUOVO
 import 'package:library_ai/services/utility_services/language_service.dart';
 import 'package:library_ai/services/utility_services/network_status_service.dart';
 import 'package:library_ai/domain/repositories/actor_repository.dart';
@@ -60,13 +63,18 @@ Future<void> init() async {
   sl.registerLazySingleton<MovieRepository>(
     () => SupabaseMovieRepositoryImpl(),
   );
+
   sl.registerLazySingleton<ExploreRepository>(() => ExploreRepositoryImpl());
+
+  sl.registerLazySingleton<FavoritesRepository>(
+    () => SupabaseFavoritesRepositoryImpl(), // <-- NUOVO
+  );
 
   // =========================================================================
   // USE CASES
   // =========================================================================
 
-  // Auth
+  // Auth & User...
   sl.registerLazySingleton(() => LoginWithEmailUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
   sl.registerLazySingleton(() => GoogleLoginUseCase(sl()));
@@ -75,8 +83,6 @@ Future<void> init() async {
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
   sl.registerLazySingleton(() => DeleteAccountUseCase(sl()));
   sl.registerLazySingleton(() => UpdateAvatarUseCase(sl()));
-
-  // User
   sl.registerLazySingleton(() => GetUserDataUseCase(sl()));
   sl.registerLazySingleton(() => UpdateBioUseCase(sl()));
   sl.registerLazySingleton(() => UpdatePrivacyUseCase(sl()));
@@ -85,7 +91,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => NetworkStatusService());
   sl.registerLazySingleton(() => UpdateNameUseCase(sl()));
 
-  // Books
+  // Books...
   sl.registerLazySingleton(() => GetUserBooksUseCase(sl()));
   sl.registerLazySingleton(() => AddBookUseCase(sl()));
   sl.registerLazySingleton(() => DeleteBookUseCase(sl()));
@@ -96,7 +102,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetSingleBookUseCase(sl()));
   sl.registerLazySingleton(() => GetFullBookDetailsUseCase(sl()));
 
-  // Movies
+  // Movies...
   sl.registerLazySingleton(() => GetWatchlistUseCase(sl()));
   sl.registerLazySingleton(() => ToggleMovieStatusUseCase(sl()));
   sl.registerLazySingleton(() => SaveMovieUseCase(sl()));
@@ -111,7 +117,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetMovieWatchProvidersUseCase(sl()));
   sl.registerLazySingleton(() => GetSingleMovieUseCase(sl()));
 
-  // TV Series
+  // TV Series...
   sl.registerLazySingleton(() => GetTvSeriesByCategoryUseCase(sl()));
   sl.registerLazySingleton(() => SearchTvSeriesUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesReviewsUseCase(sl()));
@@ -125,10 +131,15 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SaveTvSeriesAnalysisUseCase(sl()));
   sl.registerLazySingleton(() => GetSingleTvSeriesUseCase(sl()));
 
-  // Explore
+  // Explore...
   sl.registerLazySingleton(() => GetExploreCategoriesUseCase(sl()));
 
-  // Actors (AGGIORNATO CON SEARCH)
+  // Actors...
   sl.registerLazySingleton(() => GetActorDetailsUseCase(sl()));
   sl.registerLazySingleton(() => SearchActorsUseCase(sl()));
+
+  // Favorites (NUOVI)
+  sl.registerLazySingleton(() => ToggleFavoriteUseCase(sl()));
+  sl.registerLazySingleton(() => GetFavoritesStreamUseCase(sl()));
+  sl.registerLazySingleton(() => CheckFavoriteStatusUseCase(sl()));
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/injection_container.dart';
@@ -26,9 +26,11 @@ class _LibraryPageState extends State<LibraryPage> {
 
   String get _tab1Label => _isBooks ? "LETTI" : "VISTI";
   String get _tab2Label => _isBooks ? "DA LEGGERE" : "DA VEDERE";
+  String get _tab3Label => "PREFERITI"; // <-- NUOVO TAB
 
   String get _status1 => _isBooks ? "read" : "watched";
   String get _status2 => _isBooks ? "toread" : "towatch";
+  String get _status3 => "favorites"; // <-- NUOVO STATUS
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,7 @@ class _LibraryPageState extends State<LibraryPage> {
               final user = profileSnapshot.data ?? authUser;
 
               return DefaultTabController(
-                length: 2,
+                length: 3, // <-- AGGIORNATO A 3
                 child: NestedScrollView(
                   physics: const BouncingScrollPhysics(),
                   headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -61,6 +63,10 @@ class _LibraryPageState extends State<LibraryPage> {
                     children: [
                       LibraryGrid(mode: widget.mode, status: _status1),
                       LibraryGrid(mode: widget.mode, status: _status2),
+                      LibraryGrid(
+                        mode: widget.mode,
+                        status: _status3,
+                      ), // <-- NUOVA GRID
                     ],
                   ),
                 ),
@@ -104,18 +110,21 @@ class _LibraryPageState extends State<LibraryPage> {
             overlayColor: const WidgetStatePropertyAll(Colors.transparent),
             indicator: const UnderlineTabIndicator(
               borderSide: BorderSide(color: _brandColor, width: 3),
-              insets: EdgeInsets.symmetric(horizontal: 40),
+              insets: EdgeInsets.symmetric(
+                horizontal: 10,
+              ), // <-- Ridotto per far spazio a 3 tab
             ),
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white38,
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w900,
-              fontSize: 13,
-              letterSpacing: 1.5,
+              fontSize: 12, // <-- Leggermente ridotto
+              letterSpacing: 1.0,
             ),
             tabs: [
               Tab(text: _tab1Label),
               Tab(text: _tab2Label),
+              Tab(text: _tab3Label), // <-- NUOVO TAB
             ],
           ),
         ),

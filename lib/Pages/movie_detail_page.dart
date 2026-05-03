@@ -5,6 +5,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
+import 'package:library_ai/domain/use_cases/favorite_use_cases.dart'; // <-- IMPORT PREFERITI
 
 import '../services/pages_services/movie_detail_logic.dart';
 import '../models/ai_analysis_section.dart';
@@ -90,15 +91,57 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. Titolo
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          height: 1.1,
-                        ),
+                      // 1. Titolo + Cuore Preferiti
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Stream Builder per l'icona del cuore
+                          if (user != null)
+                            StreamBuilder<bool>(
+                              stream: sl<CheckFavoriteStatusUseCase>().call(
+                                user.id,
+                                _id,
+                                _isTv ? 'tv' : 'movie',
+                              ),
+                              builder: (context, favSnapshot) {
+                                final isFavorite = favSnapshot.data ?? false;
+                                return GestureDetector(
+                                  onTap: () =>
+                                      _logic.toggleFavorite(context, liveMedia),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: isFavorite
+                                          ? Colors.redAccent.withOpacity(0.1)
+                                          : Colors.white.withOpacity(0.05),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      isFavorite
+                                          ? Icons.favorite_rounded
+                                          : Icons.favorite_border_rounded,
+                                      color: isFavorite
+                                          ? Colors.redAccent
+                                          : Colors.white,
+                                      size: 26,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 20),
 
