@@ -4,12 +4,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../domain/entities/actor.dart';
 import '../domain/use_cases/actor_use_cases.dart';
 import '../domain/repositories/auth_repository.dart';
-import '../domain/use_cases/favorite_use_cases.dart'; // <-- IMPORT PREFERITI
+import '../domain/use_cases/favorite_use_cases.dart';
 import '../injection_container.dart';
 
 class ActorDetailPage extends StatefulWidget {
   final int actorId;
-
   const ActorDetailPage({Key? key, required this.actorId}) : super(key: key);
 
   @override
@@ -22,12 +21,12 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
   String? errorMessage;
   bool _isBioExpanded = false;
 
-  // Usa la stessa palette del SideMenu
+  // UI OTTIMISTICA
+  bool? _optimisticIsFavorite;
+
   static const Color _brandColor = Colors.orangeAccent;
-  static const Color _backgroundColor = Colors.black; // Nero nero
-  static const Color _cardColor = Color(
-    0xFF1A1A1A,
-  ); // Leggero grigio per contrasto
+  static const Color _backgroundColor = Colors.black;
+  static const Color _cardColor = Color(0xFF1A1A1A);
 
   @override
   void initState() {
@@ -55,20 +54,18 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     }
   }
 
-  // --- LOGICA PREFERITI ATTORI ---
-  Future<void> _toggleFavorite() async {
+  Future<void> _handleFavoriteToggle() async {
     if (actor == null) return;
-
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      if (mounted) {
-        _showMinimalSnackBar("Accedi per aggiungere ai preferiti.");
-      }
+      if (mounted) _showMinimalSnackBar("Accedi per aggiungere ai preferiti.");
       return;
     }
 
+    final currentFavState = _optimisticIsFavorite ?? false;
+    setState(() => _optimisticIsFavorite = !currentFavState);
+
     try {
-      // Costruiamo l'URL completo della foto profilo per salvarlo nel DB
       final String? fullProfileUrl = actor!.profilePath != null
           ? 'https://image.tmdb.org/t/p/w500${actor!.profilePath}'
           : null;
@@ -76,18 +73,20 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
       final isAdded = await sl<ToggleFavoriteUseCase>().call(
         user.id,
         actor!.id,
-        'person', // <-- Polimorfismo in azione!
+        'person',
         actor!.name,
         fullProfileUrl,
       );
 
       if (mounted) {
+        setState(() => _optimisticIsFavorite = isAdded);
         _showMinimalSnackBar(
           isAdded ? "Aggiunto ai Preferiti ❤️" : "Rimosso dai Preferiti 💔",
         );
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _optimisticIsFavorite = currentFavState);
         _showMinimalSnackBar("Errore nell'aggiornamento dei preferiti.");
       }
     }
@@ -159,7 +158,6 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- TITOLO E CUORE PREFERITI ---
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -184,10 +182,14 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                             'person',
                           ),
                           builder: (context, favSnapshot) {
-                            final isFavorite = favSnapshot.data ?? false;
+                            final isFavorite =
+                                _optimisticIsFavorite ??
+                                (favSnapshot.data ?? false);
+
                             return GestureDetector(
-                              onTap: _toggleFavorite,
-                              child: Container(
+                              onTap: _handleFavoriteToggle,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: isFavorite
@@ -195,14 +197,23 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                                       : Colors.white.withOpacity(0.05),
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  isFavorite
-                                      ? Icons.favorite_rounded
-                                      : Icons.favorite_border_rounded,
-                                  color: isFavorite
-                                      ? Colors.redAccent
-                                      : Colors.white,
-                                  size: 26,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  transitionBuilder: (child, anim) =>
+                                      ScaleTransition(
+                                        scale: anim,
+                                        child: child,
+                                      ),
+                                  child: Icon(
+                                    isFavorite
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    key: ValueKey(isFavorite),
+                                    color: isFavorite
+                                        ? Colors.redAccent
+                                        : Colors.white,
+                                    size: 26,
+                                  ),
                                 ),
                               ),
                             );
@@ -221,14 +232,11 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 28),
-
                   _buildStatsRow(actor!),
-
                   const SizedBox(height: 40),
                   _buildSectionTitle('BIOGRAFIA'),
                   const SizedBox(height: 16),
                   _buildExpandableBiography(actor!),
-
                   const SizedBox(height: 40),
                   _buildSectionTitle('FILMOGRAFIA'),
                   const SizedBox(height: 20),
@@ -281,8 +289,6 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                     alignment: Alignment.topCenter,
                   )
                 : Container(color: _cardColor),
-
-            // Sfumatura nera aggressiva
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -327,7 +333,6 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     final displayValue = value.length > 20
         ? '${value.substring(0, 20)}...'
         : value;
-
     return Container(
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -370,7 +375,6 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     final bio = actor.biography.isNotEmpty
         ? actor.biography
         : 'Nessuna biografia disponibile per questo attore.';
-
     return GestureDetector(
       onTap: () => setState(() => _isBioExpanded = !_isBioExpanded),
       child: AnimatedCrossFade(
@@ -443,7 +447,6 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
         ),
       );
     }
-
     return SizedBox(
       height: 250,
       child: ListView.builder(
@@ -454,9 +457,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
         itemBuilder: (context, index) {
           final credit = credits[index];
           return GestureDetector(
-            onTap: () {
-              // TODO: Navigazione alla Movie/Tv Detail Page usando credit.id e credit.mediaType
-            },
+            onTap: () {},
             child: Container(
               width: 120,
               margin: const EdgeInsets.only(right: 16),

@@ -22,15 +22,18 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage> {
   bool get _isBooks => widget.mode == AppMode.books;
+
   static const Color _brandColor = Colors.orangeAccent;
 
   String get _tab1Label => _isBooks ? "LETTI" : "VISTI";
-  String get _tab2Label => _isBooks ? "DA LEGGERE" : "DA VEDERE";
-  String get _tab3Label => "PREFERITI"; // <-- NUOVO TAB
+  String get _tab2Label => _isBooks ? "IN LETTURA" : "IN CORSO";
+  String get _tab3Label => _isBooks ? "DA LEGGERE" : "DA VEDERE";
+  String get _tab4Label => "PREFERITI";
 
   String get _status1 => _isBooks ? "read" : "watched";
-  String get _status2 => _isBooks ? "toread" : "towatch";
-  String get _status3 => "favorites"; // <-- NUOVO STATUS
+  String get _status2 => _isBooks ? "reading" : "watching";
+  String get _status3 => _isBooks ? "toread" : "towatch";
+  String get _status4 => "favorites";
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +44,6 @@ class _LibraryPageState extends State<LibraryPage> {
         stream: sl<AuthRepository>().userStream,
         builder: (context, snapshot) {
           final authUser = snapshot.data;
-
           if (authUser == null) {
             return const SizedBox.shrink();
           }
@@ -52,7 +54,7 @@ class _LibraryPageState extends State<LibraryPage> {
               final user = profileSnapshot.data ?? authUser;
 
               return DefaultTabController(
-                length: 3, // <-- AGGIORNATO A 3
+                length: 4, // <-- ORA SONO 4 TAB
                 child: NestedScrollView(
                   physics: const BouncingScrollPhysics(),
                   headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -63,10 +65,8 @@ class _LibraryPageState extends State<LibraryPage> {
                     children: [
                       LibraryGrid(mode: widget.mode, status: _status1),
                       LibraryGrid(mode: widget.mode, status: _status2),
-                      LibraryGrid(
-                        mode: widget.mode,
-                        status: _status3,
-                      ), // <-- NUOVA GRID
+                      LibraryGrid(mode: widget.mode, status: _status3),
+                      LibraryGrid(mode: widget.mode, status: _status4),
                     ],
                   ),
                 ),
@@ -107,24 +107,27 @@ class _LibraryPageState extends State<LibraryPage> {
             ),
           ),
           child: TabBar(
+            isScrollable:
+                true, // <-- Mettiamo true così ci stanno 4 tab senza stringersi
+            tabAlignment: TabAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             overlayColor: const WidgetStatePropertyAll(Colors.transparent),
             indicator: const UnderlineTabIndicator(
               borderSide: BorderSide(color: _brandColor, width: 3),
-              insets: EdgeInsets.symmetric(
-                horizontal: 10,
-              ), // <-- Ridotto per far spazio a 3 tab
+              insets: EdgeInsets.symmetric(horizontal: 10),
             ),
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white38,
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w900,
-              fontSize: 12, // <-- Leggermente ridotto
+              fontSize: 12,
               letterSpacing: 1.0,
             ),
             tabs: [
               Tab(text: _tab1Label),
               Tab(text: _tab2Label),
-              Tab(text: _tab3Label), // <-- NUOVO TAB
+              Tab(text: _tab3Label),
+              Tab(text: _tab4Label),
             ],
           ),
         ),

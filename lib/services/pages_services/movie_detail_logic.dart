@@ -5,7 +5,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
-import 'package:library_ai/domain/use_cases/favorite_use_cases.dart'; // <-- IMPORT PREFERITI
+import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
 import '../../services/utility_services/ai_service.dart';
 
 class MovieDetailLogic {
@@ -51,14 +51,14 @@ class MovieDetailLogic {
       }
 
       if (context.mounted) {
-        _showMinimalSnackBar(
-          context,
-          isRemoving
-              ? "Rimosso dalla Watchlist"
-              : (action == 'watched'
-                    ? "Segnato come Visto"
-                    : "Aggiunto ai Da Vedere"),
-        );
+        String msg = "Rimosso dalla libreria";
+        if (!isRemoving) {
+          if (action == 'watched') msg = "Segnato come Visto";
+          if (action == 'towatch') msg = "Aggiunto ai Da Vedere";
+          if (action == 'watching')
+            msg = "Aggiunto a In Corso"; // <-- NUOVO STATO
+        }
+        _showMinimalSnackBar(context, msg);
       }
     } catch (e) {
       if (context.mounted) {
@@ -67,13 +67,13 @@ class MovieDetailLogic {
     }
   }
 
-  // --- NUOVA LOGICA PREFERITI ---
-  Future<void> toggleFavorite(BuildContext context, dynamic media) async {
+  // FIX UI OTTIMISTICA: Ora ritorna un booleano (true = aggiunto, false = rimosso)
+  Future<bool> toggleFavorite(BuildContext context, dynamic media) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
       if (context.mounted)
         _showMinimalSnackBar(context, "Accedi per aggiungere ai preferiti.");
-      return;
+      return false;
     }
 
     try {
@@ -85,7 +85,6 @@ class MovieDetailLogic {
           ? media.fullPosterUrl
           : (media as Movie).fullPosterUrl;
 
-      // Chiama l'Use Case che fa il toggle nel DB
       final isAdded = await sl<ToggleFavoriteUseCase>().call(
         user.id,
         itemId,
@@ -100,13 +99,12 @@ class MovieDetailLogic {
           isAdded ? "Aggiunto ai Preferiti ❤️" : "Rimosso dai Preferiti 💔",
         );
       }
+      return isAdded;
     } catch (e) {
       if (context.mounted) {
-        _showMinimalSnackBar(
-          context,
-          "Errore nell'aggiornamento dei preferiti.",
-        );
+        _showMinimalSnackBar(context, "Errore nell'aggiornamento.");
       }
+      throw e; // Rilancia l'errore per annullare la UI ottimistica
     }
   }
 

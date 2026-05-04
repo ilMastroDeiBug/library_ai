@@ -6,7 +6,7 @@ import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
-import 'package:library_ai/domain/use_cases/favorite_use_cases.dart'; // <-- IMPORT PREFERITI
+import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
 
 import '../services/pages_services/movie_detail_logic.dart';
 import '../models/ai_analysis_section.dart';
@@ -17,7 +17,7 @@ import '../models/movie_widget/trailer_player_widget.dart';
 import '../models/movie_widget/watch_provider_widgets.dart';
 
 class MovieDetailPage extends StatefulWidget {
-  final dynamic media; // Movie o TvSeries
+  final dynamic media;
   const MovieDetailPage({super.key, required this.media});
 
   @override
@@ -27,8 +27,12 @@ class MovieDetailPage extends StatefulWidget {
 class _MovieDetailPageState extends State<MovieDetailPage> {
   final MovieDetailLogic _logic = MovieDetailLogic();
   bool _isAnalyzing = false;
+
+  // STATO OTTIMISTICO PER IL CUORE
+  bool? _optimisticIsFavorite;
+
   static const Color _brandColor = Colors.orangeAccent;
-  static const Color _backgroundColor = Colors.black; // NERO PURO
+  static const Color _backgroundColor = Colors.black;
 
   bool get _isTv => widget.media is TvSeries;
   int get _id => widget.media.id;
@@ -45,6 +49,36 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     }
   }
 
+  void _handleFavoriteToggle(dynamic liveMedia) async {
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) return;
+
+    // 1. Leggiamo lo stato attuale
+    final currentFavState = _optimisticIsFavorite ?? false;
+
+    // 2. Invertiamo subito la UI (Optimistic UI)
+    setState(() {
+      _optimisticIsFavorite = !currentFavState;
+    });
+
+    // 3. Facciamo il vero salvataggio
+    try {
+      final actualResult = await _logic.toggleFavorite(context, liveMedia);
+      if (mounted) {
+        setState(() {
+          _optimisticIsFavorite = actualResult; // Sincronizziamo con la realtà
+        });
+      }
+    } catch (e) {
+      // 4. Se fallisce, torniamo indietro
+      if (mounted) {
+        setState(() {
+          _optimisticIsFavorite = currentFavState;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = sl<AuthRepository>().currentUser;
@@ -53,7 +87,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       stream: user != null ? _getMediaStream(user.id) : null,
       builder: (context, snapshot) {
         dynamic liveMedia = widget.media;
-
         if (snapshot.hasData && snapshot.data != null) {
           liveMedia = snapshot.data;
         }
@@ -81,7 +114,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             : liveMedia as Movie;
 
         return Scaffold(
-          backgroundColor: _backgroundColor, // NERO PURO
+          backgroundColor: _backgroundColor,
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -92,7 +125,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. Titolo + Cuore Preferiti
+                      // TITOLO E CUORE PREFERITI
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -108,7 +141,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                             ),
                           ),
                           const SizedBox(width: 10),
-                          // Stream Builder per l'icona del cuore
                           if (user != null)
                             StreamBuilder<bool>(
                               stream: sl<CheckFavoriteStatusUseCase>().call(
@@ -117,11 +149,15 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                                 _isTv ? 'tv' : 'movie',
                               ),
                               builder: (context, favSnapshot) {
-                                final isFavorite = favSnapshot.data ?? false;
+                                // Se abbiamo un override ottimistico usiamo quello, altrimenti il db
+                                final isFavorite =
+                                    _optimisticIsFavorite ??
+                                    (favSnapshot.data ?? false);
+
                                 return GestureDetector(
-                                  onTap: () =>
-                                      _logic.toggleFavorite(context, liveMedia),
-                                  child: Container(
+                                  onTap: () => _handleFavoriteToggle(liveMedia),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: isFavorite
@@ -129,14 +165,25 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                                           : Colors.white.withOpacity(0.05),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(
-                                      isFavorite
-                                          ? Icons.favorite_rounded
-                                          : Icons.favorite_border_rounded,
-                                      color: isFavorite
-                                          ? Colors.redAccent
-                                          : Colors.white,
-                                      size: 26,
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
+                                      transitionBuilder: (child, anim) =>
+                                          ScaleTransition(
+                                            scale: anim,
+                                            child: child,
+                                          ),
+                                      child: Icon(
+                                        isFavorite
+                                            ? Icons.favorite_rounded
+                                            : Icons.favorite_border_rounded,
+                                        key: ValueKey(isFavorite),
+                                        color: isFavorite
+                                            ? Colors.redAccent
+                                            : Colors.white,
+                                        size: 26,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -145,12 +192,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                         ],
                       ),
                       const SizedBox(height: 20),
-
-                      // 2. Bar delle statistiche
                       MovieStatsBar(movie: displayMovieForStats),
                       const SizedBox(height: 30),
 
-                      // 3. Bottoni d'azione
+                      // I TRE BOTTONI
                       Row(
                         children: [
                           Expanded(
@@ -158,7 +203,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               label: "DA VEDERE",
                               icon: Icons.bookmark_add_outlined,
                               isActive: currentStatus == 'towatch',
-                              activeColor: _brandColor,
                               onTap: () => _logic.handleStatusAction(
                                 context,
                                 liveMedia,
@@ -167,13 +211,26 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 15),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildActionButton(
+                              label: "IN CORSO",
+                              icon: Icons.play_circle_outline_rounded,
+                              isActive: currentStatus == 'watching',
+                              onTap: () => _logic.handleStatusAction(
+                                context,
+                                liveMedia,
+                                'watching',
+                                currentStatus,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _buildActionButton(
                               label: "VISTO",
                               icon: Icons.check_circle_outline,
                               isActive: currentStatus == 'watched',
-                              activeColor: _brandColor,
                               onTap: () => _logic.handleStatusAction(
                                 context,
                                 liveMedia,
@@ -186,7 +243,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      // 4. Sezione Analisi AI
                       AIAnalysisSection(
                         analysisText: storedAnalysis,
                         isAnalyzing: _isAnalyzing,
@@ -198,7 +254,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      // 5. Sinossi
                       const Text(
                         "SINOSSI",
                         style: TextStyle(
@@ -221,17 +276,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      // 6. WATCH PROVIDERS WIDGET
                       WatchProvidersWidget(mediaId: _id, isTvSeries: _isTv),
-
-                      // 7. TRAILER WIDGET
                       TrailerPlayerWidget(mediaId: _id, isTvSeries: _isTv),
-
-                      // 8. Cast
                       MovieCastSection(id: _id, isTvSeries: _isTv),
                       const SizedBox(height: 40),
-
-                      // 9. Recensioni
                       MovieReviewsSection(
                         id: _id,
                         title: title,
@@ -253,7 +301,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     return SliverAppBar(
       expandedHeight: 450,
       pinned: true,
-      backgroundColor: _backgroundColor, // NERO PURO
+      backgroundColor: _backgroundColor,
       leading: IconButton(
         icon: Container(
           padding: const EdgeInsets.all(8),
@@ -287,7 +335,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                   colors: [
                     Colors.transparent,
                     _backgroundColor.withOpacity(0.8),
-                    _backgroundColor, // Sfumatura nel nero puro
+                    _backgroundColor,
                   ],
                   stops: const [0.5, 0.8, 1.0],
                 ),
@@ -303,26 +351,35 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     required String label,
     required IconData icon,
     required bool isActive,
-    required Color activeColor,
     required VoidCallback onTap,
   }) {
     return SizedBox(
-      height: 50,
-      child: ElevatedButton.icon(
+      height: 45, // Leggermente ridotto per adattarsi a 3
+      child: ElevatedButton(
         style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 4), // Padding ridotto
           backgroundColor: isActive
-              ? activeColor
+              ? _brandColor
               : Colors.white.withOpacity(0.05),
           foregroundColor: isActive ? Colors.black : Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
         onPressed: onTap,
-        icon: Icon(icon, size: 20),
-        label: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 9,
+              ), // Font piccolo per far stare tutto
+            ),
+          ],
         ),
       ),
     );

@@ -13,6 +13,7 @@ import 'package:library_ai/domain/entities/favorite_item.dart';
 // Use Cases
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
+import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
 
 // Pages
@@ -34,8 +35,11 @@ class _LibraryGridState extends State<LibraryGrid> {
   String _searchQuery = "";
   String _selectedFilter = "Tutti";
 
-  // IL FIX CRUCIALE: Salviamo lo stream nello stato, non nel build!
   late Stream<List<dynamic>> _dataStream;
+
+  // --- STATO SELEZIONE MULTIPLA ---
+  bool _isSelectionMode = false;
+  final Set<dynamic> _selectedItems = {};
 
   List<String> get _availableFilters {
     if (widget.mode == AppMode.books) return ['Tutti'];
@@ -54,9 +58,10 @@ class _LibraryGridState extends State<LibraryGrid> {
   @override
   void didUpdateWidget(covariant LibraryGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Se cambiamo tab (es. da Visti a Da Vedere), aggiorniamo lo stream
     if (oldWidget.mode != widget.mode || oldWidget.status != widget.status) {
       _initStream();
+      _isSelectionMode = false;
+      _selectedItems.clear();
     }
   }
 
@@ -80,66 +85,145 @@ class _LibraryGridState extends State<LibraryGrid> {
     }
   }
 
+  // --- AZIONI DI GRUPPO (BULK) ---
+  void _performBulkAction(String action) async {
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) return;
+
+    for (var item in _selectedItems) {
+      final int itemId = _extractId(item);
+      final String itemType = _extractType(item);
+
+      if (action == 'delete') {
+        if (widget.status == 'favorites') {
+          // In favorites, delete equals toggling it off
+          await sl<ToggleFavoriteUseCase>().call(
+            user.id,
+            itemId,
+            itemType,
+            _extractTitle(item),
+            null,
+          );
+        } else {
+          if (itemType == 'tv')
+            await sl<DeleteTvSeriesUseCase>().call(user.id, itemId);
+          else
+            await sl<DeleteMovieUseCase>().call(user.id, itemId);
+        }
+      } else {
+        // Update Status ('watched', 'watching', etc)
+        if (itemType == 'tv')
+          await sl<ToggleTvSeriesStatusUseCase>().call(user.id, itemId, action);
+        else
+          await sl<ToggleMovieStatusUseCase>().call(user.id, itemId, action);
+      }
+    }
+
+    setState(() {
+      _isSelectionMode = false;
+      _selectedItems.clear();
+    });
+  }
+
+  // Helpers per l'estrazione dati
+  int _extractId(dynamic item) {
+    if (item is FavoriteItem) return item.itemId;
+    return item.id;
+  }
+
+  String _extractType(dynamic item) {
+    if (item is FavoriteItem) return item.itemType;
+    if (item is TvSeries) return 'tv';
+    if (item is Book) return 'book';
+    return 'movie';
+  }
+
+  String _extractTitle(dynamic item) {
+    if (item is FavoriteItem) return item.title;
+    if (item is TvSeries) return item.name;
+    if (item is Movie) return item.title;
+    if (item is Book) return item.title;
+    return '';
+  }
+
+  void _toggleSelection(dynamic item) {
+    setState(() {
+      if (_selectedItems.contains(item)) {
+        _selectedItems.remove(item);
+      } else {
+        _selectedItems.add(item);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        _buildSearchAndFilterHeader(),
-        Expanded(
-          child: StreamBuilder<List<dynamic>>(
-            stream: _dataStream, // Usa lo stream persistente e protetto
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting &&
-                  !snapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.orangeAccent),
-                );
-              }
+        Column(
+          children: [
+            _buildSearchAndFilterHeader(),
+            Expanded(
+              child: StreamBuilder<List<dynamic>>(
+                stream: _dataStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.orangeAccent,
+                      ),
+                    );
+                  }
 
-              final allItems = snapshot.data ?? [];
-              final filteredItems = _applyLocalFilters(allItems);
+                  final allItems = snapshot.data ?? [];
+                  final filteredItems = _applyLocalFilters(allItems);
 
-              if (filteredItems.isEmpty) {
-                return _buildEmptyState();
-              }
+                  if (filteredItems.isEmpty) {
+                    return _buildEmptyState();
+                  }
 
-              return GridView.builder(
-                padding: const EdgeInsets.only(
-                  top: 10,
-                  left: 15,
-                  right: 15,
-                  bottom: 120,
-                ),
-                itemCount: filteredItems.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 0.68,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemBuilder: (context, index) {
-                  final item = filteredItems[index];
-                  return _buildItemCard(context, item);
+                  return GridView.builder(
+                    padding: const EdgeInsets.only(
+                      top: 10,
+                      left: 15,
+                      right: 15,
+                      bottom: 120,
+                    ),
+                    itemCount: filteredItems.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.68,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+                      return _buildItemCard(context, item);
+                    },
+                  );
                 },
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
+
+        // LA FLOATING ACTION BAR PER LA MULTISELEZIONE
+        if (_isSelectionMode && _selectedItems.isNotEmpty)
+          Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: _buildBulkActionBar(),
+          ),
       ],
     );
   }
 
   List<dynamic> _applyLocalFilters(List<dynamic> items) {
     return items.where((item) {
-      String title = '';
-      if (item is Book)
-        title = item.title;
-      else if (item is Movie)
-        title = item.title;
-      else if (item is TvSeries)
-        title = item.name;
-      else if (item is FavoriteItem)
-        title = item.title;
+      String title = _extractTitle(item);
 
       if (_searchQuery.isNotEmpty &&
           !title.toLowerCase().contains(_searchQuery)) {
@@ -147,18 +231,10 @@ class _LibraryGridState extends State<LibraryGrid> {
       }
 
       if (_selectedFilter != 'Tutti') {
-        if (_selectedFilter == 'Film') {
-          if (item is! Movie &&
-              !(item is FavoriteItem && item.itemType == 'movie'))
-            return false;
-        } else if (_selectedFilter == 'Serie TV') {
-          if (item is! TvSeries &&
-              !(item is FavoriteItem && item.itemType == 'tv'))
-            return false;
-        } else if (_selectedFilter == 'Attori') {
-          if (!(item is FavoriteItem && item.itemType == 'person'))
-            return false;
-        }
+        final type = _extractType(item);
+        if (_selectedFilter == 'Film' && type != 'movie') return false;
+        if (_selectedFilter == 'Serie TV' && type != 'tv') return false;
+        if (_selectedFilter == 'Attori' && type != 'person') return false;
       }
       return true;
     }).toList();
@@ -191,42 +267,63 @@ class _LibraryGridState extends State<LibraryGrid> {
             ),
           ),
           const SizedBox(height: 12),
-          if (_availableFilters.length > 1)
-            SizedBox(
-              height: 35,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: _availableFilters.length,
-                itemBuilder: (context, index) {
-                  final filter = _availableFilters[index];
-                  final isSelected = _selectedFilter == filter;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      label: Text(
-                        filter,
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 35,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: _availableFilters.length,
+                    itemBuilder: (context, index) {
+                      final filter = _availableFilters[index];
+                      final isSelected = _selectedFilter == filter;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ChoiceChip(
+                          label: Text(
+                            filter,
+                            style: TextStyle(
+                              color: isSelected ? Colors.black : Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: Colors.orangeAccent,
+                          backgroundColor: Colors.white.withOpacity(0.05),
+                          side: BorderSide.none,
+                          showCheckmark: false,
+                          onSelected: (selected) {
+                            setState(() => _selectedFilter = filter);
+                          },
                         ),
-                      ),
-                      selected: isSelected,
-                      selectedColor: Colors.orangeAccent,
-                      backgroundColor: Colors.white.withOpacity(0.05),
-                      side: BorderSide.none,
-                      showCheckmark: false,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedFilter = filter;
-                        });
-                      },
-                    ),
-                  );
-                },
+                      );
+                    },
+                  ),
+                ),
               ),
-            ),
+              // TASTO SELEZIONA
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = !_isSelectionMode;
+                    if (!_isSelectionMode) _selectedItems.clear();
+                  });
+                },
+                child: Text(
+                  _isSelectionMode ? "Annulla" : "Seleziona",
+                  style: TextStyle(
+                    color: _isSelectionMode
+                        ? Colors.redAccent
+                        : Colors.orangeAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -234,29 +331,32 @@ class _LibraryGridState extends State<LibraryGrid> {
 
   Widget _buildItemCard(BuildContext context, dynamic item) {
     String imageUrl = "";
-    String heroTag = "";
     String overlayName = "";
 
     if (item is Book) {
       imageUrl = item.thumbnailUrl;
-      heroTag = item.id;
       overlayName = item.title;
     } else if (item is Movie) {
       imageUrl = item.fullPosterUrl;
-      heroTag = item.id.toString();
       overlayName = item.title;
     } else if (item is TvSeries) {
       imageUrl = item.fullPosterUrl;
-      heroTag = item.id.toString();
       overlayName = item.name;
     } else if (item is FavoriteItem) {
       imageUrl = item.posterUrl ?? '';
-      heroTag = 'fav_${item.itemType}_${item.itemId}';
       overlayName = item.title;
     }
 
+    final isSelected = _selectedItems.contains(item);
+
     return GestureDetector(
       onTap: () {
+        if (_isSelectionMode) {
+          _toggleSelection(item);
+          return;
+        }
+
+        // NAVIGAZIONE NORMALE
         if (item is FavoriteItem) {
           if (item.itemType == 'person') {
             Navigator.push(
@@ -281,7 +381,7 @@ class _LibraryGridState extends State<LibraryGrid> {
             stubMedia = Movie(
               id: item.itemId,
               title: item.title,
-              overview: 'Dettagli base dai preferiti.',
+              overview: '',
               posterPath: barePath,
               backdropPath: barePath,
               voteAverage: 0.0,
@@ -294,7 +394,7 @@ class _LibraryGridState extends State<LibraryGrid> {
             stubMedia = TvSeries(
               id: item.itemId,
               name: item.title,
-              overview: 'Dettagli base dai preferiti.',
+              overview: '',
               posterPath: barePath,
               backdropPath: barePath,
               voteAverage: 0.0,
@@ -322,95 +422,237 @@ class _LibraryGridState extends State<LibraryGrid> {
           ),
         );
       },
-      child: Hero(
-        tag: heroTag,
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (imageUrl.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.orangeAccent,
+      onLongPress: () {
+        if (!_isSelectionMode) {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedItems.add(item);
+          });
+        }
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected
+                    ? Colors.orangeAccent
+                    : Colors.white.withOpacity(0.05),
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (imageUrl.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.orangeAccent,
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => Center(
+                        child: Icon(
+                          widget.mode == AppMode.books
+                              ? Icons.book
+                              : Icons.movie,
+                          color: Colors.white24,
+                          size: 30,
+                        ),
                       ),
                     ),
-                    errorWidget: (_, __, ___) => Center(
-                      child: Icon(
-                        widget.mode == AppMode.books ? Icons.book : Icons.movie,
-                        color: Colors.white24,
-                        size: 30,
-                      ),
+                  )
+                else
+                  Center(
+                    child: Icon(
+                      widget.mode == AppMode.books ? Icons.book : Icons.movie,
+                      color: Colors.white24,
+                      size: 30,
                     ),
                   ),
-                )
-              else
-                Center(
-                  child: Icon(
-                    widget.mode == AppMode.books ? Icons.book : Icons.movie,
-                    color: Colors.white24,
-                    size: 30,
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.only(
+                      top: 25,
+                      bottom: 8,
+                      left: 6,
+                      right: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(6),
+                        bottomRight: Radius.circular(6),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.8),
+                          Colors.black,
+                        ],
+                      ),
+                    ),
+                    child: Text(
+                      overlayName.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 3.0,
+                            color: Colors.black,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.only(
-                    top: 25,
-                    bottom: 8,
-                    left: 6,
-                    right: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(8),
-                      bottomRight: Radius.circular(8),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.8),
-                        Colors.black,
-                      ],
-                    ),
-                  ),
-                  child: Text(
-                    overlayName.toUpperCase(),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 3.0,
-                          color: Colors.black,
-                        ),
-                      ],
-                    ),
+              ],
+            ),
+          ),
+
+          // IL CERCHIETTO DI SELEZIONE
+          if (_isSelectionMode)
+            Positioned(
+              top: 5,
+              right: 5,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? Colors.orangeAccent : Colors.black45,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: Icon(
+                    Icons.check,
+                    size: 14,
+                    color: isSelected ? Colors.black : Colors.transparent,
                   ),
                 ),
               ),
-            ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  // --- LA BARRA DELLE AZIONI DI GRUPPO ---
+  Widget _buildBulkActionBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
           ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: _getBulkActionButtons(),
+      ),
+    );
+  }
+
+  List<Widget> _getBulkActionButtons() {
+    List<Widget> buttons = [];
+
+    // Bottone Elimina (sempre presente)
+    buttons.add(
+      _buildBulkBtn(
+        Icons.delete_outline,
+        "Elimina",
+        Colors.redAccent,
+        () => _performBulkAction('delete'),
+      ),
+    );
+
+    // Sezioni Da Vedere (towatch/toread)
+    if (widget.status == 'towatch' || widget.status == 'toread') {
+      buttons.add(
+        _buildBulkBtn(
+          Icons.play_circle_outline,
+          "In Corso",
+          Colors.orangeAccent,
+          () => _performBulkAction(
+            widget.mode == AppMode.books ? 'reading' : 'watching',
+          ),
+        ),
+      );
+      buttons.add(
+        _buildBulkBtn(
+          Icons.check_circle_outline,
+          widget.mode == AppMode.books ? "Letti" : "Visti",
+          Colors.greenAccent,
+          () => _performBulkAction(
+            widget.mode == AppMode.books ? 'read' : 'watched',
+          ),
+        ),
+      );
+    }
+    // Sezioni In Corso (watching/reading)
+    else if (widget.status == 'watching' || widget.status == 'reading') {
+      buttons.add(
+        _buildBulkBtn(
+          Icons.check_circle_outline,
+          widget.mode == AppMode.books ? "Letti" : "Visti",
+          Colors.greenAccent,
+          () => _performBulkAction(
+            widget.mode == AppMode.books ? 'read' : 'watched',
+          ),
+        ),
+      );
+    }
+
+    return buttons;
+  }
+
+  Widget _buildBulkBtn(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );
