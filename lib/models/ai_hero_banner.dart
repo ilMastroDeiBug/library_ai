@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
@@ -210,22 +211,18 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                           // L'Immagine con Parallasse Interno
                           ClipRRect(
                             borderRadius: BorderRadius.circular(cornerRadius),
-                            child: Image.network(
-                              data['image']!,
+                            child: CachedNetworkImage(
+                              imageUrl: data['image']!,
                               fit: BoxFit.cover,
                               // Il parallasse fa slittare l'immagine al contrario rispetto allo scroll
                               alignment: Alignment(clampedDelta * 0.7, 0),
-                              errorBuilder: (ctx, err, stack) =>
+                              errorWidget: (ctx, url, error) =>
                                   Container(color: const Color(0xFF1A1A1A)),
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        color: Colors.orangeAccent,
-                                      ),
-                                    );
-                                  },
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.orangeAccent,
+                                ),
+                              ),
                             ),
                           ),
 

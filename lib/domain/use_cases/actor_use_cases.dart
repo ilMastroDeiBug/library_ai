@@ -17,7 +17,5 @@ class SearchActorsUseCase {
 
   SearchActorsUseCase(this.repository);
 
-  Future<List<CastMember>> call(String query) async {
-    return await repository.searchActors(query);
-  }
+  Stream<List<CastMember>> call(String query) => repository.searchActors(query);
 }

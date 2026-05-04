@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 
@@ -167,23 +168,20 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Image.network(
-                            url,
+                          child: CachedNetworkImage(
+                            imageUrl: url,
                             // Gestione errori per non far crashare l'app se manca la rete
-                            errorBuilder: (context, error, stackTrace) =>
+                            errorWidget: (context, url, error) =>
                                 const Icon(
                                   Icons.wifi_off_rounded,
                                   color: Colors.white38,
                                 ),
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.orangeAccent,
-                                ),
-                              );
-                            },
+                            placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.orangeAccent,
+                              ),
+                            ),
                           ),
                         ),
                       ),

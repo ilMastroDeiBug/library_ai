@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
 
@@ -46,10 +47,19 @@ class MovieCard extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: Image.network(
-                    posterUrl,
+                  child: CachedNetworkImage(
+                    imageUrl: posterUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (ctx, err, stack) => Container(
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[900],
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.orangeAccent,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (ctx, url, error) => Container(
                       color: Colors.grey[900],
                       child: const Center(
                         child: Icon(Icons.broken_image, color: Colors.white24),

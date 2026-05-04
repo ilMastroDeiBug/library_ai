@@ -23,13 +23,13 @@ class MovieSection extends StatefulWidget {
 }
 
 class _MovieSectionState extends State<MovieSection> {
-  late Future<List<dynamic>> _future;
+  late Stream<List<dynamic>> _stream;
   final LanguageService _languageService = sl<LanguageService>();
 
   @override
   void initState() {
     super.initState();
-    _future = _fetchItems();
+    _stream = _fetchItems();
     _languageService.addListener(_handleLanguageChanged);
   }
 
@@ -39,16 +39,21 @@ class _MovieSectionState extends State<MovieSection> {
     super.dispose();
   }
 
-  Future<List<dynamic>> _fetchItems() {
+  Stream<List<dynamic>> _fetchItems() {
+    // FIX: Uso sicuro di List<dynamic>.from() invece di cast()
     return widget.isTvSeries
-        ? sl<GetTvSeriesByCategoryUseCase>().call(widget.categoryPath)
-        : sl<GetMoviesByCategoryUseCase>().call(widget.categoryPath);
+        ? sl<GetTvSeriesByCategoryUseCase>()
+              .call(widget.categoryPath)
+              .map((items) => List<dynamic>.from(items))
+        : sl<GetMoviesByCategoryUseCase>()
+              .call(widget.categoryPath)
+              .map((items) => List<dynamic>.from(items));
   }
 
   void _handleLanguageChanged() {
     if (!mounted) return;
     setState(() {
-      _future = _fetchItems();
+      _stream = _fetchItems();
     });
   }
 
@@ -84,8 +89,8 @@ class _MovieSectionState extends State<MovieSection> {
         // Lista Orizzontale
         SizedBox(
           height: 180,
-          child: FutureBuilder<List<dynamic>>(
-            future: _future,
+          child: StreamBuilder<List<dynamic>>(
+            stream: _stream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie_widget/review_model.dart';
 
 class AllReviewsPage extends StatelessWidget {
@@ -52,12 +53,20 @@ class AllReviewsPage extends StatelessWidget {
           Row(
             children: [
               CircleAvatar(
-                backgroundImage: review.avatarPath != null
-                    ? NetworkImage(review.avatarPath!)
-                    : null,
                 child: review.avatarPath == null
                     ? const Icon(Icons.person)
-                    : null,
+                    : ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: review.avatarPath!,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) =>
+                              const SizedBox.shrink(),
+                          errorWidget: (_, __, ___) =>
+                              const Icon(Icons.person),
+                        ),
+                      ),
               ),
               const SizedBox(width: 12),
               Column(

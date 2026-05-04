@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import '../../pages/settings_page.dart';
 import '../app_mode.dart';
@@ -98,11 +99,28 @@ class LibraryHeader extends StatelessWidget {
             // LOGICA AVATAR AGGIORNATA
             child: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
                 ? ClipOval(
-                    child: Image.network(
-                      user!.photoUrl!,
+                    child: CachedNetworkImage(
+                      imageUrl: user!.photoUrl!,
                       width: 40,
                       height: 40,
                       fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.orangeAccent,
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Text(
+                        user?.displayName != null &&
+                                user!.displayName!.isNotEmpty
+                            ? user!.displayName![0].toUpperCase()
+                            : 'U',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   )
                 : Text(

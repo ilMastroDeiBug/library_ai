@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import '../../Pages/settings_page.dart';
 
@@ -41,13 +42,19 @@ class SideMenuHeader extends StatelessWidget {
               // LOGICA IN TEMPO REALE: Mostra la foto se esiste, altrimenti l'iniziale
               child: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
                   ? ClipOval(
-                      child: Image.network(
-                        user!.photoUrl!,
+                      child: CachedNetworkImage(
+                        imageUrl: user!.photoUrl!,
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
                         // Se l'immagine non si carica per problemi di rete, mostra l'iniziale
-                        errorBuilder: (context, error, stackTrace) => Text(
+                        placeholder: (context, url) => const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.orangeAccent,
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Text(
                           initial,
                           style: const TextStyle(
                             color: Colors.white,

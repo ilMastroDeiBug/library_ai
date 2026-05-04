@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 
 class SettingsHeader extends StatelessWidget {
@@ -67,11 +68,24 @@ class SettingsHeader extends StatelessWidget {
                 // LOGICA: Se esiste l'URL dell'avatar lo mostra, altrimenti mostra il logo
                 child: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
                     ? ClipOval(
-                        child: Image.network(
-                          user!.photoUrl!,
+                        child: CachedNetworkImage(
+                          imageUrl: user!.photoUrl!,
                           width: 90,
                           height: 90,
                           fit: BoxFit.cover,
+                          placeholder: (context, url) => const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.orangeAccent,
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Image.asset(
+                              'assets/images/logoCine.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
                       )
                     : Padding(

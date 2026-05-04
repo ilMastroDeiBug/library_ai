@@ -66,7 +66,7 @@ class GetMoviesByCategoryUseCase {
   final MovieRepository repository;
   GetMoviesByCategoryUseCase(this.repository);
 
-  Future<List<Movie>> call(String path, {int page = 1}) =>
+  Stream<List<Movie>> call(String path, {int page = 1}) =>
       repository.getMoviesByCategory(path, page: page);
 }
 
@@ -90,9 +90,7 @@ class SearchMoviesUseCase {
   final MovieRepository repository;
   SearchMoviesUseCase(this.repository);
 
-  Future<List<Movie>> call(String query) async {
-    return await repository.searchMovies(query);
-  }
+  Stream<List<Movie>> call(String query) => repository.searchMovies(query);
 }
 
 class AnalyzeMovieUseCase {

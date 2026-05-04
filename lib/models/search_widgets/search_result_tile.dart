@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/models/app_mode.dart';
-import 'package:library_ai/models/movie_widget/cast_model.dart'; // Importa CastMember
+import 'package:library_ai/models/movie_widget/cast_model.dart';
+
 import '../../Pages/book_detail_page.dart';
 import '../../Pages/movie_detail_page.dart';
-import '../../Pages/actor_detail_page.dart'; // Importa la pagina dell'attore
+import '../../Pages/actor_detail_page.dart';
 
 class SearchResultTile extends StatelessWidget {
   final dynamic item;
@@ -22,7 +24,6 @@ class SearchResultTile extends StatelessWidget {
     IconData defaultIcon = Icons.movie;
     VoidCallback onTap = () {};
 
-    // Estrazione Dati
     if (item is Book) {
       title = item.title;
       subtitle = item.author;
@@ -55,9 +56,8 @@ class SearchResultTile extends StatelessWidget {
         MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
       );
     } else if (item is CastMember) {
-      // GESTIONE ATTORI
       title = item.name;
-      subtitle = item.character; // Qui inseriremo il ruolo (es. "Acting")
+      subtitle = item.character;
       imageUrl = item.fullProfileUrl;
       defaultIcon = Icons.person;
       onTap = () => Navigator.push(
@@ -75,23 +75,31 @@ class SearchResultTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Row(
           children: [
-            // LOCANDINA / FOTO PROFILO
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
                       width: 70,
                       height: 105,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
+                      placeholder: (context, url) => Container(
+                        width: 70,
+                        height: 105,
+                        color: Colors.white.withOpacity(0.05),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.orangeAccent,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) =>
                           _buildPlaceholder(defaultIcon),
                     )
                   : _buildPlaceholder(defaultIcon),
             ),
             const SizedBox(width: 16),
-
-            // TESTI
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,8 +130,6 @@ class SearchResultTile extends StatelessWidget {
                 ],
               ),
             ),
-
-            // ICONA FRECCIA / PLAY
             Padding(
               padding: const EdgeInsets.only(left: 10),
               child: Icon(

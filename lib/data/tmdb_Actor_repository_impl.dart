@@ -62,8 +62,8 @@ class TmdbActorRepositoryImpl implements ActorRepository {
   }
 
   @override
-  Future<List<CastMember>> searchActors(String query) async {
+  Stream<List<CastMember>> searchActors(String query) {
     // Ora chiama l'API vera invece di tirare un errore!
-    return await tmdbService.searchActors(query);
+    return tmdbService.searchActors(query);
   }
 }

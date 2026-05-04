@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/book.dart';
 import '../services/pages_services/book_detail_logic.dart';
@@ -182,12 +183,13 @@ class _BookDetailPageState extends State<BookDetailPage> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: Image.network(
-              book.thumbnailUrl,
+            child: CachedNetworkImage(
+              imageUrl: book.thumbnailUrl,
               fit: BoxFit.cover,
               color: Colors.black.withOpacity(0.6),
               colorBlendMode: BlendMode.darken,
-              errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+              placeholder: (context, url) => Container(color: Colors.grey[900]),
+              errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
             ),
           ),
           Positioned.fill(
@@ -217,9 +219,29 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       spreadRadius: 5,
                     ),
                   ],
-                  image: DecorationImage(
-                    image: NetworkImage(book.thumbnailUrl),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: CachedNetworkImage(
+                    imageUrl: book.thumbnailUrl,
                     fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[900],
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _brandColor,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      color: Colors.grey[900],
+                      child: const Icon(
+                        Icons.book_outlined,
+                        color: Colors.white24,
+                        size: 42,
+                      ),
+                    ),
                   ),
                 ),
               ),

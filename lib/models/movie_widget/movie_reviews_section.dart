@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
@@ -124,16 +125,27 @@ class MovieReviewsSection extends StatelessWidget {
                           CircleAvatar(
                             radius: 14,
                             backgroundColor: Colors.white.withOpacity(0.05),
-                            backgroundImage: review.avatarPath != null
-                                ? NetworkImage(review.avatarPath!)
-                                : null,
                             child: review.avatarPath == null
                                 ? const Icon(
                                     Icons.person,
                                     size: 16,
                                     color: Colors.white24,
                                   )
-                                : null,
+                                : ClipOval(
+                                    child: CachedNetworkImage(
+                                      imageUrl: review.avatarPath!,
+                                      width: 28,
+                                      height: 28,
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) =>
+                                          const SizedBox.shrink(),
+                                      errorWidget: (_, __, ___) => const Icon(
+                                        Icons.person,
+                                        size: 16,
+                                        color: Colors.white24,
+                                      ),
+                                    ),
+                                  ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(

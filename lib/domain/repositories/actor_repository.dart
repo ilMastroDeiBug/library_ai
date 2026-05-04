@@ -6,5 +6,5 @@ abstract class ActorRepository {
   Future<Actor> getActorDetails(int actorId);
 
   /// Cerca attori per nome restituendo una lista di CastMember per la SearchPage
-  Future<List<CastMember>> searchActors(String query);
+  Stream<List<CastMember>> searchActors(String query);
 }

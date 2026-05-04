@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class OnboardingAvatarCarousel extends StatefulWidget {
   final List<String> avatars;
@@ -80,22 +81,19 @@ class _OnboardingAvatarCarouselState extends State<OnboardingAvatarCarousel> {
                       : [],
                 ),
                 child: ClipOval(
-                  child: Image.network(
-                    widget.avatars[index],
+                  child: CachedNetworkImage(
+                    imageUrl: widget.avatars[index],
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
+                    errorWidget: (context, url, error) => const Icon(
                       Icons.wifi_off_rounded,
                       color: Colors.white38,
                     ),
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.orangeAccent,
-                        ),
-                      );
-                    },
+                    placeholder: (context, url) => const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.orangeAccent,
+                      ),
+                    ),
                   ),
                 ),
               ),

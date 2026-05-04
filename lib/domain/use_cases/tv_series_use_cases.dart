@@ -57,7 +57,7 @@ class GetTvSeriesByCategoryUseCase {
   final MovieRepository repository;
   GetTvSeriesByCategoryUseCase(this.repository);
 
-  Future<List<TvSeries>> call(String path, {int page = 1}) =>
+  Stream<List<TvSeries>> call(String path, {int page = 1}) =>
       repository.getTvSeriesByCategory(path, page: page);
 }
 
@@ -81,9 +81,7 @@ class SearchTvSeriesUseCase {
   final MovieRepository repository;
   SearchTvSeriesUseCase(this.repository);
 
-  Future<List<TvSeries>> call(String query) async {
-    return await repository.searchTvSeries(query);
-  }
+  Stream<List<TvSeries>> call(String query) => repository.searchTvSeries(query);
 }
 
 class AnalyzeTvSeriesUseCase {

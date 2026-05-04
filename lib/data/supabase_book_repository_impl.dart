@@ -1,3 +1,4 @@
+import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/book_repository.dart';
 import '../../domain/entities/book.dart';
@@ -31,63 +32,118 @@ class SupabaseBookRepositoryImpl implements BookRepository {
        _persistCatalogBook = persistCatalogBook;
 
   @override
-  Stream<List<Book>> getUserBooksStream(String userId, String status) {
-    return _supabase
-        .from(_userTableName)
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .order('timestamp', ascending: false)
-        .map((snapshot) {
-          final filteredRows = snapshot
-              .where((row) => row['status'] == status)
-              .toList();
+  Stream<List<Book>> getUserBooksStream(String userId, String status) async* {
+    final cacheKey = 'books_${userId}_$status';
+    final cacheBox = Hive.box('cinelib_cache');
 
-          return filteredRows.map((row) {
-            final mappedRow = {
-              'title': row['title'],
-              'author': row['author'],
-              'description': row['description'],
-              'thumbnailUrl': row['thumbnail_url'],
-              'pageCount': row['page_count'],
-              'averageRating': row['rating'],
-              'ratingsCount': row['ratings_count'],
-              'status': row['status'],
-              'aiAnalysis': row['ai_analysis'],
-            };
-            return Book.fromFirestore(mappedRow, row['book_id']);
-          }).toList();
-        });
+    final cachedRows = _readCachedRows(cacheBox, cacheKey);
+    if (cachedRows != null) {
+      yield _mapBookRowsToEntities(cachedRows, status);
+    }
+
+    try {
+      yield* _supabase
+          .from(_userTableName)
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .order('timestamp', ascending: false)
+          .asyncMap((snapshot) async {
+            final rows = snapshot
+                .map((row) => Map<String, dynamic>.from(row))
+                .toList();
+            final filteredRows = rows
+                .where((row) => row['status'] == status)
+                .toList();
+
+            await cacheBox.put(cacheKey, filteredRows);
+            for (final row in filteredRows) {
+              final bookId = row['book_id'];
+              if (bookId != null) {
+                await cacheBox.put('book_${userId}_$bookId', row);
+              }
+            }
+
+            return _mapBookRowsToEntities(filteredRows, status);
+          });
+    } catch (_) {
+      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
+    }
   }
 
   @override
-  Stream<Book?> getSingleBookStream(String userId, String bookId) {
+  Stream<Book?> getSingleBookStream(String userId, String bookId) async* {
     final docId = bookId.replaceAll('/', '_');
+    final cacheKey = 'book_${userId}_$docId';
+    final cacheBox = Hive.box('cinelib_cache');
 
-    return _supabase
-        .from(_userTableName)
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .map((snapshot) {
-          final bookRows = snapshot
-              .where((row) => row['book_id'] == docId)
-              .toList();
+    final cachedRow = _readCachedRow(cacheBox, cacheKey);
+    if (cachedRow != null) {
+      yield _mapBookRowToEntity(cachedRow);
+    }
 
-          if (bookRows.isEmpty) return null;
+    try {
+      yield* _supabase
+          .from(_userTableName)
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .asyncMap((snapshot) async {
+            final bookRows = snapshot
+                .where((row) => row['book_id'] == docId)
+                .toList();
 
-          final row = bookRows.first;
-          final mappedRow = {
-            'title': row['title'],
-            'author': row['author'],
-            'description': row['description'],
-            'thumbnailUrl': row['thumbnail_url'],
-            'pageCount': row['page_count'],
-            'averageRating': row['rating'],
-            'ratingsCount': row['ratings_count'],
-            'status': row['status'],
-            'aiAnalysis': row['ai_analysis'],
-          };
-          return Book.fromFirestore(mappedRow, row['book_id']);
-        });
+            if (bookRows.isEmpty) return null;
+
+            final row = Map<String, dynamic>.from(bookRows.first);
+            await cacheBox.put(cacheKey, row);
+
+            return _mapBookRowToEntity(row);
+          });
+    } catch (_) {
+      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
+    }
+  }
+
+  List<Map<String, dynamic>>? _readCachedRows(Box cacheBox, String cacheKey) {
+    final cached = cacheBox.get(cacheKey);
+    if (cached is! List) return null;
+
+    return cached
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  Map<String, dynamic>? _readCachedRow(Box cacheBox, String cacheKey) {
+    final cached = cacheBox.get(cacheKey);
+    if (cached is! Map) return null;
+
+    return Map<String, dynamic>.from(cached);
+  }
+
+  List<Book> _mapBookRowsToEntities(
+    List<Map<String, dynamic>> rows,
+    String status,
+  ) {
+    return rows
+        .where((row) => row['status'] == status)
+        .map(_mapBookRowToEntity)
+        .toList();
+  }
+
+  Book _mapBookRowToEntity(Map<String, dynamic> row) {
+    final mappedRow = {
+      'title': row['title'],
+      'author': row['author'],
+      'description': row['description'],
+      'thumbnailUrl': row['thumbnail_url'],
+      'pageCount': row['page_count'],
+      'averageRating': row['rating'],
+      'ratingsCount': row['ratings_count'],
+      'status': row['status'],
+      'aiAnalysis': row['ai_analysis'],
+    };
+
+    return Book.fromFirestore(mappedRow, row['book_id']);
   }
 
   @override
@@ -169,6 +225,16 @@ class SupabaseBookRepositoryImpl implements BookRepository {
   @override
   Future<Book> getBookDetails(Book partialBook) async {
     final safeBookId = partialBook.id.replaceAll('/', '_');
+    final cacheBox = Hive.box('cinelib_cache');
+    final catalogCacheKey = 'catalog_book_$safeBookId';
+    final cachedCatalogBook = cacheBox.get(catalogCacheKey);
+
+    if (cachedCatalogBook is Map) {
+      return _mapCatalogRowToBook(
+        Map<String, dynamic>.from(cachedCatalogBook),
+        partialBook,
+      );
+    }
 
     try {
       final cachedResponse =
@@ -180,19 +246,9 @@ class SupabaseBookRepositoryImpl implements BookRepository {
               .maybeSingle();
 
       if (cachedResponse != null) {
-        return Book(
-          id: cachedResponse['book_id'],
-          title: cachedResponse['title'],
-          author: cachedResponse['author'],
-          description: cachedResponse['description'],
-          thumbnailUrl: cachedResponse['cover_url'],
-          pageCount: cachedResponse['page_count'] ?? partialBook.pageCount,
-          rating:
-              (cachedResponse['rating'] as num?)?.toDouble() ??
-              partialBook.rating,
-          ratingsCount:
-              cachedResponse['ratings_count'] ?? partialBook.ratingsCount,
-        );
+        final catalogRow = Map<String, dynamic>.from(cachedResponse);
+        await cacheBox.put(catalogCacheKey, catalogRow);
+        return _mapCatalogRowToBook(catalogRow, partialBook);
       }
     } catch (_) {
       // non blocca il flusso principale
@@ -226,25 +282,45 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     }
 
     try {
+      final catalogRow = {
+        'book_id': finalMergedBook.id,
+        'title': finalMergedBook.title,
+        'author': finalMergedBook.author,
+        'description': finalMergedBook.description,
+        'cover_url': finalMergedBook.thumbnailUrl,
+        'page_count': finalMergedBook.pageCount,
+        'rating': finalMergedBook.rating,
+        'ratings_count': finalMergedBook.ratingsCount,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
       if (_persistCatalogBook != null) {
         await _persistCatalogBook!(finalMergedBook);
       } else {
-        await _supabase.from(_globalCatalogTable).upsert({
-          'book_id': finalMergedBook.id,
-          'title': finalMergedBook.title,
-          'author': finalMergedBook.author,
-          'description': finalMergedBook.description,
-          'cover_url': finalMergedBook.thumbnailUrl,
-          'page_count': finalMergedBook.pageCount,
-          'rating': finalMergedBook.rating,
-          'ratings_count': finalMergedBook.ratingsCount,
-          'created_at': DateTime.now().toIso8601String(),
-        });
+        await _supabase.from(_globalCatalogTable).upsert(catalogRow);
       }
+      await cacheBox.put(catalogCacheKey, catalogRow);
     } catch (_) {
       // non blocca il flusso principale
     }
 
     return finalMergedBook;
+  }
+
+  Book _mapCatalogRowToBook(
+    Map<String, dynamic> cachedResponse,
+    Book partialBook,
+  ) {
+    return Book(
+      id: cachedResponse['book_id'],
+      title: cachedResponse['title'],
+      author: cachedResponse['author'],
+      description: cachedResponse['description'],
+      thumbnailUrl: cachedResponse['cover_url'],
+      pageCount: cachedResponse['page_count'] ?? partialBook.pageCount,
+      rating:
+          (cachedResponse['rating'] as num?)?.toDouble() ?? partialBook.rating,
+      ratingsCount: cachedResponse['ratings_count'] ?? partialBook.ratingsCount,
+    );
   }
 }

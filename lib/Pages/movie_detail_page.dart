@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
@@ -272,10 +273,11 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              backdrop.isNotEmpty ? backdrop : poster,
+            CachedNetworkImage(
+              imageUrl: backdrop.isNotEmpty ? backdrop : poster,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: _backgroundColor),
+              placeholder: (context, url) => Container(color: _backgroundColor),
+              errorWidget: (_, __, ___) => Container(color: _backgroundColor),
             ),
             Container(
               decoration: BoxDecoration(

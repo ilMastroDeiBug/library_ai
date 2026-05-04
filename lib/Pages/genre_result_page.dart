@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../domain/entities/category.dart';
 import '../models/app_mode.dart';
 import '../injection_container.dart';
@@ -37,6 +39,8 @@ class _GenreResultPageState extends State<GenreResultPage> {
   bool _isLoadingFirstTime = true;
   bool _isFetchingMore = false;
   bool _hasReachedMax = false;
+  StreamSubscription? _initialItemsSubscription;
+  StreamSubscription? _moreItemsSubscription;
 
   @override
   void initState() {
@@ -49,6 +53,8 @@ class _GenreResultPageState extends State<GenreResultPage> {
   @override
   void dispose() {
     _languageService.removeListener(_handleLanguageChanged);
+    _initialItemsSubscription?.cancel();
+    _moreItemsSubscription?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -74,44 +80,79 @@ class _GenreResultPageState extends State<GenreResultPage> {
     }
   }
 
-  Future<void> _fetchInitialData() async {
-    final newItems = await _fetchItemsFromApi(1);
-    if (mounted) {
-      setState(() {
-        _items = newItems;
-        _isLoadingFirstTime = false;
-        if (newItems.length < 20) _hasReachedMax = true;
-      });
-    }
+  void _fetchInitialData() {
+    _initialItemsSubscription?.cancel();
+    var hasEmitted = false;
+
+    _initialItemsSubscription = _itemsStream(1).listen(
+      (newItems) {
+        hasEmitted = true;
+        if (!mounted) return;
+        setState(() {
+          _items = newItems;
+          _isLoadingFirstTime = false;
+          if (newItems.length < 20) _hasReachedMax = true;
+        });
+      },
+      onDone: () {
+        if (!mounted || hasEmitted) return;
+        setState(() {
+          _isLoadingFirstTime = false;
+          _hasReachedMax = true;
+        });
+      },
+      onError: (error) {
+        if (!mounted) return;
+        setState(() {
+          _isLoadingFirstTime = false;
+        });
+      },
+    );
   }
 
-  Future<void> _fetchMoreData() async {
+  void _fetchMoreData() {
     setState(() {
       _isFetchingMore = true;
     });
 
     _currentPage++;
-    final newItems = await _fetchItemsFromApi(_currentPage);
+    _moreItemsSubscription?.cancel();
+    var hasEmitted = false;
 
-    if (mounted) {
-      setState(() {
-        _isFetchingMore = false;
+    _moreItemsSubscription = _itemsStream(_currentPage).listen(
+      (newItems) {
+        hasEmitted = true;
+        if (!mounted) return;
+        setState(() {
+          _isFetchingMore = false;
 
-        // FIX DELL'INFINITO: Filtro Anti-Cloni!
-        // Controlliamo se gli elementi scaricati sono già nella lista.
-        final existingIds = _items.map((e) => _getId(e)).toSet();
-        final actuallyNew = newItems
-            .where((e) => !existingIds.contains(_getId(e)))
-            .toList();
+          // Filtro Anti-Cloni
+          final existingIds = _items.map((e) => _getId(e)).toSet();
+          final actuallyNew = newItems
+              .where((e) => !existingIds.contains(_getId(e)))
+              .toList();
 
-        // Se la pagina 2 è uguale alla pagina 1, fermiamo il caricamento
-        if (actuallyNew.isEmpty) {
+          if (actuallyNew.isEmpty && newItems.length < 20) {
+            _hasReachedMax = true;
+          } else if (actuallyNew.isNotEmpty) {
+            _items.addAll(actuallyNew);
+          }
+        });
+      },
+      onDone: () {
+        if (!mounted || hasEmitted) return;
+        setState(() {
+          _isFetchingMore = false;
           _hasReachedMax = true;
-        } else {
-          _items.addAll(actuallyNew);
-        }
-      });
-    }
+        });
+      },
+      onError: (error) {
+        if (!mounted) return;
+        setState(() {
+          _isFetchingMore = false;
+        });
+      },
+    );
   }
 
   // Helper per estrarre l'ID in modo sicuro
@@ -122,32 +163,43 @@ class _GenreResultPageState extends State<GenreResultPage> {
     return item.hashCode;
   }
 
-  Future<List<dynamic>> _fetchItemsFromApi(int page) async {
+  Stream<List<dynamic>> _itemsStream(int page) async* {
     try {
       if (widget.mode == AppMode.books) {
-        // Blocchiamo Google Books alla pagina 1 per sicurezza
-        if (page > 1) return [];
-        return await sl<GetBooksByCategoryUseCase>().call(widget.category.name);
+        if (page > 1) {
+          yield [];
+          return;
+        }
+        // Il libro è un Future, lo yieldiamo
+        yield await sl<GetBooksByCategoryUseCase>().call(widget.category.name);
       } else {
         final path = 'with_genres=${widget.category.id}';
         if (widget.isTvSeries) {
-          return await sl<GetTvSeriesByCategoryUseCase>().call(
+          // Usiamo await for per estrarre le liste dallo stream
+          await for (final list in sl<GetTvSeriesByCategoryUseCase>().call(
             path,
             page: page,
-          );
+          )) {
+            yield list;
+          }
         } else {
-          return await sl<GetMoviesByCategoryUseCase>().call(path, page: page);
+          await for (final list in sl<GetMoviesByCategoryUseCase>().call(
+            path,
+            page: page,
+          )) {
+            yield list;
+          }
         }
       }
     } catch (e) {
-      return [];
+      yield [];
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // NERO ASSOLUTO
+      backgroundColor: Colors.black,
       body: CustomScrollView(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(),
@@ -175,7 +227,6 @@ class _GenreResultPageState extends State<GenreResultPage> {
               ),
             ),
           ),
-
           if (_isLoadingFirstTime)
             const SliverFillRemaining(
               child: Center(
@@ -217,7 +268,6 @@ class _GenreResultPageState extends State<GenreResultPage> {
                 }, childCount: _items.length),
               ),
             ),
-
           if (_isFetchingMore)
             const SliverToBoxAdapter(
               child: Padding(
@@ -227,7 +277,6 @@ class _GenreResultPageState extends State<GenreResultPage> {
                 ),
               ),
             ),
-
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
@@ -235,8 +284,6 @@ class _GenreResultPageState extends State<GenreResultPage> {
   }
 }
 
-// --- FIX RED SCREEN LIBRI ---
-// Widget dedicato per la griglia che supporta sia Film che Libri
 class _GridItemCard extends StatelessWidget {
   final dynamic item;
   const _GridItemCard({required this.item});
@@ -286,14 +333,21 @@ class _GridItemCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                      placeholder: (context, url) => Container(
+                        color: const Color(0xFF1E1E1E),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.orangeAccent,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => _buildPlaceholder(),
                     )
                   : _buildPlaceholder(),
-
-              // Gradiente alla base per far risaltare il vuoto
               Positioned(
                 bottom: 0,
                 left: 0,
@@ -312,7 +366,6 @@ class _GridItemCard extends StatelessWidget {
                   ),
                 ),
               ),
-
               if (rating > 0)
                 Positioned(
                   top: 8,

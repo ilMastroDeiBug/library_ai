@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/models/app_mode.dart';
@@ -332,17 +333,34 @@ class _LibraryGridState extends State<LibraryGrid> {
             color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.white.withOpacity(0.05)),
-            image: imageUrl.isNotEmpty
-                ? DecorationImage(
-                    image: NetworkImage(imageUrl),
-                    fit: BoxFit.cover,
-                  )
-                : null,
           ),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (imageUrl.isEmpty)
+              if (imageUrl.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.orangeAccent,
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Center(
+                      child: Icon(
+                        widget.mode == AppMode.books
+                            ? Icons.book
+                            : Icons.movie,
+                        color: Colors.white24,
+                        size: 30,
+                      ),
+                    ),
+                  ),
+                )
+              else
                 Center(
                   child: Icon(
                     widget.mode == AppMode.books ? Icons.book : Icons.movie,

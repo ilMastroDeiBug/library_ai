@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:library_ai/Pages/splash_screen.dart';
 import 'firebase_options.dart';
@@ -16,7 +18,6 @@ import 'package:library_ai/domain/entities/app_user.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 import 'package:library_ai/services/utility_services/network_status_service.dart';
-import 'package:library_ai/Pages/offline_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,8 +28,12 @@ void main() async {
     anonKey: 'sb_publishable_MiRYZsjKtlT68nNzn2S-JQ_g-bBj_Gu',
   );
 
+  await Hive.initFlutter();
+  await Hive.openBox('cinelib_cache');
+  await Hive.openBox('tmdb_cache');
+
   await di.init();
-  di.sl<NetworkStatusService>();
+  di.sl<NetworkStatusService>(); // Inizializzato per usarlo nel resto dell'app!
 
   runApp(const MyApp());
 }
@@ -43,12 +48,12 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        primaryColor: Colors.orangeAccent, // BRAND COLOR
-        scaffoldBackgroundColor: Colors.black, // NERO TIKTOK/NETFLIX
+        primaryColor: Colors.orangeAccent,
+        scaffoldBackgroundColor: Colors.black,
         colorScheme: const ColorScheme.dark(
           primary: Colors.orangeAccent,
           secondary: Colors.orangeAccent,
-          surface: Color(0xFF0A0A0C), // Grigio scurissimo
+          surface: Color(0xFF0A0A0C),
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
@@ -57,135 +62,159 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const _AppNetworkGate(child: SplashScreen()),
+      // LA MAGIA È QUI: Il builder avvolge l'intera app (Navigator)
+      builder: (context, child) {
+        return GlobalNetworkBanner(child: child ?? const SizedBox.shrink());
+      },
+      home: const SplashScreen(),
     );
   }
 }
 
-class _AppNetworkGate extends StatefulWidget {
+// --- WIDGET BANNER OFFLINE GLOBALE ---
+class GlobalNetworkBanner extends StatefulWidget {
   final Widget child;
 
-  const _AppNetworkGate({required this.child});
+  const GlobalNetworkBanner({super.key, required this.child});
 
   @override
-  State<_AppNetworkGate> createState() => _AppNetworkGateState();
+  State<GlobalNetworkBanner> createState() => _GlobalNetworkBannerState();
 }
 
-class _AppNetworkGateState extends State<_AppNetworkGate> {
-  final NetworkStatusService _network = di.sl<NetworkStatusService>();
-  bool _isOfflineGateLatched = false;
+class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
+  bool _isVisible = false;
+  Timer? _hideTimer;
+  late final NetworkStatusService _networkService;
 
   @override
   void initState() {
     super.initState();
-    _network.addListener(_handleNetworkStateChanged);
+    _networkService = di.sl<NetworkStatusService>();
+    // Ci agganciamo al servizio di rete
+    _networkService.addListener(_onNetworkChange);
+    // Eseguiamo un controllo iniziale appena l'app si apre
+    _onNetworkChange();
   }
 
   @override
   void dispose() {
-    _network.removeListener(_handleNetworkStateChanged);
+    _networkService.removeListener(_onNetworkChange);
+    _hideTimer?.cancel();
     super.dispose();
   }
 
-  void _handleNetworkStateChanged() {
-    if (!_network.hasResolvedInitialStatus) return;
+  void _onNetworkChange() {
+    if (!mounted)
+      return; // Sicurezza: evita crash se il widget è stato distrutto
 
-    final shouldLatch = !_network.isOnline && !_network.hasEverBeenOnline;
-    if (shouldLatch != _isOfflineGateLatched) {
-      setState(() {
-        _isOfflineGateLatched = shouldLatch || _isOfflineGateLatched;
-      });
-    }
-  }
+    final isOffline = !_networkService.isOnline;
+    final hasResolved = _networkService.hasResolvedInitialStatus;
 
-  void _handleOfflinePrimaryAction() {
-    if (_network.isOnline) {
-      setState(() {
-        _isOfflineGateLatched = false;
+    if (hasResolved && isOffline) {
+      // 1. Forza l'apparizione del banner ogni volta che rileva l'offline
+      setState(() => _isVisible = true);
+
+      // 2. Resettiamo il timer precedente (se l'utente fa attacca/stacca veloce)
+      _hideTimer?.cancel();
+
+      // 3. Facciamo partire il timer di 10 secondi per nasconderlo automaticamente
+      _hideTimer = Timer(const Duration(seconds: 10), () {
+        if (mounted) {
+          setState(() => _isVisible = false);
+        }
       });
-      return;
+    } else {
+      // Se torna online, lo nascondiamo subito e fermiamo il timer
+      if (_isVisible) {
+        setState(() => _isVisible = false);
+      }
+      _hideTimer?.cancel();
     }
-    _network.checkConnection();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _network,
-      builder: (context, _) {
-        final showOfflinePage =
-            _network.hasResolvedInitialStatus &&
-            (_isOfflineGateLatched ||
-                (!_network.isOnline && !_network.hasEverBeenOnline));
+    return Stack(
+      children: [
+        // L'app normale sotto
+        widget.child,
 
-        final showOfflineBanner =
-            _network.hasResolvedInitialStatus &&
-            !_network.isOnline &&
-            _network.hasEverBeenOnline;
-
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            widget.child,
-            if (showOfflinePage)
-              OfflinePage(
-                isBackOnline: _network.isOnline,
-                onRetry: _handleOfflinePrimaryAction,
-              ),
-            if (showOfflineBanner) const _OfflineBannerOverlay(),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _OfflineBannerOverlay extends StatelessWidget {
-  const _OfflineBannerOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      ignoring: true,
-      child: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        // Il banner animato sopra
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.fastOutSlowIn,
+          // Se non è visibile, lo nascondiamo 150 pixel sopra lo schermo per sicurezza
+          top: _isVisible ? 0 : -150,
+          left: 0,
+          right: 0,
+          child: SafeArea(
             child: Material(
               color: Colors.transparent,
               child: Container(
-                width: double.infinity,
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: LinearGradient(
-                    colors: [const Color(0xFFF57C33), const Color(0xFFFFA552)],
+                  color: const Color(0xFF161618), // Sfondo in palette CineShare
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.orangeAccent.withOpacity(0.3),
+                    width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.orangeAccent.withOpacity(0.28),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
+                      color: Colors.black.withOpacity(0.8),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.wifi_off_rounded, color: Colors.black, size: 22),
-                    SizedBox(width: 12),
+                    // Icona con cerchio sfumato
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orangeAccent.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.wifi_off_rounded,
+                        color: Colors.orangeAccent,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    // Testi
                     Expanded(
-                      child: Text(
-                        'Sei offline. Quando la rete torna, puoi continuare senza refresh automatici.',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          height: 1.25,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'SEI OFFLINE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Nessun problema, goditi la tua libreria.',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -194,7 +223,7 @@ class _OfflineBannerOverlay extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

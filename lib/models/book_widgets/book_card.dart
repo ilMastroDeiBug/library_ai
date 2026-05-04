@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 // Assicurati che questo import punti alla NUOVA entità
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/book.dart';
 import '../../pages/book_detail_page.dart'; // Controlla il percorso delle pagine
 import 'star_rating.dart';
@@ -41,11 +42,12 @@ class BookCard extends StatelessWidget {
               // --- 1. COPERTINA ---
               Expanded(
                 child: book.thumbnailUrl.isNotEmpty
-                    ? Image.network(
-                        book.thumbnailUrl,
+                    ? CachedNetworkImage(
+                        imageUrl: book.thumbnailUrl,
                         fit: BoxFit.cover,
                         width: double.infinity,
-                        errorBuilder: (context, error, stackTrace) =>
+                        placeholder: (context, url) => _buildLoading(),
+                        errorWidget: (context, url, error) =>
                             _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
@@ -136,6 +138,18 @@ class BookCard extends StatelessWidget {
       color: Colors.grey[800],
       child: const Center(
         child: Icon(Icons.broken_image, color: Colors.white24),
+      ),
+    );
+  }
+
+  Widget _buildLoading() {
+    return Container(
+      color: Colors.grey[800],
+      child: const Center(
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: Colors.orangeAccent,
+        ),
       ),
     );
   }

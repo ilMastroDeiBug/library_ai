@@ -19,16 +19,16 @@ abstract class MovieRepository {
   Future<void> saveAnalysis(String userId, int id, String analysis);
 
   // API (TMDB)
-  Future<List<Movie>> getMoviesByCategory(String categoryPath, {int page = 1});
-  Future<List<TvSeries>> getTvSeriesByCategory(
+  Stream<List<Movie>> getMoviesByCategory(String categoryPath, {int page = 1});
+  Stream<List<TvSeries>> getTvSeriesByCategory(
     String categoryPath, {
     int page = 1,
   });
 
   Future<List<Review>> getReviews(int id, {bool isTv = false});
   Future<List<CastMember>> getCast(int id, {bool isTv = false});
-  Future<List<Movie>> searchMovies(String query);
-  Future<List<TvSeries>> searchTvSeries(String query);
+  Stream<List<Movie>> searchMovies(String query);
+  Stream<List<TvSeries>> searchTvSeries(String query);
 
   Future<String?> getTrailerKey(int id, {bool isTv = false});
   Future<WatchProvidersResult?> getWatchProviders(int id, {bool isTv = false});

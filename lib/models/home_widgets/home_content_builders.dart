@@ -1,5 +1,4 @@
-﻿import 'dart:math'; // <-- NECESSARIO PER IL RANDOMIZER
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/pages_services/home_service.dart';
 import '../../models/book_widgets/book_section.dart';
 import '../../injection_container.dart';
@@ -11,10 +10,10 @@ import '../../domain/use_cases/tv_series_use_cases.dart';
 import '../../pages/book_detail_page.dart';
 import '../../pages/movie_detail_page.dart';
 import '../../models/app_mode.dart';
-import '../../models/movie_widget/movie_card.dart';
 import '../../domain/entities/movie.dart';
 import '../../domain/entities/tv_series.dart';
 import '../../services/utility_services/language_service.dart';
+import 'cinema_horizontal.dart'; // Assicurati che l'import sia corretto per CinemaHorizontalList
 
 class HomeContentBuilder {
   static List<Widget> buildBookContent() {
@@ -33,7 +32,7 @@ class HomeContentBuilder {
 
   static List<Widget> buildCinemaContent({
     required CinemaType type,
-    required Set<int> seenIds, // <-- RICEVE IL REGISTRO
+    required Set<int> seenIds,
   }) {
     final sections = (type == CinemaType.movies)
         ? HomeService.movieSections
@@ -46,7 +45,7 @@ class HomeContentBuilder {
         title: section['title'],
         path: section['path'],
         isTv: type == CinemaType.tvSeries,
-        seenIds: seenIds, // <-- LO PASSA ALLA SINGOLA RIGA
+        seenIds: seenIds,
       );
     }).toList();
   }
@@ -54,13 +53,13 @@ class HomeContentBuilder {
   static Widget buildHeroBanner(
     AppMode mode, {
     CinemaType cinemaType = CinemaType.movies,
-    Set<int>? seenIds, // <-- RICEVE IL REGISTRO
+    Set<int>? seenIds,
   }) {
     final languageCode = sl<LanguageService>().currentLanguage;
 
-    return FutureBuilder<List<dynamic>>(
+    return StreamBuilder<List<dynamic>>(
       key: ValueKey('hero_${mode.index}_${cinemaType.index}_$languageCode'),
-      future: _fetchHeroItems(mode, cinemaType, seenIds),
+      stream: _heroItemsStream(mode, cinemaType, seenIds),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -89,194 +88,41 @@ class HomeContentBuilder {
     );
   }
 
-  static Future<List<dynamic>> _fetchHeroItems(
+  static Stream<List<dynamic>> _heroItemsStream(
     AppMode mode,
     CinemaType cinemaType,
     Set<int>? seenIds,
-  ) async {
+  ) async* {
     try {
-      List<dynamic> items = [];
       if (mode == AppMode.books) {
-        items = await sl<GetBooksByCategoryUseCase>().call("Fantasy");
-      } else {
-        items = cinemaType == CinemaType.movies
-            ? await sl<GetMoviesByCategoryUseCase>().call("trending")
-            : await sl<GetTvSeriesByCategoryUseCase>().call("trending");
+        // I libri sono rimasti dei Future
+        final books = await sl<GetBooksByCategoryUseCase>().call("Fantasy");
+        yield List<dynamic>.from(books);
+        return;
       }
 
-      // PRENOTAZIONE: Se ci sono film nel banner, li registriamo subito
-      // così non appariranno nelle liste sottostanti!
-      if (seenIds != null && items.isNotEmpty) {
-        for (var item in items.take(5)) {
-          seenIds.add(item.id);
+      // Risolto il problema del cast dinamico
+      final Stream<List<dynamic>> stream = cinemaType == CinemaType.movies
+          ? sl<GetMoviesByCategoryUseCase>()
+                .call("trending")
+                .map((items) => List<dynamic>.from(items))
+          : sl<GetTvSeriesByCategoryUseCase>()
+                .call("trending")
+                .map((items) => List<dynamic>.from(items));
+
+      await for (final items in stream) {
+        if (seenIds != null && items.isNotEmpty) {
+          for (var item in items.take(5)) {
+            // Controllo sicuro prima di accedere all'ID
+            if (item is Movie) seenIds.add(item.id);
+            if (item is TvSeries) seenIds.add(item.id);
+          }
         }
+        yield items;
       }
-
-      return items;
     } catch (e) {
-      return [];
+      yield [];
     }
-  }
-}
-
-// -------------------------------------------------------------
-// ORA È UNO STATEFUL WIDGET PER NON SPARE CHIAMATE API INUTILI
-// E GESTIRE IL FILTRO DEI DOPPIONI
-// -------------------------------------------------------------
-class CinemaHorizontalList extends StatefulWidget {
-  final String title;
-  final String path;
-  final bool isTv;
-  final Set<int> seenIds;
-
-  const CinemaHorizontalList({
-    required this.title,
-    required this.path,
-    required this.isTv,
-    required this.seenIds,
-    super.key,
-  });
-
-  @override
-  State<CinemaHorizontalList> createState() => _CinemaHorizontalListState();
-}
-
-class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
-  late Future<List<dynamic>> _future;
-  final LanguageService _languageService = sl<LanguageService>();
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _fetchAndFilter();
-    _languageService.addListener(_handleLanguageChanged);
-  }
-
-  @override
-  void dispose() {
-    _languageService.removeListener(_handleLanguageChanged);
-    super.dispose();
-  }
-
-  void _handleLanguageChanged() {
-    if (!mounted) return;
-    setState(() {
-      _future = _fetchAndFilter();
-    });
-  }
-
-  Future<List<dynamic>> _fetchAndFilter() async {
-    // 1. RANDOMIZER
-    int pageToFetch = 1;
-    if (widget.path.contains('with_genres=')) {
-      pageToFetch = Random().nextInt(3) + 1;
-    }
-
-    // 2. FETCH SEPARATO (Evitiamo il conflitto di tipi di Dart!)
-    List<dynamic> rawItems = [];
-    if (widget.isTv) {
-      rawItems = await sl<GetTvSeriesByCategoryUseCase>().call(
-        widget.path,
-        page: pageToFetch,
-      );
-    } else {
-      rawItems = await sl<GetMoviesByCategoryUseCase>().call(
-        widget.path,
-        page: pageToFetch,
-      );
-    }
-
-    // 3. DEDUPLICAZIONE ANTI-CLONI
-    List<dynamic> uniqueItems = [];
-    for (var item in rawItems) {
-      // TYPE CHECKING: Estraiamo l'id in modo 100% sicuro
-      int currentId = 0;
-      if (item is Movie) {
-        currentId = item.id;
-      } else if (item is TvSeries) {
-        currentId = item.id;
-      } else {
-        continue; // Fallback di sicurezza se l'item è rotto
-      }
-
-      // Se il set NON contiene l'id, il film/serie è inedito
-      if (!widget.seenIds.contains(currentId)) {
-        uniqueItems.add(item);
-        widget.seenIds.add(currentId); // Lo blocchiamo per le righe future
-      }
-    }
-
-    // 4. SHUFFLE
-    if (widget.path.contains('with_genres=')) {
-      uniqueItems.shuffle();
-    }
-
-    return uniqueItems;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                widget.title, // <-- Aggiornato a widget.title
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Icon(Icons.arrow_forward, color: Colors.white54, size: 16),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 240,
-          child: FutureBuilder<List<dynamic>>(
-            key: ValueKey('list_${widget.title}_${widget.isTv}'),
-            future: _future, // <-- ORA USA IL FUTURE INIZIALIZZATO IN INITSTATE
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                );
-              }
-              final items = snapshot.data ?? [];
-
-              // Se la deduplicazione ha svuotato la lista, nascondiamo la riga gracefully
-              if (items.isEmpty) return const SizedBox.shrink();
-
-              return ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 15),
-                    child: MovieCard(
-                      media: items[index],
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MovieDetailPage(media: items[index]),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
   }
 }
 

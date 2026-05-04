@@ -1,3 +1,4 @@
+import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/repositories/favorite_repository.dart';
 import '../domain/entities/favorite_item.dart';
@@ -14,7 +15,6 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
     String title,
     String? posterUrl,
   ) async {
-    // 1. Controlla se è già nei preferiti
     final existing = await _supabase
         .from(_tableName)
         .select()
@@ -24,61 +24,103 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
         .maybeSingle();
 
     if (existing != null) {
-      // 2a. Se esiste, rimuovilo
       await _supabase.from(_tableName).delete().eq('id', existing['id']);
       return false;
-    } else {
-      // 2b. Se non esiste, salvalo
-      await _supabase.from(_tableName).insert({
-        'user_id': userId,
-        'item_id': itemId,
-        'item_type': itemType,
-        'title': title,
-        'poster_url': posterUrl,
-      });
-      return true;
+    }
+
+    await _supabase.from(_tableName).insert({
+      'user_id': userId,
+      'item_id': itemId,
+      'item_type': itemType,
+      'title': title,
+      'poster_url': posterUrl,
+    });
+    return true;
+  }
+
+  @override
+  Stream<List<FavoriteItem>> getFavoritesStream(
+    String userId, {
+    String? type,
+  }) async* {
+    final cacheKey = type == null
+        ? 'favorites_$userId'
+        : 'favorites_${userId}_$type';
+    final cacheBox = Hive.box('cinelib_cache');
+
+    final cachedRows = _readCachedRows(cacheBox, cacheKey);
+    if (cachedRows != null) {
+      yield _mapFavoriteRowsToEntities(cachedRows, type: type);
+    } else if (type != null) {
+      final cachedAllRows = _readCachedRows(cacheBox, 'favorites_$userId');
+      if (cachedAllRows != null) {
+        yield _mapFavoriteRowsToEntities(cachedAllRows, type: type);
+      }
+    }
+
+    try {
+      yield* _supabase
+          .from(_tableName)
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .asyncMap((snapshot) async {
+            final rows = snapshot
+                .map((row) => Map<String, dynamic>.from(row))
+                .toList();
+            final filteredRows = type == null
+                ? rows
+                : rows.where((row) => row['item_type'] == type).toList();
+
+            await cacheBox.put(cacheKey, filteredRows);
+            if (type == null) {
+              final groupedByType = <String, List<Map<String, dynamic>>>{};
+              for (final row in rows) {
+                final rowType = row['item_type']?.toString();
+                if (rowType == null) continue;
+                groupedByType.putIfAbsent(rowType, () => []).add(row);
+              }
+
+              for (final entry in groupedByType.entries) {
+                await cacheBox.put(
+                  'favorites_${userId}_${entry.key}',
+                  entry.value,
+                );
+              }
+            }
+
+            return _mapFavoriteRowsToEntities(filteredRows, type: type);
+          });
+    } catch (_) {
+      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
     }
   }
 
   @override
-  Stream<List<FavoriteItem>> getFavoritesStream(String userId, {String? type}) {
-    // 1. Apriamo lo stream dicendo a Supabase che 'id' è la chiave primaria
-    // per tracciare correttamente gli aggiornamenti in tempo reale.
-    var query = _supabase
-        .from(_tableName)
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .order('created_at', ascending: false);
-
-    return query.map((snapshot) {
-      // 2. Se c'è un filtro 'type' (es. voglio solo i film)
-      if (type != null) {
-        // Applichiamo il filtro in memoria.
-        // Nota: Creiamo esplicitamente una NUOVA lista con .toList()
-        // così Flutter capisce che lo stato è cambiato.
-        final filtered = snapshot
-            .where((row) => row['item_type'] == type)
-            .toList();
-        return filtered.map((row) => FavoriteItem.fromMap(row)).toList();
-      }
-
-      // 3. Se non c'è filtro, mappiamo tutti i risultati
-      return snapshot.map((row) => FavoriteItem.fromMap(row)).toList();
+  Stream<bool> isFavoriteStream(String userId, int itemId, String itemType) {
+    return getFavoritesStream(userId, type: itemType).map((items) {
+      return items.any((item) => item.itemId == itemId);
     });
   }
 
-  @override
-  Stream<bool> isFavoriteStream(String userId, int itemId, String itemType) {
-    return _supabase
-        .from(_tableName)
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId) // <-- L'unico filtro permesso lato server
-        .map((snapshot) {
-          // Filtriamo il resto lato client nella memoria dell'app (velocissimo)
-          final matches = snapshot.where(
-            (row) => row['item_id'] == itemId && row['item_type'] == itemType,
-          );
-          return matches.isNotEmpty;
-        });
+  List<Map<String, dynamic>>? _readCachedRows(Box cacheBox, String cacheKey) {
+    final cached = cacheBox.get(cacheKey);
+    if (cached is! List) return null;
+
+    return cached
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  List<FavoriteItem> _mapFavoriteRowsToEntities(
+    List<Map<String, dynamic>> rows, {
+    String? type,
+  }) {
+    final filteredRows = type == null
+        ? rows
+        : rows.where((row) => row['item_type'] == type).toList();
+
+    return filteredRows.map((row) => FavoriteItem.fromMap(row)).toList();
   }
 }

@@ -1,4 +1,7 @@
+// lib/services/utility_services/tmdb_service.dart
+
 import 'dart:convert';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
@@ -24,119 +27,163 @@ class TmdbService {
 
   String get _language => sl<LanguageService>().currentLanguage;
 
-  // --- FILM ---
-  Future<List<Movie>> fetchMoviesByCategory(
+  // --- FILM (STREAM CACHE-THEN-NETWORK) ---
+  Stream<List<Movie>> fetchMoviesByCategory(
     String endpoint, {
     int page = 1,
-  }) async {
+  }) async* {
     final url = Uri.parse(
       '$_baseUrl/movie/$endpoint?language=$_language&page=$page',
     );
-    return _fetchMovies(url);
+    yield* _streamMovies(url, 'tmdb_movie_${endpoint}_${_language}_page_$page');
   }
 
-  Future<List<Movie>> fetchMoviesByGenre(String genreId, {int page = 1}) async {
+  Stream<List<Movie>> fetchMoviesByGenre(
+    String genreId, {
+    int page = 1,
+  }) async* {
     final url = Uri.parse(
       '$_baseUrl/discover/movie?with_genres=$genreId&language=$_language&page=$page',
     );
-    return _fetchMovies(url);
+    yield* _streamMovies(
+      url,
+      'tmdb_movie_genre_${genreId}_${_language}_page_$page',
+    );
   }
 
-  Future<List<Movie>> fetchTrendingMovies({int page = 1}) async {
+  Stream<List<Movie>> fetchTrendingMovies({int page = 1}) async* {
     final url = Uri.parse(
       '$_baseUrl/trending/movie/week?language=$_language&page=$page',
     );
-    return _fetchMovies(url);
+    yield* _streamMovies(url, 'tmdb_trending_movies_${_language}_page_$page');
   }
 
-  Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
-    if (query.isEmpty) return [];
+  Stream<List<Movie>> searchMovies(String query, {int page = 1}) async* {
+    if (query.isEmpty) {
+      yield [];
+      return;
+    }
     final url = Uri.parse(
-      '$_baseUrl/search/movie?query=$query&language=$_language&include_adult=false&page=$page',
+      '$_baseUrl/search/movie?query=${Uri.encodeQueryComponent(query)}&language=$_language&include_adult=false&page=$page',
     );
-    return _fetchMovies(url);
+    yield* _streamMovies(
+      url,
+      'tmdb_search_movies_${_sanitizeCachePart(query)}_${_language}_page_$page',
+    );
   }
 
-  // --- SERIE TV ---
-  Future<List<TvSeries>> fetchTvSeriesByCategory(
+  // --- SERIE TV (STREAM CACHE-THEN-NETWORK) ---
+  Stream<List<TvSeries>> fetchTvSeriesByCategory(
     String endpoint, {
     int page = 1,
-  }) async {
+  }) async* {
     final url = Uri.parse(
       '$_baseUrl/tv/$endpoint?language=$_language&page=$page',
     );
-    return _fetchTvSeries(url);
+    yield* _streamTvSeries(url, 'tmdb_tv_${endpoint}_${_language}_page_$page');
   }
 
-  Future<List<TvSeries>> fetchTvByGenre(String genreId, {int page = 1}) async {
+  Stream<List<TvSeries>> fetchTvByGenre(String genreId, {int page = 1}) async* {
     final url = Uri.parse(
       '$_baseUrl/discover/tv?with_genres=$genreId&language=$_language&page=$page',
     );
-    return _fetchTvSeries(url);
+    yield* _streamTvSeries(
+      url,
+      'tmdb_tv_genre_${genreId}_${_language}_page_$page',
+    );
   }
 
-  Future<List<TvSeries>> fetchTvTrending({int page = 1}) async {
+  Stream<List<TvSeries>> fetchTvTrending({int page = 1}) async* {
     final url = Uri.parse(
       '$_baseUrl/trending/tv/week?language=$_language&page=$page',
     );
-    return _fetchTvSeries(url);
+    yield* _streamTvSeries(url, 'tmdb_trending_tv_${_language}_page_$page');
   }
 
-  Future<List<TvSeries>> searchTvSeries(String query, {int page = 1}) async {
-    if (query.isEmpty) return [];
+  Stream<List<TvSeries>> searchTvSeries(String query, {int page = 1}) async* {
+    if (query.isEmpty) {
+      yield [];
+      return;
+    }
     final url = Uri.parse(
-      '$_baseUrl/search/tv?query=$query&language=$_language&include_adult=false&page=$page',
+      '$_baseUrl/search/tv?query=${Uri.encodeQueryComponent(query)}&language=$_language&include_adult=false&page=$page',
     );
-    return _fetchTvSeries(url);
+    yield* _streamTvSeries(
+      url,
+      'tmdb_search_tv_${_sanitizeCachePart(query)}_${_language}_page_$page',
+    );
   }
 
-  // --- ATTORI / PERSONE ---
-  Future<List<CastMember>> searchActors(String query, {int page = 1}) async {
-    if (query.isEmpty) return [];
+  // --- ATTORI / PERSONE (STREAM CACHE-THEN-NETWORK) ---
+  Stream<List<CastMember>> searchActors(String query, {int page = 1}) async* {
+    if (query.isEmpty) {
+      yield [];
+      return;
+    }
     final url = Uri.parse(
-      '$_baseUrl/search/person?query=$query&language=$_language&page=$page',
+      '$_baseUrl/search/person?query=${Uri.encodeQueryComponent(query)}&language=$_language&page=$page',
     );
+    final cacheKey =
+        'tmdb_search_people_${_sanitizeCachePart(query)}_${_language}_page_$page';
+    final cacheBox = Hive.box('tmdb_cache');
+
+    final cachedResults = _readCachedResults(cacheBox, cacheKey);
+    if (cachedResults != null) {
+      yield cachedResults.map(_mapPersonSearchResult).toList();
+    }
 
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return (data['results'] as List).map((json) {
-          return CastMember(
-            id: json['id'] ?? 0,
-            name: json['name'] ?? 'Sconosciuto',
-            character: json['known_for_department'] ?? 'Attore',
-            profilePath: json['profile_path'],
-          );
-        }).toList();
+        final results = (data['results'] as List? ?? [])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+        await cacheBox.put(cacheKey, results);
+        yield results.map(_mapPersonSearchResult).toList();
       }
-      return [];
-    } catch (e) {
-      throw Exception('Errore ricerca attori: $e');
+    } catch (_) {
+      // Offline fallback gestito dallo yield iniziale
     }
   }
 
-  // --- COMMON ---
+  // --- COMMON (FUTURE CON CACHE OFFLINE-FALLBACK) ---
+
   Future<List<CastMember>> fetchCast(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final url = Uri.parse(
       '$_baseUrl/$endpoint/$id/credits?language=$_language',
     );
+    final cacheKey = 'tmdb_cast_${id}_$endpoint';
+    final cacheBox = Hive.box('tmdb_cache');
 
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List castList = data['cast'] ?? [];
+
+        // Salva in cache
+        await cacheBox.put(cacheKey, castList);
+
         return castList
             .map((json) => CastMember.fromJson(json))
             .take(10)
             .toList();
       } else {
-        throw Exception('Errore TMDB fetchCast: ${response.statusCode}');
+        throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Errore connessione fetchCast: $e');
+      // OFFLINE FALLBACK
+      final cachedData = cacheBox.get(cacheKey);
+      if (cachedData is List) {
+        return cachedData
+            .map((json) => CastMember.fromJson(Map<String, dynamic>.from(json)))
+            .take(10)
+            .toList();
+      }
+      throw Exception('Errore connessione e nessuna cache: $e');
     }
   }
 
@@ -145,40 +192,70 @@ class TmdbService {
     final url = Uri.parse(
       '$_baseUrl/$endpoint/$id/reviews?language=$_language&page=1',
     );
+    final cacheKey = 'tmdb_reviews_${id}_$endpoint';
+    final cacheBox = Hive.box('tmdb_cache');
 
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List results = data['results'] ?? [];
+
+        // Salva in cache
+        await cacheBox.put(cacheKey, results);
+
         return results.map((json) => Review.fromJson(json)).take(5).toList();
       } else {
-        throw Exception('Errore TMDB fetchReviews: ${response.statusCode}');
+        throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Errore connessione fetchReviews: $e');
+      // OFFLINE FALLBACK
+      final cachedData = cacheBox.get(cacheKey);
+      if (cachedData is List) {
+        return cachedData
+            .map((json) => Review.fromJson(Map<String, dynamic>.from(json)))
+            .take(5)
+            .toList();
+      }
+      throw Exception('Errore connessione e nessuna cache: $e');
     }
   }
 
   Future<String?> fetchTrailerKey(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final url = Uri.parse('$_baseUrl/$endpoint/$id/videos?language=$_language');
+    final cacheKey = 'tmdb_trailer_${id}_$endpoint';
+    final cacheBox = Hive.box('tmdb_cache');
 
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List results = data['results'] ?? [];
+
+        // Salva la lista intera in cache
+        await cacheBox.put(cacheKey, results);
+
         final trailer = results.firstWhere(
           (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
           orElse: () => null,
         );
         return trailer?['key'];
       } else {
-        throw Exception('Errore TMDB fetchTrailerKey: ${response.statusCode}');
+        throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Errore connessione fetchTrailerKey: $e');
+      // OFFLINE FALLBACK
+      final cachedData = cacheBox.get(cacheKey);
+      if (cachedData is List) {
+        final List results = cachedData;
+        final trailer = results.firstWhere(
+          (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
+          orElse: () => null,
+        );
+        return trailer?['key'];
+      }
+      throw Exception('Errore connessione e nessuna cache: $e');
     }
   }
 
@@ -188,76 +265,138 @@ class TmdbService {
   }) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final url = Uri.parse('$_baseUrl/$endpoint/$id/watch/providers');
+    final cacheKey = 'tmdb_providers_${id}_$endpoint';
+    final cacheBox = Hive.box('tmdb_cache');
 
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'];
-        if (results != null && results.containsKey('IT')) {
-          return WatchProvidersResult.fromJson(results['IT']);
+
+        // Salva in cache il nodo 'results'
+        if (results != null) {
+          await cacheBox.put(cacheKey, results);
+          if (results.containsKey('IT')) {
+            return WatchProvidersResult.fromJson(results['IT']);
+          }
         }
         return null;
       } else {
-        throw Exception(
-          'Errore TMDB fetchWatchProviders: ${response.statusCode}',
-        );
+        throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Errore connessione fetchWatchProviders: $e');
+      // OFFLINE FALLBACK
+      final cachedData = cacheBox.get(cacheKey);
+      if (cachedData is Map && cachedData.containsKey('IT')) {
+        return WatchProvidersResult.fromJson(
+          Map<String, dynamic>.from(cachedData['IT']),
+        );
+      }
+      return null; // Fallback silenzioso per i providers
     }
   }
 
-  // --- PERSON/ACTOR DETAILS CORRETTO ---
+  // --- PERSON/ACTOR DETAILS CORRETTO (FUTURE CON CACHE) ---
   Future<Map<String, dynamic>> getPersonDetails(int personId) async {
     final url = Uri.parse(
       '$_baseUrl/person/$personId?language=$_language&append_to_response=combined_credits',
     );
+    final cacheKey = 'tmdb_person_details_$personId';
+    final cacheBox = Hive.box('tmdb_cache');
 
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        final data = json.decode(response.body);
+
+        // Salva l'intero oggetto in cache
+        await cacheBox.put(cacheKey, data);
+
+        return data;
       } else {
-        throw Exception(
-          'Failed to load person details: ${response.statusCode}',
-        );
+        throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Errore di Rete TMDB (Person): $e');
+      // OFFLINE FALLBACK
+      final cachedData = cacheBox.get(cacheKey);
+      if (cachedData is Map) {
+        return Map<String, dynamic>.from(cachedData);
+      }
+      throw Exception('Errore di Rete TMDB (Person) e nessuna cache: $e');
     }
   }
 
   // --- HELPERS ---
-  Future<List<Movie>> _fetchMovies(Uri url) async {
+  Stream<List<Movie>> _streamMovies(Uri url, String cacheKey) async* {
+    final cacheBox = Hive.box('tmdb_cache');
+    final cachedResults = _readCachedResults(cacheBox, cacheKey);
+    if (cachedResults != null) {
+      yield cachedResults.map(Movie.fromTmdb).toList();
+    }
+
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return (data['results'] as List)
-            .map((item) => Movie.fromTmdb(item))
+        final results = (data['results'] as List? ?? [])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
             .toList();
-      } else {
-        throw Exception('Errore HTTP TMDB (Movies): ${response.statusCode}');
+        await cacheBox.put(cacheKey, results);
+        yield results.map(Movie.fromTmdb).toList();
       }
-    } catch (e) {
-      throw Exception('Errore di Rete TMDB (Movies): $e');
+    } catch (_) {
+      // Offline fallback gestito dallo yield iniziale
     }
   }
 
-  Future<List<TvSeries>> _fetchTvSeries(Uri url) async {
+  Stream<List<TvSeries>> _streamTvSeries(Uri url, String cacheKey) async* {
+    final cacheBox = Hive.box('tmdb_cache');
+    final cachedResults = _readCachedResults(cacheBox, cacheKey);
+    if (cachedResults != null) {
+      yield cachedResults.map(TvSeries.fromTmdb).toList();
+    }
+
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return (data['results'] as List)
-            .map((item) => TvSeries.fromTmdb(item))
+        final results = (data['results'] as List? ?? [])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
             .toList();
-      } else {
-        throw Exception('Errore HTTP TMDB (TV): ${response.statusCode}');
+        await cacheBox.put(cacheKey, results);
+        yield results.map(TvSeries.fromTmdb).toList();
       }
-    } catch (e) {
-      throw Exception('Errore di Rete TMDB (TV): $e');
+    } catch (_) {
+      // Offline fallback gestito dallo yield iniziale
     }
+  }
+
+  List<Map<String, dynamic>>? _readCachedResults(
+    Box cacheBox,
+    String cacheKey,
+  ) {
+    final cached = cacheBox.get(cacheKey);
+    if (cached is! List) return null;
+
+    return cached
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  String _sanitizeCachePart(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+  }
+
+  CastMember _mapPersonSearchResult(Map<String, dynamic> json) {
+    return CastMember(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? 'Sconosciuto',
+      character: json['known_for_department'] ?? 'Attore',
+      profilePath: json['profile_path'],
+    );
   }
 }

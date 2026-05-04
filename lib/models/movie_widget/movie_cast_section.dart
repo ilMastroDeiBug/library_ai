@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
@@ -91,22 +92,34 @@ class MovieCastSection extends StatelessWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white10),
-                                image: actor.fullProfileUrl.isNotEmpty
-                                    ? DecorationImage(
-                                        image: NetworkImage(
-                                          actor.fullProfileUrl,
-                                        ),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
                                 color: Colors.white10,
                               ),
-                              child: actor.fullProfileUrl.isEmpty
-                                  ? const Icon(
+                              child: actor.fullProfileUrl.isNotEmpty
+                                  ? ClipOval(
+                                      child: CachedNetworkImage(
+                                        imageUrl: actor.fullProfileUrl,
+                                        width: 70,
+                                        height: 70,
+                                        fit: BoxFit.cover,
+                                        placeholder: (context, url) =>
+                                            const Center(
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.orangeAccent,
+                                              ),
+                                            ),
+                                        errorWidget: (_, __, ___) =>
+                                            const Icon(
+                                          Icons.person,
+                                          color: Colors.white24,
+                                        ),
+                                      ),
+                                    )
+                                  : const Icon(
                                       Icons.person,
                                       color: Colors.white24,
-                                    )
-                                  : null,
+                                    ),
                             ),
                             const SizedBox(height: 8),
                             Text(

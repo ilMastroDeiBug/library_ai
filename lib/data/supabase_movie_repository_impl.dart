@@ -1,3 +1,4 @@
+import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/entities/movie.dart';
@@ -20,62 +21,125 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
        _tmdbService = tmdbService ?? TmdbService();
 
   @override
-  Stream<List<dynamic>> getWatchlistStream(String userId, String status) {
-    return _supabase
-        .from(_tableName)
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .order('timestamp', ascending: false)
-        .map((snapshot) {
-          final filteredRows = snapshot
-              .where((row) => row['status'] == status)
-              .toList();
+  Stream<List<dynamic>> getWatchlistStream(String userId, String status) async* {
+    final cacheKey = 'watchlist_${userId}_$status';
+    final cacheBox = Hive.box('cinelib_cache');
 
-          return filteredRows.map((row) {
-            final type = row['type'] as String;
-            final int mediaId = row['media_id'] as int;
+    final cachedRows = _readCachedRows(cacheBox, cacheKey);
+    if (cachedRows != null) {
+      yield _mapWatchlistRowsToEntities(cachedRows, status);
+    }
 
-            final Map<String, dynamic> rawData = row['raw_data'] ?? {};
-            rawData['status'] = row['status'];
-            rawData['aiAnalysis'] = row['ai_analysis'];
-            rawData['type'] = type;
+    try {
+      yield* _supabase
+          .from(_tableName)
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .order('timestamp', ascending: false)
+          .asyncMap((snapshot) async {
+            final rows = snapshot
+                .map((row) => Map<String, dynamic>.from(row))
+                .toList();
+            final filteredRows = rows
+                .where((row) => row['status'] == status)
+                .toList();
 
-            return (type == 'tv')
-                ? TvSeries.fromFirestore(rawData, mediaId)
-                : Movie.fromFirestore(rawData, mediaId);
-          }).toList();
-        });
+            await cacheBox.put(cacheKey, filteredRows);
+            for (final row in filteredRows) {
+              final mediaId = row['media_id'];
+              if (mediaId != null) {
+                await cacheBox.put('media_${userId}_$mediaId', row);
+              }
+            }
+
+            return _mapWatchlistRowsToEntities(filteredRows, status);
+          });
+    } catch (_) {
+      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
+    }
+  }
+
+  List<Map<String, dynamic>>? _readCachedRows(Box cacheBox, String cacheKey) {
+    final cached = cacheBox.get(cacheKey);
+    if (cached is! List) return null;
+
+    return cached
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  List<dynamic> _mapWatchlistRowsToEntities(
+    List<Map<String, dynamic>> rows,
+    String status,
+  ) {
+    return rows.where((row) => row['status'] == status).map((row) {
+      final type = row['type'] as String? ?? 'movie';
+      final mediaId = int.tryParse(row['media_id'].toString()) ?? 0;
+
+      final rawData = Map<String, dynamic>.from(row['raw_data'] as Map? ?? {});
+      rawData['status'] = row['status'];
+      rawData['aiAnalysis'] = row['ai_analysis'];
+      rawData['type'] = type;
+
+      return (type == 'tv')
+          ? TvSeries.fromFirestore(rawData, mediaId)
+          : Movie.fromFirestore(rawData, mediaId);
+    }).toList();
   }
 
   @override
-  Stream<dynamic> getSingleMediaStream(String userId, int id) {
-    return _supabase
-        .from(_tableName)
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .map((snapshot) {
-          final filteredSnapshot = snapshot.where((row) {
-            final rowMediaId = int.tryParse(row['media_id'].toString()) ?? 0;
-            return rowMediaId == id;
-          }).toList();
+  Stream<dynamic> getSingleMediaStream(String userId, int id) async* {
+    final cacheKey = 'media_${userId}_$id';
+    final cacheBox = Hive.box('cinelib_cache');
 
-          if (filteredSnapshot.isEmpty) return null;
+    final cachedRow = _readCachedRow(cacheBox, cacheKey);
+    if (cachedRow != null) {
+      yield _mapWatchlistRowToEntity(cachedRow);
+    }
 
-          final row = filteredSnapshot.first;
-          final type = row['type'] as String;
+    try {
+      yield* _supabase
+          .from(_tableName)
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .asyncMap((snapshot) async {
+            final filteredSnapshot = snapshot.where((row) {
+              final rowMediaId = int.tryParse(row['media_id'].toString()) ?? 0;
+              return rowMediaId == id;
+            }).toList();
 
-          final Map<String, dynamic> rawData = Map<String, dynamic>.from(
-            row['raw_data'] as Map? ?? {},
-          );
+            if (filteredSnapshot.isEmpty) return null;
 
-          rawData['status'] = row['status'];
-          rawData['aiAnalysis'] = row['ai_analysis'];
-          rawData['type'] = type;
+            final row = Map<String, dynamic>.from(filteredSnapshot.first);
+            await cacheBox.put(cacheKey, row);
 
-          return (type == 'tv')
-              ? TvSeries.fromFirestore(rawData, id)
-              : Movie.fromFirestore(rawData, id);
-        });
+            return _mapWatchlistRowToEntity(row);
+          });
+    } catch (_) {
+      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
+    }
+  }
+
+  Map<String, dynamic>? _readCachedRow(Box cacheBox, String cacheKey) {
+    final cached = cacheBox.get(cacheKey);
+    if (cached is! Map) return null;
+
+    return Map<String, dynamic>.from(cached);
+  }
+
+  dynamic _mapWatchlistRowToEntity(Map<String, dynamic> row) {
+    final type = row['type'] as String? ?? 'movie';
+    final mediaId = int.tryParse(row['media_id'].toString()) ?? 0;
+
+    final rawData = Map<String, dynamic>.from(row['raw_data'] as Map? ?? {});
+    rawData['status'] = row['status'];
+    rawData['aiAnalysis'] = row['ai_analysis'];
+    rawData['type'] = type;
+
+    return (type == 'tv')
+        ? TvSeries.fromFirestore(rawData, mediaId)
+        : Movie.fromFirestore(rawData, mediaId);
   }
 
   @override
@@ -135,49 +199,53 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
   }
 
   @override
-  Future<List<Movie>> getMoviesByCategory(
+  Stream<List<Movie>> getMoviesByCategory(
     String categoryPath, {
     int page = 1,
-  }) async {
-    List<Movie> rawList;
+  }) async* {
+    Stream<List<Movie>> rawStream;
     if (categoryPath == 'trending') {
-      rawList = await _tmdbService.fetchTrendingMovies(page: page);
+      rawStream = _tmdbService.fetchTrendingMovies(page: page);
     } else if (categoryPath.contains('with_genres=')) {
       final genreId = categoryPath.split('=').last;
-      rawList = await _tmdbService.fetchMoviesByGenre(genreId, page: page);
+      rawStream = _tmdbService.fetchMoviesByGenre(genreId, page: page);
     } else {
-      rawList = await _tmdbService.fetchMoviesByCategory(
+      rawStream = _tmdbService.fetchMoviesByCategory(
         categoryPath,
         page: page,
       );
     }
 
-    return rawList
-        .where((movie) => movie.posterPath.isNotEmpty && movie.voteCount > 0)
-        .toList();
+    yield* rawStream.map(
+      (rawList) => rawList
+          .where((movie) => movie.posterPath.isNotEmpty && movie.voteCount > 0)
+          .toList(),
+    );
   }
 
   @override
-  Future<List<TvSeries>> getTvSeriesByCategory(
+  Stream<List<TvSeries>> getTvSeriesByCategory(
     String categoryPath, {
     int page = 1,
-  }) async {
-    List<TvSeries> rawList;
+  }) async* {
+    Stream<List<TvSeries>> rawStream;
     if (categoryPath == 'trending') {
-      rawList = await _tmdbService.fetchTvTrending(page: page);
+      rawStream = _tmdbService.fetchTvTrending(page: page);
     } else if (categoryPath.contains('with_genres=')) {
       final genreId = categoryPath.split('=').last;
-      rawList = await _tmdbService.fetchTvByGenre(genreId, page: page);
+      rawStream = _tmdbService.fetchTvByGenre(genreId, page: page);
     } else {
-      rawList = await _tmdbService.fetchTvSeriesByCategory(
+      rawStream = _tmdbService.fetchTvSeriesByCategory(
         categoryPath,
         page: page,
       );
     }
 
-    return rawList
-        .where((tv) => tv.posterPath.isNotEmpty && tv.voteCount > 0)
-        .toList();
+    yield* rawStream.map(
+      (rawList) => rawList
+          .where((tv) => tv.posterPath.isNotEmpty && tv.voteCount > 0)
+          .toList(),
+    );
   }
 
   @override
@@ -191,12 +259,12 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
   }
 
   @override
-  Future<List<Movie>> searchMovies(String query) async {
+  Stream<List<Movie>> searchMovies(String query) {
     return _tmdbService.searchMovies(query);
   }
 
   @override
-  Future<List<TvSeries>> searchTvSeries(String query) async {
+  Stream<List<TvSeries>> searchTvSeries(String query) {
     return _tmdbService.searchTvSeries(query);
   }
 

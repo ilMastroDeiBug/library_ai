@@ -1,5 +1,6 @@
 // lib/models/movie_widget/watch_providers_widget.dart
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
@@ -156,12 +157,23 @@ class _WatchProvidersWidgetState extends State<WatchProvidersWidget> {
                     message: p.providerName,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        p.fullLogoUrl,
+                      child: CachedNetworkImage(
+                        imageUrl: p.fullLogoUrl,
                         width: 50,
                         height: 50,
                         fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => Container(
+                        placeholder: (context, url) => Container(
+                          width: 50,
+                          height: 50,
+                          color: Colors.grey[800],
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.orangeAccent,
+                            ),
+                          ),
+                        ),
+                        errorWidget: (ctx, url, error) => Container(
                           width: 50,
                           height: 50,
                           color: Colors.grey[800],

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
@@ -89,12 +90,23 @@ class SearchResultTile extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
                       width: 70,
                       height: 105,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
+                      placeholder: (context, url) => Container(
+                        width: 70,
+                        height: 105,
+                        color: Colors.white.withOpacity(0.05),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.orangeAccent,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) =>
                           _buildPlaceholder(defaultIcon),
                     )
                   : _buildPlaceholder(defaultIcon),
@@ -303,6 +315,11 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
   String _lastSearchedQuery = "";
   int _searchType = 0; // 0 = Media (Film/Serie), 1 = Attori
 
+  // Sostituiamo i vecchi Future con i listener per gli Stream
+  StreamSubscription<List<Movie>>? _movieSearchSubscription;
+  StreamSubscription<List<TvSeries>>? _tvSearchSubscription;
+  StreamSubscription<List<CastMember>>? _actorSearchSubscription;
+
   final LanguageService _languageService = sl<LanguageService>();
 
   @override
@@ -334,13 +351,19 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
     }
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    // Annulliamo le iscrizioni precedenti se l'utente cambia query velocemente
+    _movieSearchSubscription?.cancel();
+    _tvSearchSubscription?.cancel();
+    _actorSearchSubscription?.cancel();
+
     setState(() => _isLoading = true);
     _debounce = Timer(const Duration(milliseconds: 500), () {
       _performSearch(currentQuery);
     });
   }
 
-  Future<void> _performSearch(String queryStr) async {
+  void _performSearch(String queryStr) {
     final requestKey =
         '$queryStr::${_languageService.currentLanguage}::$_searchType';
 
@@ -350,53 +373,120 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
     }
 
     _lastSearchedQuery = requestKey;
-    List<dynamic> fetchResults = [];
 
-    try {
-      if (_searchType == 0) {
-        // Cerca Film & Serie in parallelo
-        final responses = await Future.wait([
-          sl<SearchMoviesUseCase>().call(queryStr),
-          sl<SearchTvSeriesUseCase>().call(queryStr),
-        ]);
-
-        // Unisce i risultati
-        List<dynamic> combinedResults = [...responses[0], ...responses[1]];
-
-        // Ordina i risultati combinati basandosi sulla popolarità
-        combinedResults.sort((a, b) {
-          // Utilizziamo un fallback a 0.0 per evitare crash
-          // Richiede che a.popularity e b.popularity siano implementati nelle Entity
-          double popA = 0.0;
-          double popB = 0.0;
-
-          if (a is Movie || a is TvSeries) popA = a.popularity ?? 0.0;
-          if (b is Movie || b is TvSeries) popB = b.popularity ?? 0.0;
-
-          return popB.compareTo(popA);
-        });
-
-        fetchResults = combinedResults;
-      } else {
-        // Cerca Attori
-        fetchResults = await sl<SearchActorsUseCase>().call(queryStr);
-      }
-    } catch (e) {
-      debugPrint("Search Error: $e");
+    if (_searchType == 0) {
+      _listenToMediaSearch(queryStr);
+    } else {
+      _listenToActorSearch(queryStr);
     }
+  }
 
-    if (mounted) {
-      setState(() {
-        _results = fetchResults;
-        _isLoading = false;
+  void _listenToMediaSearch(String queryStr) {
+    List<Movie> latestMovies = [];
+    List<TvSeries> latestTv = [];
+    var hasMovieEmission = false;
+    var hasTvEmission = false;
+
+    // Funzione interna per combinare e ordinare i risultati dei due Stream
+    void publishCombinedResults() {
+      final combinedResults = <dynamic>[...latestMovies, ...latestTv];
+
+      combinedResults.sort((a, b) {
+        // Estrazione sicura della popolarità per evitare crash a runtime
+        double popA = 0.0;
+        double popB = 0.0;
+
+        if (a is Movie || a is TvSeries) {
+          popA = (a.popularity as num?)?.toDouble() ?? 0.0;
+        }
+        if (b is Movie || b is TvSeries) {
+          popB = (b.popularity as num?)?.toDouble() ?? 0.0;
+        }
+
+        return popB.compareTo(popA);
       });
+
+      if (mounted) {
+        setState(() {
+          _results = combinedResults;
+          _isLoading = false;
+        });
+      }
     }
+
+    void handleDone() {
+      if (!mounted) return;
+      if (!hasMovieEmission && !hasTvEmission) {
+        setState(() {
+          _results = [];
+          _isLoading = false;
+        });
+      }
+    }
+
+    // Ci iscriviamo allo Stream dei film
+    _movieSearchSubscription = sl<SearchMoviesUseCase>()
+        .call(queryStr)
+        .listen(
+          (movies) {
+            hasMovieEmission = true;
+            latestMovies = movies;
+            publishCombinedResults();
+          },
+          onError: (_) => handleDone(),
+          onDone: handleDone,
+        );
+
+    // Ci iscriviamo allo Stream delle Serie TV simultaneamente
+    _tvSearchSubscription = sl<SearchTvSeriesUseCase>()
+        .call(queryStr)
+        .listen(
+          (series) {
+            hasTvEmission = true;
+            latestTv = series;
+            publishCombinedResults();
+          },
+          onError: (_) => handleDone(),
+          onDone: handleDone,
+        );
+  }
+
+  void _listenToActorSearch(String queryStr) {
+    var hasEmission = false;
+
+    // Ci iscriviamo allo Stream degli Attori
+    _actorSearchSubscription = sl<SearchActorsUseCase>()
+        .call(queryStr)
+        .listen(
+          (actors) {
+            hasEmission = true;
+            if (!mounted) return;
+            setState(() {
+              _results = actors;
+              _isLoading = false;
+            });
+          },
+          onError: (_) {
+            if (!mounted) return;
+            setState(() => _isLoading = false);
+          },
+          onDone: () {
+            if (!mounted || hasEmission) return;
+            setState(() {
+              _results = [];
+              _isLoading = false;
+            });
+          },
+        );
   }
 
   @override
   void dispose() {
     _languageService.removeListener(_handleLanguageChanged);
     _debounce?.cancel();
+    _movieSearchSubscription?.cancel();
+    _tvSearchSubscription?.cancel();
+    _actorSearchSubscription?.cancel();
     super.dispose();
   }
 
