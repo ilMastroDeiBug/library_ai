@@ -1,23 +1,23 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:library_ai/domain/entities/book.dart';
-import 'package:library_ai/domain/entities/movie.dart';
-import 'package:library_ai/domain/entities/tv_series.dart';
-import 'package:library_ai/models/app_mode.dart';
-import 'package:library_ai/models/movie_widget/cast_model.dart';
-import 'package:library_ai/injection_container.dart';
-import 'package:library_ai/services/utility_services/language_service.dart';
+import '../domain/entities/book.dart';
+import '../domain/entities/movie.dart';
+import '../domain/entities/tv_series.dart';
+import '../models/app_mode.dart';
+import '../models/movie_widget/cast_model.dart';
+import '../injection_container.dart';
+import '../services/utility_services/language_service.dart';
 
 // Use Cases
-import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
-import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
-import 'package:library_ai/domain/use_cases/actor_use_cases.dart';
+import '../domain/use_cases/movie_use_cases.dart';
+import '../domain/use_cases/tv_series_use_cases.dart';
+import '../domain/use_cases/actor_use_cases.dart';
 
 // Pages
-import '../../Pages/book_detail_page.dart';
-import '../../Pages/movie_detail_page.dart';
-import '../../Pages/actor_detail_page.dart';
+import 'book_detail_page.dart';
+import 'movie_detail_page.dart';
+import 'actor_detail_page.dart';
 
 class SearchResultTile extends StatelessWidget {
   final dynamic item;

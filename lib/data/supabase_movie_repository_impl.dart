@@ -30,26 +30,22 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
     final cacheKey = 'watchlist_${userId}_$status';
     final cacheBox = Hive.box('cinelib_cache');
 
-    // 1. CARICHIAMO E MOSTRIAMO SUBITO LA CACHE
+    // 1. CARICA LA CACHE
     final cachedRows = _readCachedRows(cacheBox, cacheKey);
-    final bool hasCache = cachedRows != null && cachedRows.isNotEmpty;
-
     if (cachedRows != null) {
       yield _mapWatchlistRowsToEntities(cachedRows, status);
     }
 
-    // 2. SE SIAMO OFFLINE, FERMIAMOCI ALLA CACHE
+    // 2. BLOCCO OFFLINE
     if (!sl<NetworkStatusService>().isOnline) return;
 
-    // 3. AGGIORNAMENTO DA SUPABASE PROTETTO
+    // 3. STREAM SUPABASE PULITO
     try {
       final supabaseStream = _supabase
           .from(_tableName)
           .stream(primaryKey: ['id'])
           .eq('user_id', userId)
           .order('timestamp', ascending: false);
-
-      bool isFirstEvent = true;
 
       await for (final snapshot in supabaseStream) {
         final rows = snapshot
@@ -59,16 +55,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
             .where((row) => row['status'] == status)
             .toList();
 
-        // FIX CRITICO DEL MILLISECONDO:
-        // Supabase spara un array vuoto [] appena si connette.
-        // Se abbiamo la cache, ignoriamo questo "falso vuoto".
-        if (isFirstEvent && filteredRows.isEmpty && hasCache) {
-          isFirstEvent = false;
-          continue;
-        }
-        isFirstEvent = false;
-
-        // Salvataggio in cache solo di dati reali e validi
         await cacheBox.put(cacheKey, filteredRows);
         for (final row in filteredRows) {
           final mediaId = row['media_id'];
@@ -79,15 +65,12 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
 
         yield _mapWatchlistRowsToEntities(filteredRows, status);
       }
-    } catch (_) {
-      // In caso di caduta di rete durante lo stream, la UI non perde i dati
-    }
+    } catch (_) {}
   }
 
   List<Map<String, dynamic>>? _readCachedRows(Box cacheBox, String cacheKey) {
     final cached = cacheBox.get(cacheKey);
     if (cached is! List) return null;
-
     return cached
         .whereType<Map>()
         .map((row) => Map<String, dynamic>.from(row))
@@ -101,7 +84,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
     return rows.where((row) => row['status'] == status).map((row) {
       final type = row['type'] as String? ?? 'movie';
       final mediaId = int.tryParse(row['media_id'].toString()) ?? 0;
-
       final rawData = Map<String, dynamic>.from(row['raw_data'] as Map? ?? {});
       rawData['status'] = row['status'];
       rawData['aiAnalysis'] = row['ai_analysis'];
@@ -119,8 +101,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
     final cacheBox = Hive.box('cinelib_cache');
 
     final cachedRow = _readCachedRow(cacheBox, cacheKey);
-    final bool hasCache = cachedRow != null;
-
     if (cachedRow != null) {
       yield _mapWatchlistRowToEntity(cachedRow);
     }
@@ -133,20 +113,11 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
           .stream(primaryKey: ['id'])
           .eq('user_id', userId);
 
-      bool isFirstEvent = true;
-
       await for (final snapshot in supabaseStream) {
         final filteredSnapshot = snapshot.where((row) {
           final rowMediaId = int.tryParse(row['media_id'].toString()) ?? 0;
           return rowMediaId == id;
         }).toList();
-
-        // FIX "Falso Vuoto" per la pagina dettaglio
-        if (isFirstEvent && filteredSnapshot.isEmpty && hasCache) {
-          isFirstEvent = false;
-          continue;
-        }
-        isFirstEvent = false;
 
         if (filteredSnapshot.isEmpty) {
           yield null;
@@ -170,7 +141,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
   dynamic _mapWatchlistRowToEntity(Map<String, dynamic> row) {
     final type = row['type'] as String? ?? 'movie';
     final mediaId = int.tryParse(row['media_id'].toString()) ?? 0;
-
     final rawData = Map<String, dynamic>.from(row['raw_data'] as Map? ?? {});
     rawData['status'] = row['status'];
     rawData['aiAnalysis'] = row['ai_analysis'];
@@ -183,7 +153,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
 
   @override
   Future<void> saveMovie(Movie movie, String userId) async {
-    await _supabase.from(_tableName).upsert({
+    final payload = {
       'user_id': userId,
       'media_id': movie.id,
       'type': 'movie',
@@ -191,12 +161,20 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       'ai_analysis': movie.aiAnalysis,
       'raw_data': movie.toMap(),
       'timestamp': DateTime.now().toIso8601String(),
-    }, onConflict: 'user_id, media_id, type');
+    };
+
+    await _supabase
+        .from(_tableName)
+        .upsert(payload, onConflict: 'user_id, media_id, type');
+
+    // Aggiornamento cache istantaneo
+    final cacheBox = Hive.box('cinelib_cache');
+    await cacheBox.put('media_${userId}_${movie.id}', payload);
   }
 
   @override
   Future<void> saveTvSeries(TvSeries series, String userId) async {
-    await _supabase.from(_tableName).upsert({
+    final payload = {
       'user_id': userId,
       'media_id': series.id,
       'type': 'tv',
@@ -204,16 +182,37 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       'ai_analysis': series.aiAnalysis,
       'raw_data': series.toMap(),
       'timestamp': DateTime.now().toIso8601String(),
-    }, onConflict: 'user_id, media_id, type');
+    };
+
+    await _supabase
+        .from(_tableName)
+        .upsert(payload, onConflict: 'user_id, media_id, type');
+
+    // Aggiornamento cache istantaneo
+    final cacheBox = Hive.box('cinelib_cache');
+    await cacheBox.put('media_${userId}_${series.id}', payload);
   }
 
   @override
   Future<void> updateStatus(String userId, int id, String newStatus) async {
+    final timestamp = DateTime.now().toIso8601String();
+
     await _supabase
         .from(_tableName)
-        .update({'status': newStatus})
+        .update({'status': newStatus, 'timestamp': timestamp})
         .eq('user_id', userId)
         .eq('media_id', id);
+
+    // FIX CHIAVE: Allineiamo la cache locale per la Detail Page
+    final cacheBox = Hive.box('cinelib_cache');
+    final cacheKey = 'media_${userId}_$id';
+    final cachedRow = cacheBox.get(cacheKey);
+    if (cachedRow is Map) {
+      final updatedRow = Map<String, dynamic>.from(cachedRow);
+      updatedRow['status'] = newStatus;
+      updatedRow['timestamp'] = timestamp;
+      await cacheBox.put(cacheKey, updatedRow);
+    }
   }
 
   @override
@@ -223,6 +222,10 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .delete()
         .eq('user_id', userId)
         .eq('media_id', id);
+
+    // Pialliamo anche la cache
+    final cacheBox = Hive.box('cinelib_cache');
+    await cacheBox.delete('media_${userId}_$id');
   }
 
   @override
@@ -251,7 +254,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
     } else {
       rawStream = _tmdbService.fetchMoviesByCategory(categoryPath, page: page);
     }
-
     yield* rawStream.map(
       (rawList) => rawList
           .where((movie) => movie.posterPath.isNotEmpty && movie.voteCount > 0)
@@ -276,7 +278,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         page: page,
       );
     }
-
     yield* rawStream.map(
       (rawList) => rawList
           .where((tv) => tv.posterPath.isNotEmpty && tv.voteCount > 0)
@@ -285,35 +286,28 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
   }
 
   @override
-  Future<List<Review>> getReviews(int id, {bool isTv = false}) async {
-    return _tmdbService.fetchReviews(id, isTv: isTv);
-  }
+  Future<List<Review>> getReviews(int id, {bool isTv = false}) async =>
+      _tmdbService.fetchReviews(id, isTv: isTv);
 
   @override
-  Future<List<CastMember>> getCast(int id, {bool isTv = false}) async {
-    return _tmdbService.fetchCast(id, isTv: isTv);
-  }
+  Future<List<CastMember>> getCast(int id, {bool isTv = false}) async =>
+      _tmdbService.fetchCast(id, isTv: isTv);
 
   @override
-  Stream<List<Movie>> searchMovies(String query) {
-    return _tmdbService.searchMovies(query);
-  }
+  Stream<List<Movie>> searchMovies(String query) =>
+      _tmdbService.searchMovies(query);
 
   @override
-  Stream<List<TvSeries>> searchTvSeries(String query) {
-    return _tmdbService.searchTvSeries(query);
-  }
+  Stream<List<TvSeries>> searchTvSeries(String query) =>
+      _tmdbService.searchTvSeries(query);
 
   @override
-  Future<String?> getTrailerKey(int id, {bool isTv = false}) async {
-    return _tmdbService.fetchTrailerKey(id, isTv: isTv);
-  }
+  Future<String?> getTrailerKey(int id, {bool isTv = false}) async =>
+      _tmdbService.fetchTrailerKey(id, isTv: isTv);
 
   @override
   Future<WatchProvidersResult?> getWatchProviders(
     int id, {
     bool isTv = false,
-  }) async {
-    return _tmdbService.fetchWatchProviders(id, isTv: isTv);
-  }
+  }) async => _tmdbService.fetchWatchProviders(id, isTv: isTv);
 }

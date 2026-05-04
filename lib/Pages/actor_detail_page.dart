@@ -23,6 +23,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
 
   // UI OTTIMISTICA
   bool? _optimisticIsFavorite;
+  bool _isTogglingHeart = false;
 
   static const Color _brandColor = Colors.orangeAccent;
   static const Color _backgroundColor = Colors.black;
@@ -54,7 +55,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     }
   }
 
-  Future<void> _handleFavoriteToggle() async {
+  Future<void> _handleFavoriteToggle(bool currentStreamValue) async {
     if (actor == null) return;
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
@@ -62,8 +63,11 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
       return;
     }
 
-    final currentFavState = _optimisticIsFavorite ?? false;
-    setState(() => _optimisticIsFavorite = !currentFavState);
+    final targetValue = !(_optimisticIsFavorite ?? currentStreamValue);
+    setState(() {
+      _isTogglingHeart = true;
+      _optimisticIsFavorite = targetValue;
+    });
 
     try {
       final String? fullProfileUrl = actor!.profilePath != null
@@ -86,9 +90,11 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _optimisticIsFavorite = currentFavState);
+        setState(() => _optimisticIsFavorite = !targetValue);
         _showMinimalSnackBar("Errore nell'aggiornamento dei preferiti.");
       }
+    } finally {
+      if (mounted) setState(() => _isTogglingHeart = false);
     }
   }
 
@@ -182,12 +188,13 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                             'person',
                           ),
                           builder: (context, favSnapshot) {
-                            final isFavorite =
-                                _optimisticIsFavorite ??
-                                (favSnapshot.data ?? false);
+                            final streamValue = favSnapshot.data ?? false;
+                            final isFavorite = _isTogglingHeart
+                                ? _optimisticIsFavorite!
+                                : (_optimisticIsFavorite ?? streamValue);
 
                             return GestureDetector(
-                              onTap: _handleFavoriteToggle,
+                              onTap: () => _handleFavoriteToggle(streamValue),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.all(8),

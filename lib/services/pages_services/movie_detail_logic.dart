@@ -14,7 +14,8 @@ class MovieDetailLogic {
   MovieDetailLogic({AIService? aiService})
     : _aiService = aiService ?? AIService();
 
-  Future<void> handleStatusAction(
+  // Ritorna TRUE se va a buon fine, così l'Optimistic UI è sicura
+  Future<bool> handleStatusAction(
     BuildContext context,
     dynamic media,
     String action,
@@ -23,7 +24,7 @@ class MovieDetailLogic {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
       if (context.mounted) _showMinimalSnackBar(context, "Accedi per salvare.");
-      return;
+      return false;
     }
 
     final isRemoving = currentStatus == action;
@@ -55,19 +56,19 @@ class MovieDetailLogic {
         if (!isRemoving) {
           if (action == 'watched') msg = "Segnato come Visto";
           if (action == 'towatch') msg = "Aggiunto ai Da Vedere";
-          if (action == 'watching')
-            msg = "Aggiunto a In Corso"; // <-- NUOVO STATO
+          if (action == 'watching') msg = "Aggiunto a In Corso";
         }
         _showMinimalSnackBar(context, msg);
       }
+      return true;
     } catch (e) {
       if (context.mounted) {
         _showMinimalSnackBar(context, "Errore nel salvataggio. Riprova.");
       }
+      return false;
     }
   }
 
-  // FIX UI OTTIMISTICA: Ora ritorna un booleano (true = aggiunto, false = rimosso)
   Future<bool> toggleFavorite(BuildContext context, dynamic media) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
@@ -101,10 +102,12 @@ class MovieDetailLogic {
       }
       return isAdded;
     } catch (e) {
-      if (context.mounted) {
-        _showMinimalSnackBar(context, "Errore nell'aggiornamento.");
-      }
-      throw e; // Rilancia l'errore per annullare la UI ottimistica
+      if (context.mounted)
+        _showMinimalSnackBar(
+          context,
+          "Errore nell'aggiornamento dei preferiti.",
+        );
+      throw e;
     }
   }
 
@@ -115,7 +118,6 @@ class MovieDetailLogic {
     try {
       final type = (media is TvSeries) ? 'tv' : 'movie';
       final title = (media is TvSeries) ? media.name : (media as Movie).title;
-
       final analysis = await _aiService.analyzeMedia(
         title: title,
         type: type,
@@ -142,10 +144,8 @@ class MovieDetailLogic {
         );
         await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
       }
-
       return analysis;
     } catch (e) {
-      debugPrint("AI Error: $e");
       return null;
     }
   }

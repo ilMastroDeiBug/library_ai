@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
@@ -28,8 +29,13 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   final MovieDetailLogic _logic = MovieDetailLogic();
   bool _isAnalyzing = false;
 
-  // STATO OTTIMISTICO PER IL CUORE
-  bool? _optimisticIsFavorite;
+  // UI OTTIMISTICA (Per il cuore e per i 3 bottoni di status)
+  StreamSubscription<bool>? _favSubscription;
+  bool _isFavorite = false;
+  bool _isTogglingHeart = false;
+
+  String? _optimisticStatus;
+  bool _isTogglingStatus = false;
 
   static const Color _brandColor = Colors.orangeAccent;
   static const Color _backgroundColor = Colors.black;
@@ -37,15 +43,28 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   bool get _isTv => widget.media is TvSeries;
   int get _id => widget.media.id;
 
-  Stream<dynamic>? _getMediaStream(String userId) {
-    try {
-      if (_isTv) {
-        return sl<GetSingleTvSeriesUseCase>().call(userId, _id.toString());
-      } else {
-        return sl<GetSingleMovieUseCase>().call(userId, _id.toString());
-      }
-    } catch (e) {
-      return null;
+  @override
+  void initState() {
+    super.initState();
+    _initFavoriteStream();
+  }
+
+  @override
+  void dispose() {
+    _favSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _initFavoriteStream() {
+    final user = sl<AuthRepository>().currentUser;
+    if (user != null) {
+      _favSubscription = sl<CheckFavoriteStatusUseCase>()
+          .call(user.id, _id, _isTv ? 'tv' : 'movie')
+          .listen((isFav) {
+            if (!_isTogglingHeart && mounted) {
+              setState(() => _isFavorite = isFav);
+            }
+          });
     }
   }
 
@@ -53,29 +72,63 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return;
 
-    // 1. Leggiamo lo stato attuale
-    final currentFavState = _optimisticIsFavorite ?? false;
-
-    // 2. Invertiamo subito la UI (Optimistic UI)
     setState(() {
-      _optimisticIsFavorite = !currentFavState;
+      _isTogglingHeart = true;
+      _isFavorite = !_isFavorite;
     });
 
-    // 3. Facciamo il vero salvataggio
     try {
-      final actualResult = await _logic.toggleFavorite(context, liveMedia);
-      if (mounted) {
-        setState(() {
-          _optimisticIsFavorite = actualResult; // Sincronizziamo con la realtà
-        });
+      final result = await _logic.toggleFavorite(context, liveMedia);
+      if (mounted) setState(() => _isFavorite = result);
+    } catch (e) {
+      if (mounted)
+        setState(() => _isFavorite = !_isFavorite); // Revert su errore
+    } finally {
+      if (mounted) setState(() => _isTogglingHeart = false);
+    }
+  }
+
+  // --- GESTIONE OTTIMISTICA STATUS DEI PULSANTI ---
+  void _handleStatusToggle(
+    dynamic liveMedia,
+    String action,
+    String streamStatus,
+  ) async {
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) return;
+
+    final isRemoving = streamStatus == action;
+    final targetStatus = isRemoving ? 'none' : action;
+
+    setState(() {
+      _isTogglingStatus = true;
+      _optimisticStatus = targetStatus;
+    });
+
+    try {
+      final success = await _logic.handleStatusAction(
+        context,
+        liveMedia,
+        action,
+        streamStatus,
+      );
+      if (mounted && !success) {
+        setState(() => _optimisticStatus = streamStatus); // Revert se fallisce
       }
     } catch (e) {
-      // 4. Se fallisce, torniamo indietro
-      if (mounted) {
-        setState(() {
-          _optimisticIsFavorite = currentFavState;
-        });
-      }
+      if (mounted) setState(() => _optimisticStatus = streamStatus);
+    } finally {
+      if (mounted) setState(() => _isTogglingStatus = false);
+    }
+  }
+
+  Stream<dynamic>? _getMediaStream(String userId) {
+    try {
+      if (_isTv)
+        return sl<GetSingleTvSeriesUseCase>().call(userId, _id.toString());
+      return sl<GetSingleMovieUseCase>().call(userId, _id.toString());
+    } catch (e) {
+      return null;
     }
   }
 
@@ -91,7 +144,12 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           liveMedia = snapshot.data;
         }
 
-        final String currentStatus = liveMedia.status ?? 'none';
+        // Il mix Optimistic UI: Prende lo stato reale se non stiamo cliccando.
+        final String streamStatus = liveMedia.status ?? 'none';
+        final String currentStatus = _isTogglingStatus
+            ? _optimisticStatus!
+            : (_optimisticStatus ?? streamStatus);
+
         final String? storedAnalysis = liveMedia.aiAnalysis;
         final String title = _isTv ? liveMedia.name : liveMedia.title;
         final String overview = liveMedia.overview;
@@ -125,7 +183,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // TITOLO E CUORE PREFERITI
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -142,52 +199,36 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                           ),
                           const SizedBox(width: 10),
                           if (user != null)
-                            StreamBuilder<bool>(
-                              stream: sl<CheckFavoriteStatusUseCase>().call(
-                                user.id,
-                                _id,
-                                _isTv ? 'tv' : 'movie',
-                              ),
-                              builder: (context, favSnapshot) {
-                                // Se abbiamo un override ottimistico usiamo quello, altrimenti il db
-                                final isFavorite =
-                                    _optimisticIsFavorite ??
-                                    (favSnapshot.data ?? false);
-
-                                return GestureDetector(
-                                  onTap: () => _handleFavoriteToggle(liveMedia),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: isFavorite
-                                          ? Colors.redAccent.withOpacity(0.1)
-                                          : Colors.white.withOpacity(0.05),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 200,
+                            GestureDetector(
+                              onTap: () => _handleFavoriteToggle(liveMedia),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _isFavorite
+                                      ? Colors.redAccent.withOpacity(0.1)
+                                      : Colors.white.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  transitionBuilder: (child, anim) =>
+                                      ScaleTransition(
+                                        scale: anim,
+                                        child: child,
                                       ),
-                                      transitionBuilder: (child, anim) =>
-                                          ScaleTransition(
-                                            scale: anim,
-                                            child: child,
-                                          ),
-                                      child: Icon(
-                                        isFavorite
-                                            ? Icons.favorite_rounded
-                                            : Icons.favorite_border_rounded,
-                                        key: ValueKey(isFavorite),
-                                        color: isFavorite
-                                            ? Colors.redAccent
-                                            : Colors.white,
-                                        size: 26,
-                                      ),
-                                    ),
+                                  child: Icon(
+                                    _isFavorite
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    key: ValueKey(_isFavorite),
+                                    color: _isFavorite
+                                        ? Colors.redAccent
+                                        : Colors.white,
+                                    size: 26,
                                   ),
-                                );
-                              },
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -195,7 +236,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       MovieStatsBar(movie: displayMovieForStats),
                       const SizedBox(height: 30),
 
-                      // I TRE BOTTONI
+                      // I TRE BOTTONI OTTIMIZZATI
                       Row(
                         children: [
                           Expanded(
@@ -203,11 +244,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               label: "DA VEDERE",
                               icon: Icons.bookmark_add_outlined,
                               isActive: currentStatus == 'towatch',
-                              onTap: () => _logic.handleStatusAction(
-                                context,
+                              onTap: () => _handleStatusToggle(
                                 liveMedia,
                                 'towatch',
-                                currentStatus,
+                                streamStatus,
                               ),
                             ),
                           ),
@@ -217,11 +257,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               label: "IN CORSO",
                               icon: Icons.play_circle_outline_rounded,
                               isActive: currentStatus == 'watching',
-                              onTap: () => _logic.handleStatusAction(
-                                context,
+                              onTap: () => _handleStatusToggle(
                                 liveMedia,
                                 'watching',
-                                currentStatus,
+                                streamStatus,
                               ),
                             ),
                           ),
@@ -231,11 +270,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               label: "VISTO",
                               icon: Icons.check_circle_outline,
                               isActive: currentStatus == 'watched',
-                              onTap: () => _logic.handleStatusAction(
-                                context,
+                              onTap: () => _handleStatusToggle(
                                 liveMedia,
                                 'watched',
-                                currentStatus,
+                                streamStatus,
                               ),
                             ),
                           ),
@@ -354,10 +392,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     required VoidCallback onTap,
   }) {
     return SizedBox(
-      height: 45, // Leggermente ridotto per adattarsi a 3
+      height: 45,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 4), // Padding ridotto
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           backgroundColor: isActive
               ? _brandColor
               : Colors.white.withOpacity(0.05),
@@ -374,10 +412,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 9,
-              ), // Font piccolo per far stare tutto
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 9),
             ),
           ],
         ),

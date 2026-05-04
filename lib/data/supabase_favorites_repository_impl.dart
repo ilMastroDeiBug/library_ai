@@ -25,19 +25,43 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
         .eq('item_type', itemType)
         .maybeSingle();
 
-    if (existing != null) {
+    final isAdded = existing == null;
+
+    if (!isAdded) {
       await _supabase.from(_tableName).delete().eq('id', existing['id']);
-      return false;
+    } else {
+      await _supabase.from(_tableName).insert({
+        'user_id': userId,
+        'item_id': itemId,
+        'item_type': itemType,
+        'title': title,
+        'poster_url': posterUrl,
+      });
     }
 
-    await _supabase.from(_tableName).insert({
-      'user_id': userId,
-      'item_id': itemId,
-      'item_type': itemType,
-      'title': title,
-      'poster_url': posterUrl,
-    });
-    return true;
+    // FIX CHIAVE: Sincronizziamo la Cache locale in modo che le Detail Pages
+    // abbiano sempre la risposta corretta immediata!
+    final cacheBox = Hive.box('cinelib_cache');
+    final cacheKey = 'favorites_${userId}_$itemType';
+    final cachedList = cacheBox.get(cacheKey);
+
+    if (cachedList is List) {
+      var list = cachedList.map((e) => Map<String, dynamic>.from(e)).toList();
+      if (isAdded) {
+        list.insert(0, {
+          'user_id': userId,
+          'item_id': itemId,
+          'item_type': itemType,
+          'title': title,
+          'poster_url': posterUrl,
+        });
+      } else {
+        list.removeWhere((e) => e['item_id'] == itemId);
+      }
+      await cacheBox.put(cacheKey, list);
+    }
+
+    return isAdded;
   }
 
   @override
@@ -50,26 +74,18 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
         : 'favorites_${userId}_$type';
     final cacheBox = Hive.box('cinelib_cache');
 
-    // 1. CARICHIAMO E MOSTRIAMO SUBITO LA CACHE
     final cachedRows = _readCachedRows(cacheBox, cacheKey);
-    bool hasCache = false;
-
     if (cachedRows != null) {
-      hasCache = cachedRows.isNotEmpty;
       yield _mapFavoriteRowsToEntities(cachedRows, type: type);
     } else if (type != null) {
-      // Se non abbiamo la cache specifica, cerchiamo in quella generale
       final cachedAllRows = _readCachedRows(cacheBox, 'favorites_$userId');
       if (cachedAllRows != null) {
-        hasCache = cachedAllRows.isNotEmpty;
         yield _mapFavoriteRowsToEntities(cachedAllRows, type: type);
       }
     }
 
-    // 2. SE SIAMO OFFLINE, FERMIAMOCI ALLA CACHE
     if (!sl<NetworkStatusService>().isOnline) return;
 
-    // 3. AGGIORNAMENTO DA SUPABASE PROTETTO
     try {
       final supabaseStream = _supabase
           .from(_tableName)
@@ -77,27 +93,14 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
-      bool isFirstEvent = true;
-
       await for (final snapshot in supabaseStream) {
         final rows = snapshot
             .map((row) => Map<String, dynamic>.from(row))
             .toList();
-
         final filteredRows = type == null
             ? rows
             : rows.where((row) => row['item_type'] == type).toList();
 
-        // FIX CRITICO DEL MILLISECONDO:
-        // Supabase spara un array vuoto [] appena si connette.
-        // Se abbiamo la cache, ignoriamo questo "falso vuoto".
-        if (isFirstEvent && filteredRows.isEmpty && hasCache) {
-          isFirstEvent = false;
-          continue;
-        }
-        isFirstEvent = false;
-
-        // Salvataggio in cache solo di dati reali e validi
         await cacheBox.put(cacheKey, filteredRows);
 
         if (type == null) {
@@ -107,7 +110,6 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
             if (rowType == null) continue;
             groupedByType.putIfAbsent(rowType, () => []).add(row);
           }
-
           for (final entry in groupedByType.entries) {
             await cacheBox.put('favorites_${userId}_${entry.key}', entry.value);
           }
@@ -115,9 +117,7 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
 
         yield _mapFavoriteRowsToEntities(filteredRows, type: type);
       }
-    } catch (_) {
-      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
-    }
+    } catch (_) {}
   }
 
   @override
@@ -130,7 +130,6 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
   List<Map<String, dynamic>>? _readCachedRows(Box cacheBox, String cacheKey) {
     final cached = cacheBox.get(cacheKey);
     if (cached is! List) return null;
-
     return cached
         .whereType<Map>()
         .map((row) => Map<String, dynamic>.from(row))
@@ -144,7 +143,6 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
     final filteredRows = type == null
         ? rows
         : rows.where((row) => row['item_type'] == type).toList();
-
     return filteredRows.map((row) => FavoriteItem.fromMap(row)).toList();
   }
 }

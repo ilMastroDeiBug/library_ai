@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
@@ -41,6 +42,10 @@ class _LibraryGridState extends State<LibraryGrid> {
   bool _isSelectionMode = false;
   final Set<dynamic> _selectedItems = {};
 
+  // UI OTTIMISTICA: Nasconde istantaneamente gli item spostati/eliminati
+  final Set<dynamic> _hiddenItems = {};
+  bool _isBulkActionLoading = false;
+
   List<String> get _availableFilters {
     if (widget.mode == AppMode.books) return ['Tutti'];
     if (widget.status == 'favorites') {
@@ -62,6 +67,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       _initStream();
       _isSelectionMode = false;
       _selectedItems.clear();
+      _hiddenItems.clear(); // Resettiamo la cache visiva
     }
   }
 
@@ -85,48 +91,93 @@ class _LibraryGridState extends State<LibraryGrid> {
     }
   }
 
-  // --- AZIONI DI GRUPPO (BULK) ---
+  // --- AZIONI DI GRUPPO (BULK) CORRETTE ---
   void _performBulkAction(String action) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return;
 
-    for (var item in _selectedItems) {
-      final int itemId = _extractId(item);
-      final String itemType = _extractType(item);
+    setState(() => _isBulkActionLoading = true);
 
-      if (action == 'delete') {
-        if (widget.status == 'favorites') {
-          // In favorites, delete equals toggling it off
-          await sl<ToggleFavoriteUseCase>().call(
-            user.id,
-            itemId,
-            itemType,
-            _extractTitle(item),
-            null,
-          );
+    try {
+      for (var item in _selectedItems) {
+        final dynamic itemId = _extractId(item);
+        final String itemType = _extractType(item);
+
+        if (action == 'delete') {
+          if (widget.status == 'favorites') {
+            await sl<ToggleFavoriteUseCase>().call(
+              user.id,
+              itemId as int,
+              itemType,
+              _extractTitle(item),
+              null,
+            );
+          } else {
+            if (itemType == 'tv')
+              await sl<DeleteTvSeriesUseCase>().call(user.id, itemId as int);
+            else if (itemType == 'book')
+              await sl<DeleteBookUseCase>().call(user.id, itemId as String);
+            else
+              await sl<DeleteMovieUseCase>().call(user.id, itemId as int);
+          }
         } else {
-          if (itemType == 'tv')
-            await sl<DeleteTvSeriesUseCase>().call(user.id, itemId);
-          else
-            await sl<DeleteMovieUseCase>().call(user.id, itemId);
+          // UTILIZZIAMO I SAVE USE CASES AFFIDABILI (Come nella Detail Page)
+          if (item is Movie) {
+            final updated = item.copyWith(status: action);
+            await sl<SaveMovieUseCase>().call(updated, user.id);
+          } else if (item is TvSeries) {
+            final updated = TvSeries(
+              id: item.id,
+              name: item.name,
+              overview: item.overview,
+              posterPath: item.posterPath,
+              backdropPath: item.backdropPath,
+              voteAverage: item.voteAverage,
+              voteCount: item.voteCount,
+              firstAirDate: item.firstAirDate,
+              status: action,
+              aiAnalysis: item.aiAnalysis,
+              popularity: item.popularity,
+            );
+            await sl<SaveTvSeriesUseCase>().call(updated, user.id);
+          } else if (item is Book) {
+            final updated = Book(
+              id: item.id,
+              title: item.title,
+              author: item.author,
+              description: item.description,
+              thumbnailUrl: item.thumbnailUrl,
+              pageCount: item.pageCount,
+              rating: item.rating,
+              ratingsCount: item.ratingsCount,
+              status: action,
+              aiAnalysis: item.aiAnalysis,
+            );
+            await sl<AddBookUseCase>().call(updated, user.id);
+          }
         }
-      } else {
-        // Update Status ('watched', 'watching', etc)
-        if (itemType == 'tv')
-          await sl<ToggleTvSeriesStatusUseCase>().call(user.id, itemId, action);
-        else
-          await sl<ToggleMovieStatusUseCase>().call(user.id, itemId, action);
+      }
+
+      // OPTIMISTIC UI: Nascondiamo subito le locandine dalla griglia!
+      _hiddenItems.addAll(_selectedItems.map((e) => _extractId(e)));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Errore durante l'operazione.")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSelectionMode = false;
+          _selectedItems.clear();
+          _isBulkActionLoading = false;
+        });
       }
     }
-
-    setState(() {
-      _isSelectionMode = false;
-      _selectedItems.clear();
-    });
   }
 
-  // Helpers per l'estrazione dati
-  int _extractId(dynamic item) {
+  dynamic _extractId(dynamic item) {
     if (item is FavoriteItem) return item.itemId;
     return item.id;
   }
@@ -188,8 +239,9 @@ class _LibraryGridState extends State<LibraryGrid> {
                       top: 10,
                       left: 15,
                       right: 15,
-                      bottom: 120,
-                    ),
+                      bottom: 150,
+                    ), // Spazio per la bulk bar
+                    physics: const BouncingScrollPhysics(),
                     itemCount: filteredItems.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
@@ -209,10 +261,23 @@ class _LibraryGridState extends State<LibraryGrid> {
           ],
         ),
 
-        // LA FLOATING ACTION BAR PER LA MULTISELEZIONE
-        if (_isSelectionMode && _selectedItems.isNotEmpty)
+        // LOADING OVERLAY
+        if (_isBulkActionLoading)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black54,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.orangeAccent),
+              ),
+            ),
+          ),
+
+        // LA FLOATING ACTION BAR PER LA MULTISELEZIONE IN VETRO
+        if (_isSelectionMode &&
+            _selectedItems.isNotEmpty &&
+            !_isBulkActionLoading)
           Positioned(
-            bottom: 20,
+            bottom: 130, // Rialzata per evitare la BottomNavigationBar
             left: 20,
             right: 20,
             child: _buildBulkActionBar(),
@@ -223,13 +288,18 @@ class _LibraryGridState extends State<LibraryGrid> {
 
   List<dynamic> _applyLocalFilters(List<dynamic> items) {
     return items.where((item) {
+      // 1. OPTIMISTIC UI: Se l'abbiamo appena spostato, non mostrarlo
+      if (_hiddenItems.contains(_extractId(item))) return false;
+
       String title = _extractTitle(item);
 
+      // 2. Ricerca Testuale
       if (_searchQuery.isNotEmpty &&
           !title.toLowerCase().contains(_searchQuery)) {
         return false;
       }
 
+      // 3. Filtro Chip (Tutti, Film, Serie)
       if (_selectedFilter != 'Tutti') {
         final type = _extractType(item);
         if (_selectedFilter == 'Film' && type != 'movie') return false;
@@ -245,65 +315,32 @@ class _LibraryGridState extends State<LibraryGrid> {
       padding: const EdgeInsets.fromLTRB(15, 15, 15, 5),
       child: Column(
         children: [
-          TextField(
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            onChanged: (value) =>
-                setState(() => _searchQuery = value.toLowerCase()),
-            decoration: InputDecoration(
-              hintText: 'Cerca nella lista...',
-              hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(
-                Icons.search_rounded,
-                color: Colors.white54,
-                size: 20,
-              ),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.08),
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 35,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: _availableFilters.length,
-                    itemBuilder: (context, index) {
-                      final filter = _availableFilters[index];
-                      final isSelected = _selectedFilter == filter;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ChoiceChip(
-                          label: Text(
-                            filter,
-                            style: TextStyle(
-                              color: isSelected ? Colors.black : Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: Colors.orangeAccent,
-                          backgroundColor: Colors.white.withOpacity(0.05),
-                          side: BorderSide.none,
-                          showCheckmark: false,
-                          onSelected: (selected) {
-                            setState(() => _selectedFilter = filter);
-                          },
-                        ),
-                      );
-                    },
+                child: TextField(
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  onChanged: (value) =>
+                      setState(() => _searchQuery = value.toLowerCase()),
+                  decoration: InputDecoration(
+                    hintText: 'Cerca nella lista...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: Colors.white54,
+                      size: 20,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.08),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(width: 10),
               // TASTO SELEZIONA
               TextButton(
                 onPressed: () {
@@ -324,6 +361,41 @@ class _LibraryGridState extends State<LibraryGrid> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          if (_availableFilters.length > 1)
+            SizedBox(
+              height: 35,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: _availableFilters.length,
+                itemBuilder: (context, index) {
+                  final filter = _availableFilters[index];
+                  final isSelected = _selectedFilter == filter;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ChoiceChip(
+                      label: Text(
+                        filter,
+                        style: TextStyle(
+                          color: isSelected ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: Colors.orangeAccent,
+                      backgroundColor: Colors.white.withOpacity(0.05),
+                      side: BorderSide.none,
+                      showCheckmark: false,
+                      onSelected: (selected) {
+                        setState(() => _selectedFilter = filter);
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
         ],
       ),
     );
@@ -356,7 +428,7 @@ class _LibraryGridState extends State<LibraryGrid> {
           return;
         }
 
-        // NAVIGAZIONE NORMALE
+        // NAVIGAZIONE
         if (item is FavoriteItem) {
           if (item.itemType == 'person') {
             Navigator.push(
@@ -528,7 +600,6 @@ class _LibraryGridState extends State<LibraryGrid> {
             ),
           ),
 
-          // IL CERCHIETTO DI SELEZIONE
           if (_isSelectionMode)
             Positioned(
               top: 5,
@@ -554,24 +625,33 @@ class _LibraryGridState extends State<LibraryGrid> {
     );
   }
 
-  // --- LA BARRA DELLE AZIONI DI GRUPPO ---
+  // --- LA BARRA DELLE AZIONI DI GRUPPO IN GLASSMORPHISM ---
   Widget _buildBulkActionBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.5),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), // Sfocatura
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(
+              0xFF1E1E1E,
+            ).withOpacity(0.65), // Semitrasparente!
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: _getBulkActionButtons(),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: _getBulkActionButtons(),
+          ),
+        ),
       ),
     );
   }
@@ -589,7 +669,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       ),
     );
 
-    // Sezioni Da Vedere (towatch/toread)
+    // Sezioni Da Vedere
     if (widget.status == 'towatch' || widget.status == 'toread') {
       buttons.add(
         _buildBulkBtn(
@@ -612,7 +692,7 @@ class _LibraryGridState extends State<LibraryGrid> {
         ),
       );
     }
-    // Sezioni In Corso (watching/reading)
+    // Sezioni In Corso
     else if (widget.status == 'watching' || widget.status == 'reading') {
       buttons.add(
         _buildBulkBtn(
@@ -642,13 +722,13 @@ class _LibraryGridState extends State<LibraryGrid> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 22),
+            Icon(icon, color: color, size: 24),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
                 color: color,
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),
