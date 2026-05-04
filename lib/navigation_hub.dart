@@ -20,10 +20,12 @@ class NavigationHub extends StatefulWidget {
 
 class _NavigationHubState extends State<NavigationHub> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   int _selectedIndex = 0;
   AppMode _currentMode = AppMode.movies;
   bool _isSocialActive = false;
+
+  // IL NOTIFIER: Segnala alle pagine un "doppio tap" sulla barra
+  final ValueNotifier<int> _reselectNotifier = ValueNotifier<int>(0);
 
   void _changeMode(AppMode newMode) {
     setState(() {
@@ -41,7 +43,12 @@ class _NavigationHubState extends State<NavigationHub> {
   }
 
   void _onBottomNavTap(int index) {
-    setState(() => _selectedIndex = index);
+    if (_selectedIndex == index) {
+      // Magia: Utente ha tappato sull'icona dove si trova già. Lanciamo l'evento!
+      _reselectNotifier.value = DateTime.now().millisecondsSinceEpoch;
+    } else {
+      setState(() => _selectedIndex = index);
+    }
   }
 
   List<Widget> _buildMediaPages() {
@@ -49,6 +56,7 @@ class _NavigationHubState extends State<NavigationHub> {
       HomePage(
         mode: _currentMode,
         onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+        reselectNotifier: _reselectNotifier, // Passato in modo invisibile!
       ),
       LibraryPage(
         mode: _currentMode,
@@ -86,21 +94,18 @@ class _NavigationHubState extends State<NavigationHub> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.black, // Sfondo base nero
-      // LA MAGIA: Permette alla lista di scorrere sotto la barra fluttuante
-      extendBody: true,
-
+      extendBody:
+          true, // Permette alla lista di scorrere sotto la barra fluttuante
       drawer: SideMenu(
         currentMode: _currentMode,
         isSocialActive: _isSocialActive,
         onModeChanged: _changeMode,
         onSocialTap: _toggleSocial,
       ),
-
       body: IndexedStack(
         index: _selectedIndex,
         children: _isSocialActive ? _buildSocialPages() : _buildMediaPages(),
       ),
-
       bottomNavigationBar: _isSocialActive
           ? SocialBottomBar(
               currentIndex: _selectedIndex,

@@ -39,8 +39,8 @@ class _GenreResultPageState extends State<GenreResultPage> {
   bool _isLoadingFirstTime = true;
   bool _isFetchingMore = false;
   bool _hasReachedMax = false;
-  StreamSubscription? _initialItemsSubscription;
-  StreamSubscription? _moreItemsSubscription;
+  StreamSubscription<List<dynamic>>? _initialItemsSubscription;
+  StreamSubscription<List<dynamic>>? _moreItemsSubscription;
 
   @override
   void initState() {
@@ -171,24 +171,21 @@ class _GenreResultPageState extends State<GenreResultPage> {
           return;
         }
         // Il libro è un Future, lo yieldiamo
-        yield await sl<GetBooksByCategoryUseCase>().call(widget.category.name);
+        final books = await sl<GetBooksByCategoryUseCase>().call(
+          widget.category.name,
+        );
+        yield List<dynamic>.from(books);
       } else {
         final path = 'with_genres=${widget.category.id}';
         if (widget.isTvSeries) {
-          // Usiamo await for per estrarre le liste dallo stream
-          await for (final list in sl<GetTvSeriesByCategoryUseCase>().call(
-            path,
-            page: page,
-          )) {
-            yield list;
-          }
+          // Usiamo map per castare correttamente la lista a dynamic
+          yield* sl<GetTvSeriesByCategoryUseCase>()
+              .call(path, page: page)
+              .map((list) => List<dynamic>.from(list));
         } else {
-          await for (final list in sl<GetMoviesByCategoryUseCase>().call(
-            path,
-            page: page,
-          )) {
-            yield list;
-          }
+          yield* sl<GetMoviesByCategoryUseCase>()
+              .call(path, page: page)
+              .map((list) => List<dynamic>.from(list));
         }
       }
     } catch (e) {
@@ -295,13 +292,13 @@ class _GridItemCard extends StatelessWidget {
 
     if (item is Book) {
       imageUrl = item.thumbnailUrl;
-      rating = item.rating;
+      rating = (item.rating as num).toDouble();
     } else if (item is Movie) {
       imageUrl = item.fullPosterUrl;
-      rating = item.voteAverage;
+      rating = (item.voteAverage as num).toDouble();
     } else if (item is TvSeries) {
       imageUrl = item.fullPosterUrl;
-      rating = item.voteAverage;
+      rating = (item.voteAverage as num).toDouble();
     }
 
     return GestureDetector(

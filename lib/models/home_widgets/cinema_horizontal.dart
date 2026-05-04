@@ -5,7 +5,7 @@ import '../../domain/use_cases/movie_use_cases.dart';
 import '../../domain/use_cases/tv_series_use_cases.dart';
 import '../../domain/entities/movie.dart';
 import '../../domain/entities/tv_series.dart';
-import '../../pages/movie_detail_page.dart';
+import '../../Pages/movie_detail_page.dart';
 import '../movie_widget/movie_card.dart';
 import '../../services/utility_services/language_service.dart';
 
@@ -52,7 +52,6 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
   }
 
   Stream<List<dynamic>> _fetchAndFilter() async* {
-    // Rimosso il randomizer per garantire l'offline-first
     int pageToFetch = 1;
 
     final Stream<List<dynamic>> stream = widget.isTv
@@ -63,7 +62,14 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
               .call(widget.path, page: pageToFetch)
               .map((items) => List<dynamic>.from(items));
 
+    // FIX SCHERMO NERO: Memoria locale degli ID aggiunti da QUESTA emissione
+    final Set<int> localAddedIds = {};
+
     await for (final rawItems in stream) {
+      // Puliamo gli ID che avevamo inserito noi stessi con la precedente emissione (cache)
+      widget.seenIds.removeAll(localAddedIds);
+      localAddedIds.clear();
+
       List<dynamic> uniqueItems = [];
       for (var item in rawItems) {
         int currentId = 0;
@@ -75,18 +81,21 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
           continue;
         }
 
+        // Filtra contro i veri doppioni delle ALTRE righe
         if (!widget.seenIds.contains(currentId)) {
           uniqueItems.add(item);
           widget.seenIds.add(currentId);
+          localAddedIds.add(currentId); // Ci segniamo di averlo messo noi
         }
       }
 
-      // Manteniamo lo shuffle solo all'interno dei dati scaricati/messi in cache per varietà visiva
       if (widget.path.contains('with_genres=')) {
         uniqueItems.shuffle();
       }
 
-      yield uniqueItems;
+      if (uniqueItems.isNotEmpty) {
+        yield uniqueItems;
+      }
     }
   }
 
@@ -118,7 +127,8 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
             key: ValueKey('list_${widget.title}_${widget.isTv}'),
             stream: _stream,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
                 return const Center(
                   child: CircularProgressIndicator(
                     strokeWidth: 2,

@@ -6,15 +6,18 @@ import 'search_page.dart';
 import '../injection_container.dart';
 import '../services/utility_services/language_service.dart';
 
-// --- IMPORT SOSPESI TEMPORANEAMENTE PER IL REFACTORING ---
-// import '../models/book_widgets/add_book_sheet.dart';
-// import '../models/user_books_section.dart';
-
 class HomePage extends StatefulWidget {
   final AppMode mode;
   final VoidCallback onOpenDrawer;
+  // Nuovo parametro per intercettare il doppio click sulla bottom bar
+  final ValueNotifier<int>? reselectNotifier;
 
-  const HomePage({super.key, required this.mode, required this.onOpenDrawer});
+  const HomePage({
+    super.key,
+    required this.mode,
+    required this.onOpenDrawer,
+    this.reselectNotifier,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -22,35 +25,60 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   static const Color _brandColor = Colors.orangeAccent;
-
   late PageController _cinemaPageController;
   CinemaType _selectedCinemaType = CinemaType.movies;
+
+  // Controller per scrollare in cima e chiave per forzare il refresh
+  final ScrollController _movieScrollController = ScrollController();
+  final ScrollController _tvScrollController = ScrollController();
+  Key _refreshKey = UniqueKey();
 
   @override
   void initState() {
     super.initState();
     _cinemaPageController = PageController(initialPage: 0);
+    // Ascoltiamo il doppio tap dalla NavigationHub
+    widget.reselectNotifier?.addListener(_onReselect);
   }
 
   @override
   void dispose() {
+    widget.reselectNotifier?.removeListener(_onReselect);
     _cinemaPageController.dispose();
+    _movieScrollController.dispose();
+    _tvScrollController.dispose();
     super.dispose();
   }
 
-  /* SOSPESO: Tasto Aggiungi Libro
-  void _showAddSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
-      ),
-      builder: (context) => const AddBookSheet(),
-    );
+  // Funzione chiamata quando premi di nuovo l'icona Home nella bottom bar
+  void _onReselect() {
+    if (!mounted) return;
+
+    // 1. Torna in cima
+    final activeController = _selectedCinemaType == CinemaType.movies
+        ? _movieScrollController
+        : _tvScrollController;
+
+    if (activeController.hasClients) {
+      activeController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    }
+
+    // 2. Forza l'aggiornamento ricreando i Widget interni
+    _forceRefresh();
   }
-  */
+
+  Future<void> _forceRefresh() async {
+    setState(() {
+      _refreshKey =
+          UniqueKey(); // Cambiando chiave, i widget si distruggono e si ricaricano
+    });
+    // Piccola pausa per mostrare l'animazione di refresh
+    await Future.delayed(const Duration(milliseconds: 800));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,11 +108,17 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           _KeepAliveSection(
                             key: ValueKey('home_movies_$languageCode'),
-                            child: _buildCinemaPage(CinemaType.movies),
+                            child: _buildCinemaPage(
+                              CinemaType.movies,
+                              _movieScrollController,
+                            ),
                           ),
                           _KeepAliveSection(
                             key: ValueKey('home_tv_$languageCode'),
-                            child: _buildCinemaPage(CinemaType.tvSeries),
+                            child: _buildCinemaPage(
+                              CinemaType.tvSeries,
+                              _tvScrollController,
+                            ),
                           ),
                         ],
                       ),
@@ -102,7 +136,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- IL NUOVO HEADER STILE TIKTOK ---
   Widget _buildModernHeader(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -127,7 +160,6 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Tasto Menu
           GestureDetector(
             onTap: widget.onOpenDrawer,
             child: const Icon(
@@ -137,8 +169,6 @@ class _HomePageState extends State<HomePage> {
               shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
             ),
           ),
-
-          // Switcher Centrale (O Titolo Libri)
           if (widget.mode == AppMode.movies)
             HomeCinemaSwitcher(
               selectedType: _selectedCinemaType,
@@ -164,8 +194,6 @@ class _HomePageState extends State<HomePage> {
                 shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
               ),
             ),
-
-          // Tasto Ricerca a scomparsa (Disabilitato nei libri per non innescare query)
           if (widget.mode == AppMode.movies)
             GestureDetector(
               onTap: () => showSearch(
@@ -180,13 +208,12 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           else
-            const SizedBox(width: 28), // Spazio vuoto per bilanciare la Row
+            const SizedBox(width: 28),
         ],
       ),
     );
   }
 
-  // --- 🔒 LA LEVA MARKETING (Coming Soon Books) ---
   Widget _buildComingSoonBooks(BuildContext context) {
     return Center(
       child: Padding(
@@ -233,7 +260,7 @@ class _HomePageState extends State<HomePage> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      "🚀 Grazie! Ti avviseremo non appena il Vault dei libri sarà sbloccato.",
+                      "✨ Grazie! Ti avviseremo non appena il Vault dei libri sarà sbloccato.",
                     ),
                     behavior: SnackBarBehavior.floating,
                     backgroundColor: Color(0xFF2C2C2C),
@@ -265,69 +292,50 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- COSTRUZIONE LISTE OTTIMIZZATE (CINEMA) ---
-  Widget _buildCinemaPage(CinemaType type) {
+  // Aggiunto il controller e il RefreshIndicator
+  Widget _buildCinemaPage(CinemaType type, ScrollController controller) {
     final Set<int> seenIds = {};
     final sections = HomeContentBuilder.buildCinemaContent(
       type: type,
       seenIds: seenIds,
     );
 
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 0, bottom: 100),
-      physics: const BouncingScrollPhysics(),
-      itemCount: sections.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _KeepAliveSection(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                HomeContentBuilder.buildHeroBanner(
-                  widget.mode,
-                  cinemaType: type,
-                  seenIds: seenIds,
-                ),
-                const SizedBox(height: 30),
-              ],
-            ),
-          );
-        }
-        return _KeepAliveSection(child: sections[index - 1]);
-      },
+    return RefreshIndicator(
+      color: _brandColor,
+      backgroundColor: const Color(0xFF1E1E1E),
+      onRefresh: _forceRefresh,
+      child: ListView.builder(
+        key:
+            _refreshKey, // La chiave magica che resetta tutto quando tiriamo giù
+        controller: controller, // Ci agganciamo al controller per scrollare
+        padding: const EdgeInsets.only(top: 0, bottom: 100),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        itemCount: sections.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return _KeepAliveSection(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HomeContentBuilder.buildHeroBanner(
+                    widget.mode,
+                    cinemaType: type,
+                    seenIds: seenIds,
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            );
+          }
+          return _KeepAliveSection(child: sections[index - 1]);
+        },
+      ),
     );
   }
-
-  /* SOSPESO: La vecchia UI dei libri
-  Widget _buildStaticScroll(List<Widget> content) {
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 0, bottom: 100),
-      physics: const BouncingScrollPhysics(),
-      itemCount: content.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _KeepAliveSection(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                HomeContentBuilder.buildHeroBanner(widget.mode),
-                const SizedBox(height: 30),
-                const UserBooksSection(
-                  title: "In coda di lettura",
-                  status: "toread",
-                ),
-              ],
-            ),
-          );
-        }
-        return _KeepAliveSection(child: content[index - 1]);
-      },
-    );
-  }
-  */
 }
 
-// --- IL WIDGET MAGICO PER LA CACHE ---
 class _KeepAliveSection extends StatefulWidget {
   final Widget child;
   const _KeepAliveSection({super.key, required this.child});

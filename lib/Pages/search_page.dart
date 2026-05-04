@@ -315,7 +315,6 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
   String _lastSearchedQuery = "";
   int _searchType = 0; // 0 = Media (Film/Serie), 1 = Attori
 
-  // Sostituiamo i vecchi Future con i listener per gli Stream
   StreamSubscription<List<Movie>>? _movieSearchSubscription;
   StreamSubscription<List<TvSeries>>? _tvSearchSubscription;
   StreamSubscription<List<CastMember>>? _actorSearchSubscription;
@@ -352,7 +351,6 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-    // Annulliamo le iscrizioni precedenti se l'utente cambia query velocemente
     _movieSearchSubscription?.cancel();
     _tvSearchSubscription?.cancel();
     _actorSearchSubscription?.cancel();

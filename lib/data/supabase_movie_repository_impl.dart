@@ -7,6 +7,8 @@ import 'package:library_ai/models/movie_widget/review_model.dart';
 import 'package:library_ai/models/movie_widget/cast_model.dart';
 import 'package:library_ai/services/utility_services/tmdb_service.dart';
 import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
+import 'package:library_ai/services/utility_services/network_status_service.dart';
+import 'package:library_ai/injection_container.dart';
 
 class SupabaseMovieRepositoryImpl implements MovieRepository {
   final SupabaseClient _supabase;
@@ -21,41 +23,64 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
        _tmdbService = tmdbService ?? TmdbService();
 
   @override
-  Stream<List<dynamic>> getWatchlistStream(String userId, String status) async* {
+  Stream<List<dynamic>> getWatchlistStream(
+    String userId,
+    String status,
+  ) async* {
     final cacheKey = 'watchlist_${userId}_$status';
     final cacheBox = Hive.box('cinelib_cache');
 
+    // 1. CARICHIAMO E MOSTRIAMO SUBITO LA CACHE
     final cachedRows = _readCachedRows(cacheBox, cacheKey);
+    final bool hasCache = cachedRows != null && cachedRows.isNotEmpty;
+
     if (cachedRows != null) {
       yield _mapWatchlistRowsToEntities(cachedRows, status);
     }
 
+    // 2. SE SIAMO OFFLINE, FERMIAMOCI ALLA CACHE
+    if (!sl<NetworkStatusService>().isOnline) return;
+
+    // 3. AGGIORNAMENTO DA SUPABASE PROTETTO
     try {
-      yield* _supabase
+      final supabaseStream = _supabase
           .from(_tableName)
           .stream(primaryKey: ['id'])
           .eq('user_id', userId)
-          .order('timestamp', ascending: false)
-          .asyncMap((snapshot) async {
-            final rows = snapshot
-                .map((row) => Map<String, dynamic>.from(row))
-                .toList();
-            final filteredRows = rows
-                .where((row) => row['status'] == status)
-                .toList();
+          .order('timestamp', ascending: false);
 
-            await cacheBox.put(cacheKey, filteredRows);
-            for (final row in filteredRows) {
-              final mediaId = row['media_id'];
-              if (mediaId != null) {
-                await cacheBox.put('media_${userId}_$mediaId', row);
-              }
-            }
+      bool isFirstEvent = true;
 
-            return _mapWatchlistRowsToEntities(filteredRows, status);
-          });
+      await for (final snapshot in supabaseStream) {
+        final rows = snapshot
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList();
+        final filteredRows = rows
+            .where((row) => row['status'] == status)
+            .toList();
+
+        // FIX CRITICO DEL MILLISECONDO:
+        // Supabase spara un array vuoto [] appena si connette.
+        // Se abbiamo la cache, ignoriamo questo "falso vuoto".
+        if (isFirstEvent && filteredRows.isEmpty && hasCache) {
+          isFirstEvent = false;
+          continue;
+        }
+        isFirstEvent = false;
+
+        // Salvataggio in cache solo di dati reali e validi
+        await cacheBox.put(cacheKey, filteredRows);
+        for (final row in filteredRows) {
+          final mediaId = row['media_id'];
+          if (mediaId != null) {
+            await cacheBox.put('media_${userId}_$mediaId', row);
+          }
+        }
+
+        yield _mapWatchlistRowsToEntities(filteredRows, status);
+      }
     } catch (_) {
-      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
+      // In caso di caduta di rete durante lo stream, la UI non perde i dati
     }
   }
 
@@ -94,37 +119,51 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
     final cacheBox = Hive.box('cinelib_cache');
 
     final cachedRow = _readCachedRow(cacheBox, cacheKey);
+    final bool hasCache = cachedRow != null;
+
     if (cachedRow != null) {
       yield _mapWatchlistRowToEntity(cachedRow);
     }
 
+    if (!sl<NetworkStatusService>().isOnline) return;
+
     try {
-      yield* _supabase
+      final supabaseStream = _supabase
           .from(_tableName)
           .stream(primaryKey: ['id'])
-          .eq('user_id', userId)
-          .asyncMap((snapshot) async {
-            final filteredSnapshot = snapshot.where((row) {
-              final rowMediaId = int.tryParse(row['media_id'].toString()) ?? 0;
-              return rowMediaId == id;
-            }).toList();
+          .eq('user_id', userId);
 
-            if (filteredSnapshot.isEmpty) return null;
+      bool isFirstEvent = true;
 
-            final row = Map<String, dynamic>.from(filteredSnapshot.first);
-            await cacheBox.put(cacheKey, row);
+      await for (final snapshot in supabaseStream) {
+        final filteredSnapshot = snapshot.where((row) {
+          final rowMediaId = int.tryParse(row['media_id'].toString()) ?? 0;
+          return rowMediaId == id;
+        }).toList();
 
-            return _mapWatchlistRowToEntity(row);
-          });
-    } catch (_) {
-      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
-    }
+        // FIX "Falso Vuoto" per la pagina dettaglio
+        if (isFirstEvent && filteredSnapshot.isEmpty && hasCache) {
+          isFirstEvent = false;
+          continue;
+        }
+        isFirstEvent = false;
+
+        if (filteredSnapshot.isEmpty) {
+          yield null;
+          continue;
+        }
+
+        final row = Map<String, dynamic>.from(filteredSnapshot.first);
+        await cacheBox.put(cacheKey, row);
+
+        yield _mapWatchlistRowToEntity(row);
+      }
+    } catch (_) {}
   }
 
   Map<String, dynamic>? _readCachedRow(Box cacheBox, String cacheKey) {
     final cached = cacheBox.get(cacheKey);
     if (cached is! Map) return null;
-
     return Map<String, dynamic>.from(cached);
   }
 
@@ -210,10 +249,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       final genreId = categoryPath.split('=').last;
       rawStream = _tmdbService.fetchMoviesByGenre(genreId, page: page);
     } else {
-      rawStream = _tmdbService.fetchMoviesByCategory(
-        categoryPath,
-        page: page,
-      );
+      rawStream = _tmdbService.fetchMoviesByCategory(categoryPath, page: page);
     }
 
     yield* rawStream.map(

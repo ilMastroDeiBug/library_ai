@@ -31,13 +31,14 @@ class LibraryGrid extends StatefulWidget {
 }
 
 class _LibraryGridState extends State<LibraryGrid> {
-  // Stato locale per Ricerca e Filtri
   String _searchQuery = "";
   String _selectedFilter = "Tutti";
 
-  // Determina quali filtri mostrare in base alla tab in cui ci troviamo
+  // IL FIX CRUCIALE: Salviamo lo stream nello stato, non nel build!
+  late Stream<List<dynamic>> _dataStream;
+
   List<String> get _availableFilters {
-    if (widget.mode == AppMode.books) return ['Tutti']; // Per i libri in futuro
+    if (widget.mode == AppMode.books) return ['Tutti'];
     if (widget.status == 'favorites') {
       return ['Tutti', 'Film', 'Serie TV', 'Attori'];
     }
@@ -45,87 +46,91 @@ class _LibraryGridState extends State<LibraryGrid> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _initStream();
+  }
+
+  @override
+  void didUpdateWidget(covariant LibraryGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Se cambiamo tab (es. da Visti a Da Vedere), aggiorniamo lo stream
+    if (oldWidget.mode != widget.mode || oldWidget.status != widget.status) {
+      _initStream();
+    }
+  }
+
+  void _initStream() {
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) {
+      _dataStream = const Stream.empty();
+      return;
+    }
+
+    if (widget.status == 'favorites') {
+      final filterType = widget.mode == AppMode.books ? 'book' : null;
+      _dataStream = sl<GetFavoritesStreamUseCase>().call(
+        user.id,
+        type: filterType,
+      );
+    } else if (widget.mode == AppMode.books) {
+      _dataStream = sl<GetUserBooksUseCase>().call(user.id, widget.status);
+    } else {
+      _dataStream = sl<GetWatchlistUseCase>().call(user.id, widget.status);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: sl<AuthRepository>().userStream,
-      builder: (context, userSnapshot) {
-        final user = userSnapshot.data;
-        if (user == null) return const SizedBox.shrink();
+    return Column(
+      children: [
+        _buildSearchAndFilterHeader(),
+        Expanded(
+          child: StreamBuilder<List<dynamic>>(
+            stream: _dataStream, // Usa lo stream persistente e protetto
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.orangeAccent),
+                );
+              }
 
-        // 1. SELEZIONIAMO LO STREAM GIUSTO
-        final dynamic dataStream;
-        if (widget.status == 'favorites') {
-          final filterType = widget.mode == AppMode.books ? 'book' : null;
-          dataStream = sl<GetFavoritesStreamUseCase>().call(
-            user.id,
-            type: filterType,
-          );
-        } else if (widget.mode == AppMode.books) {
-          dataStream = sl<GetUserBooksUseCase>().call(user.id, widget.status);
-        } else {
-          dataStream = sl<GetWatchlistUseCase>().call(user.id, widget.status);
-        }
+              final allItems = snapshot.data ?? [];
+              final filteredItems = _applyLocalFilters(allItems);
 
-        return Column(
-          children: [
-            // --- HEADER RICERCA E FILTRI ---
-            _buildSearchAndFilterHeader(),
+              if (filteredItems.isEmpty) {
+                return _buildEmptyState();
+              }
 
-            // --- GRIGLIA RISULTATI ---
-            Expanded(
-              child: StreamBuilder<List<dynamic>>(
-                stream: dataStream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.orangeAccent,
-                      ),
-                    );
-                  }
-
-                  final allItems = snapshot.data ?? [];
-
-                  // 2. APPLICHIAMO FILTRI E RICERCA LOCALMENTE
-                  final filteredItems = _applyLocalFilters(allItems);
-
-                  if (filteredItems.isEmpty) {
-                    return _buildEmptyState();
-                  }
-
-                  return GridView.builder(
-                    padding: const EdgeInsets.only(
-                      top: 10, // Ridotto perché c'è già l'header sopra
-                      left: 15,
-                      right: 15,
-                      bottom: 120,
-                    ),
-                    itemCount: filteredItems.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.68,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                        ),
-                    itemBuilder: (context, index) {
-                      final item = filteredItems[index];
-                      return _buildItemCard(context, item);
-                    },
-                  );
+              return GridView.builder(
+                padding: const EdgeInsets.only(
+                  top: 10,
+                  left: 15,
+                  right: 15,
+                  bottom: 120,
+                ),
+                itemCount: filteredItems.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 0.68,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemBuilder: (context, index) {
+                  final item = filteredItems[index];
+                  return _buildItemCard(context, item);
                 },
-              ),
-            ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  // --- LOGICA DI FILTRAGGIO IN-PLACE ---
   List<dynamic> _applyLocalFilters(List<dynamic> items) {
     return items.where((item) {
-      // Estraiamo il titolo per la ricerca testuale
       String title = '';
       if (item is Book)
         title = item.title;
@@ -136,13 +141,11 @@ class _LibraryGridState extends State<LibraryGrid> {
       else if (item is FavoriteItem)
         title = item.title;
 
-      // Filtro 1: Barra di Ricerca
       if (_searchQuery.isNotEmpty &&
           !title.toLowerCase().contains(_searchQuery)) {
         return false;
       }
 
-      // Filtro 2: Chip (Film, Serie TV, Attori)
       if (_selectedFilter != 'Tutti') {
         if (_selectedFilter == 'Film') {
           if (item is! Movie &&
@@ -157,18 +160,15 @@ class _LibraryGridState extends State<LibraryGrid> {
             return false;
         }
       }
-
-      return true; // Se passa tutti i controlli, mostralo!
+      return true;
     }).toList();
   }
 
-  // --- UI HEADER (BARRA E CHIP) ---
   Widget _buildSearchAndFilterHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(15, 15, 15, 5),
       child: Column(
         children: [
-          // Barra di Ricerca
           TextField(
             style: const TextStyle(color: Colors.white, fontSize: 14),
             onChanged: (value) =>
@@ -191,7 +191,6 @@ class _LibraryGridState extends State<LibraryGrid> {
             ),
           ),
           const SizedBox(height: 12),
-          // Chips dei Filtri (Scrollabili Orizzontalmente)
           if (_availableFilters.length > 1)
             SizedBox(
               height: 35,
@@ -233,7 +232,6 @@ class _LibraryGridState extends State<LibraryGrid> {
     );
   }
 
-  // --- UI CARD E NAVIGAZIONE (Invariato dall'ultima versione con i Gradienti) ---
   Widget _buildItemCard(BuildContext context, dynamic item) {
     String imageUrl = "";
     String heroTag = "";
@@ -269,7 +267,6 @@ class _LibraryGridState extends State<LibraryGrid> {
             );
             return;
           }
-
           final bool isFullUrl =
               item.posterUrl != null && item.posterUrl!.startsWith('http');
           final String barePath = isFullUrl
@@ -307,7 +304,6 @@ class _LibraryGridState extends State<LibraryGrid> {
               status: 'none',
             );
           }
-
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -351,9 +347,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                     ),
                     errorWidget: (_, __, ___) => Center(
                       child: Icon(
-                        widget.mode == AppMode.books
-                            ? Icons.book
-                            : Icons.movie,
+                        widget.mode == AppMode.books ? Icons.book : Icons.movie,
                         color: Colors.white24,
                         size: 30,
                       ),
@@ -437,7 +431,7 @@ class _LibraryGridState extends State<LibraryGrid> {
           const SizedBox(height: 16),
           Text(
             _searchQuery.isNotEmpty
-                ? "NESSUN RISULTATO" // Cambio testuale dinamico se l'utente cerca qualcosa che non c'è
+                ? "NESSUN RISULTATO"
                 : (widget.status == 'favorites'
                       ? "NESSUN PREFERITO"
                       : "NESSUN ELEMENTO"),

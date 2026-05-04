@@ -2,6 +2,8 @@ import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/repositories/favorite_repository.dart';
 import '../domain/entities/favorite_item.dart';
+import 'package:library_ai/services/utility_services/network_status_service.dart';
+import 'package:library_ai/injection_container.dart';
 
 class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -48,49 +50,71 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
         : 'favorites_${userId}_$type';
     final cacheBox = Hive.box('cinelib_cache');
 
+    // 1. CARICHIAMO E MOSTRIAMO SUBITO LA CACHE
     final cachedRows = _readCachedRows(cacheBox, cacheKey);
+    bool hasCache = false;
+
     if (cachedRows != null) {
+      hasCache = cachedRows.isNotEmpty;
       yield _mapFavoriteRowsToEntities(cachedRows, type: type);
     } else if (type != null) {
+      // Se non abbiamo la cache specifica, cerchiamo in quella generale
       final cachedAllRows = _readCachedRows(cacheBox, 'favorites_$userId');
       if (cachedAllRows != null) {
+        hasCache = cachedAllRows.isNotEmpty;
         yield _mapFavoriteRowsToEntities(cachedAllRows, type: type);
       }
     }
 
+    // 2. SE SIAMO OFFLINE, FERMIAMOCI ALLA CACHE
+    if (!sl<NetworkStatusService>().isOnline) return;
+
+    // 3. AGGIORNAMENTO DA SUPABASE PROTETTO
     try {
-      yield* _supabase
+      final supabaseStream = _supabase
           .from(_tableName)
           .stream(primaryKey: ['id'])
           .eq('user_id', userId)
-          .order('created_at', ascending: false)
-          .asyncMap((snapshot) async {
-            final rows = snapshot
-                .map((row) => Map<String, dynamic>.from(row))
-                .toList();
-            final filteredRows = type == null
-                ? rows
-                : rows.where((row) => row['item_type'] == type).toList();
+          .order('created_at', ascending: false);
 
-            await cacheBox.put(cacheKey, filteredRows);
-            if (type == null) {
-              final groupedByType = <String, List<Map<String, dynamic>>>{};
-              for (final row in rows) {
-                final rowType = row['item_type']?.toString();
-                if (rowType == null) continue;
-                groupedByType.putIfAbsent(rowType, () => []).add(row);
-              }
+      bool isFirstEvent = true;
 
-              for (final entry in groupedByType.entries) {
-                await cacheBox.put(
-                  'favorites_${userId}_${entry.key}',
-                  entry.value,
-                );
-              }
-            }
+      await for (final snapshot in supabaseStream) {
+        final rows = snapshot
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList();
 
-            return _mapFavoriteRowsToEntities(filteredRows, type: type);
-          });
+        final filteredRows = type == null
+            ? rows
+            : rows.where((row) => row['item_type'] == type).toList();
+
+        // FIX CRITICO DEL MILLISECONDO:
+        // Supabase spara un array vuoto [] appena si connette.
+        // Se abbiamo la cache, ignoriamo questo "falso vuoto".
+        if (isFirstEvent && filteredRows.isEmpty && hasCache) {
+          isFirstEvent = false;
+          continue;
+        }
+        isFirstEvent = false;
+
+        // Salvataggio in cache solo di dati reali e validi
+        await cacheBox.put(cacheKey, filteredRows);
+
+        if (type == null) {
+          final groupedByType = <String, List<Map<String, dynamic>>>{};
+          for (final row in rows) {
+            final rowType = row['item_type']?.toString();
+            if (rowType == null) continue;
+            groupedByType.putIfAbsent(rowType, () => []).add(row);
+          }
+
+          for (final entry in groupedByType.entries) {
+            await cacheBox.put('favorites_${userId}_${entry.key}', entry.value);
+          }
+        }
+
+        yield _mapFavoriteRowsToEntities(filteredRows, type: type);
+      }
     } catch (_) {
       // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
     }
