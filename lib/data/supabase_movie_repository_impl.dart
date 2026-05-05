@@ -9,18 +9,22 @@ import 'package:library_ai/services/utility_services/tmdb_service.dart';
 import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
 import 'package:library_ai/services/utility_services/network_status_service.dart';
 import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/services/utility_services/cinelib_cache_service.dart';
 
 class SupabaseMovieRepositoryImpl implements MovieRepository {
   final SupabaseClient _supabase;
   final TmdbService _tmdbService;
+  final CinelibCacheService _cacheService;
 
   static const String _tableName = 'user_watchlist';
 
   SupabaseMovieRepositoryImpl({
     SupabaseClient? supabaseClient,
     TmdbService? tmdbService,
+    CinelibCacheService? cacheService,
   }) : _supabase = supabaseClient ?? Supabase.instance.client,
-       _tmdbService = tmdbService ?? TmdbService();
+       _tmdbService = tmdbService ?? TmdbService(),
+       _cacheService = cacheService ?? CinelibCacheService();
 
   @override
   Stream<List<dynamic>> getWatchlistStream(
@@ -120,12 +124,17 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         }).toList();
 
         if (filteredSnapshot.isEmpty) {
+          await _cacheService.deleteMediaItem(userId: userId, mediaId: id);
           yield null;
           continue;
         }
 
         final row = Map<String, dynamic>.from(filteredSnapshot.first);
-        await cacheBox.put(cacheKey, row);
+        await _cacheService.upsertMediaItem(
+          userId: userId,
+          mediaId: id,
+          row: row,
+        );
 
         yield _mapWatchlistRowToEntity(row);
       }
@@ -168,8 +177,11 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .upsert(payload, onConflict: 'user_id, media_id, type');
 
     // Aggiornamento cache istantaneo
-    final cacheBox = Hive.box('cinelib_cache');
-    await cacheBox.put('media_${userId}_${movie.id}', payload);
+    await _cacheService.upsertMediaItem(
+      userId: userId,
+      mediaId: movie.id,
+      row: payload,
+    );
   }
 
   @override
@@ -189,8 +201,11 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .upsert(payload, onConflict: 'user_id, media_id, type');
 
     // Aggiornamento cache istantaneo
-    final cacheBox = Hive.box('cinelib_cache');
-    await cacheBox.put('media_${userId}_${series.id}', payload);
+    await _cacheService.upsertMediaItem(
+      userId: userId,
+      mediaId: series.id,
+      row: payload,
+    );
   }
 
   @override
@@ -203,16 +218,12 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .eq('user_id', userId)
         .eq('media_id', id);
 
-    // FIX CHIAVE: Allineiamo la cache locale per la Detail Page
-    final cacheBox = Hive.box('cinelib_cache');
-    final cacheKey = 'media_${userId}_$id';
-    final cachedRow = cacheBox.get(cacheKey);
-    if (cachedRow is Map) {
-      final updatedRow = Map<String, dynamic>.from(cachedRow);
-      updatedRow['status'] = newStatus;
-      updatedRow['timestamp'] = timestamp;
-      await cacheBox.put(cacheKey, updatedRow);
-    }
+    await _cacheService.updateMediaStatus(
+      userId: userId,
+      mediaId: id,
+      newStatus: newStatus,
+      timestamp: timestamp,
+    );
   }
 
   @override
@@ -223,9 +234,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .eq('user_id', userId)
         .eq('media_id', id);
 
-    // Pialliamo anche la cache
-    final cacheBox = Hive.box('cinelib_cache');
-    await cacheBox.delete('media_${userId}_$id');
+    await _cacheService.deleteMediaItem(userId: userId, mediaId: id);
   }
 
   @override

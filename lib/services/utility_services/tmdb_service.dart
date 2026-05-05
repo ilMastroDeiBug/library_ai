@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/services/utility_services/cache_wrapper.dart';
 import '../../models/movie_widget/review_model.dart';
 import '../../models/movie_widget/cast_model.dart';
 import '../../models/movie_widget/watch_provider_model.dart';
@@ -15,6 +16,7 @@ class TmdbService {
   static const String _accessToken =
       "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NmU3NmMyMGZiZjE2ZDFjYTMxZGM1NWM0YjQ5MTA4YyIsIm5iZiI6MTc3MDkxNjMzMC42MjEsInN1YiI6IjY5OGUwOWVhN2M5ZjE4Y2M2NGRjZGQ2NSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.LJL0sBW1eiY3GEw81O-RyD2L-DXqbl7sCwVPxEisabE";
   static const String _baseUrl = 'https://api.themoviedb.org/3';
+  static const Duration _cacheTtl = Duration(hours: 24);
 
   final http.Client _client;
 
@@ -127,7 +129,7 @@ class TmdbService {
         'tmdb_search_people_${_sanitizeCachePart(query)}_${_language}_page_$page';
     final cacheBox = Hive.box('tmdb_cache');
 
-    final cachedResults = _readCachedResults(cacheBox, cacheKey);
+    final cachedResults = await _readCachedResults(cacheBox, cacheKey);
     if (cachedResults != null) {
       yield cachedResults.map(_mapPersonSearchResult).toList();
     }
@@ -140,7 +142,7 @@ class TmdbService {
             .whereType<Map>()
             .map((item) => Map<String, dynamic>.from(item))
             .toList();
-        await cacheBox.put(cacheKey, results);
+        await _writeCache(cacheBox, cacheKey, results);
         yield results.map(_mapPersonSearchResult).toList();
       }
     } catch (_) {
@@ -164,8 +166,7 @@ class TmdbService {
         final data = json.decode(response.body);
         final List castList = data['cast'] ?? [];
 
-        // Salva in cache
-        await cacheBox.put(cacheKey, castList);
+        await _writeCache(cacheBox, cacheKey, castList);
 
         return castList
             .map((json) => CastMember.fromJson(json))
@@ -176,8 +177,8 @@ class TmdbService {
       }
     } catch (e) {
       // OFFLINE FALLBACK
-      final cachedData = cacheBox.get(cacheKey);
-      if (cachedData is List) {
+      final cachedData = await _readCachedList(cacheBox, cacheKey);
+      if (cachedData != null) {
         return cachedData
             .map((json) => CastMember.fromJson(Map<String, dynamic>.from(json)))
             .take(10)
@@ -201,8 +202,7 @@ class TmdbService {
         final data = json.decode(response.body);
         final List results = data['results'] ?? [];
 
-        // Salva in cache
-        await cacheBox.put(cacheKey, results);
+        await _writeCache(cacheBox, cacheKey, results);
 
         return results.map((json) => Review.fromJson(json)).take(5).toList();
       } else {
@@ -210,8 +210,8 @@ class TmdbService {
       }
     } catch (e) {
       // OFFLINE FALLBACK
-      final cachedData = cacheBox.get(cacheKey);
-      if (cachedData is List) {
+      final cachedData = await _readCachedList(cacheBox, cacheKey);
+      if (cachedData != null) {
         return cachedData
             .map((json) => Review.fromJson(Map<String, dynamic>.from(json)))
             .take(5)
@@ -233,8 +233,7 @@ class TmdbService {
         final data = json.decode(response.body);
         final List results = data['results'] ?? [];
 
-        // Salva la lista intera in cache
-        await cacheBox.put(cacheKey, results);
+        await _writeCache(cacheBox, cacheKey, results);
 
         final trailer = results.firstWhere(
           (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
@@ -246,9 +245,9 @@ class TmdbService {
       }
     } catch (e) {
       // OFFLINE FALLBACK
-      final cachedData = cacheBox.get(cacheKey);
-      if (cachedData is List) {
-        final List results = cachedData;
+      final cachedData = await _readCachedList(cacheBox, cacheKey);
+      if (cachedData != null) {
+        final results = cachedData;
         final trailer = results.firstWhere(
           (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
           orElse: () => null,
@@ -276,7 +275,7 @@ class TmdbService {
 
         // Salva in cache il nodo 'results'
         if (results != null) {
-          await cacheBox.put(cacheKey, results);
+          await _writeCache(cacheBox, cacheKey, results);
           if (results.containsKey('IT')) {
             return WatchProvidersResult.fromJson(results['IT']);
           }
@@ -287,8 +286,8 @@ class TmdbService {
       }
     } catch (e) {
       // OFFLINE FALLBACK
-      final cachedData = cacheBox.get(cacheKey);
-      if (cachedData is Map && cachedData.containsKey('IT')) {
+      final cachedData = await _readCachedMap(cacheBox, cacheKey);
+      if (cachedData != null && cachedData.containsKey('IT')) {
         return WatchProvidersResult.fromJson(
           Map<String, dynamic>.from(cachedData['IT']),
         );
@@ -310,8 +309,7 @@ class TmdbService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        // Salva l'intero oggetto in cache
-        await cacheBox.put(cacheKey, data);
+        await _writeCache(cacheBox, cacheKey, data);
 
         return data;
       } else {
@@ -319,9 +317,9 @@ class TmdbService {
       }
     } catch (e) {
       // OFFLINE FALLBACK
-      final cachedData = cacheBox.get(cacheKey);
-      if (cachedData is Map) {
-        return Map<String, dynamic>.from(cachedData);
+      final cachedData = await _readCachedMap(cacheBox, cacheKey);
+      if (cachedData != null) {
+        return cachedData;
       }
       throw Exception('Errore di Rete TMDB (Person) e nessuna cache: $e');
     }
@@ -330,7 +328,7 @@ class TmdbService {
   // --- HELPERS ---
   Stream<List<Movie>> _streamMovies(Uri url, String cacheKey) async* {
     final cacheBox = Hive.box('tmdb_cache');
-    final cachedResults = _readCachedResults(cacheBox, cacheKey);
+    final cachedResults = await _readCachedResults(cacheBox, cacheKey);
     if (cachedResults != null) {
       yield cachedResults.map(Movie.fromTmdb).toList();
     }
@@ -343,7 +341,7 @@ class TmdbService {
             .whereType<Map>()
             .map((item) => Map<String, dynamic>.from(item))
             .toList();
-        await cacheBox.put(cacheKey, results);
+        await _writeCache(cacheBox, cacheKey, results);
         yield results.map(Movie.fromTmdb).toList();
       }
     } catch (_) {
@@ -353,7 +351,7 @@ class TmdbService {
 
   Stream<List<TvSeries>> _streamTvSeries(Uri url, String cacheKey) async* {
     final cacheBox = Hive.box('tmdb_cache');
-    final cachedResults = _readCachedResults(cacheBox, cacheKey);
+    final cachedResults = await _readCachedResults(cacheBox, cacheKey);
     if (cachedResults != null) {
       yield cachedResults.map(TvSeries.fromTmdb).toList();
     }
@@ -366,7 +364,7 @@ class TmdbService {
             .whereType<Map>()
             .map((item) => Map<String, dynamic>.from(item))
             .toList();
-        await cacheBox.put(cacheKey, results);
+        await _writeCache(cacheBox, cacheKey, results);
         yield results.map(TvSeries.fromTmdb).toList();
       }
     } catch (_) {
@@ -374,11 +372,54 @@ class TmdbService {
     }
   }
 
-  List<Map<String, dynamic>>? _readCachedResults(
+  Future<void> _writeCache(Box cacheBox, String cacheKey, Object? data) {
+    final wrapper = CacheWrapper<Object?>(
+      data: data,
+      cachedAt: DateTime.now(),
+    );
+    return cacheBox.put(cacheKey, wrapper.toHiveMap());
+  }
+
+  Future<Object?> _readFreshCachedValue(Box cacheBox, String cacheKey) async {
+    final wrapper = CacheWrapper.fromHive<Object?>(cacheBox.get(cacheKey));
+    if (wrapper == null) {
+      if (cacheBox.containsKey(cacheKey)) {
+        await cacheBox.delete(cacheKey);
+      }
+      return null;
+    }
+
+    if (wrapper.isExpired(_cacheTtl)) {
+      await cacheBox.delete(cacheKey);
+      return null;
+    }
+
+    return wrapper.data;
+  }
+
+  Future<List<dynamic>?> _readCachedList(
     Box cacheBox,
     String cacheKey,
-  ) {
-    final cached = cacheBox.get(cacheKey);
+  ) async {
+    final cached = await _readFreshCachedValue(cacheBox, cacheKey);
+    if (cached is! List) return null;
+    return cached;
+  }
+
+  Future<Map<String, dynamic>?> _readCachedMap(
+    Box cacheBox,
+    String cacheKey,
+  ) async {
+    final cached = await _readFreshCachedValue(cacheBox, cacheKey);
+    if (cached is! Map) return null;
+    return Map<String, dynamic>.from(cached);
+  }
+
+  Future<List<Map<String, dynamic>>?> _readCachedResults(
+    Box cacheBox,
+    String cacheKey,
+  ) async {
+    final cached = await _readCachedList(cacheBox, cacheKey);
     if (cached is! List) return null;
 
     return cached

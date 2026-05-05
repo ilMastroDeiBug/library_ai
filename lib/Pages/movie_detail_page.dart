@@ -293,7 +293,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       const SizedBox(height: 40),
 
                       const Text(
-                        "SINOSSI",
+                        "TRAMA",
                         style: TextStyle(
                           color: Colors.white38,
                           fontWeight: FontWeight.bold,

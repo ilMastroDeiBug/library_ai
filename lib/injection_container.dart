@@ -24,6 +24,7 @@ import 'package:library_ai/domain/repositories/actor_repository.dart';
 import 'package:library_ai/data/tmdb_actor_repository_impl.dart';
 import 'package:library_ai/domain/use_cases/actor_use_cases.dart';
 import 'package:library_ai/services/utility_services/tmdb_service.dart';
+import 'package:library_ai/services/utility_services/cinelib_cache_service.dart';
 
 // Import Services Libri (DORMIENTI)
 import 'package:library_ai/services/utility_services/open_library_service.dart';
@@ -38,6 +39,7 @@ Future<void> init() async {
   // EXTERNAL SERVICES / DATA SOURCES
   // =========================================================================
   sl.registerLazySingleton<TmdbService>(() => TmdbService());
+  sl.registerLazySingleton<CinelibCacheService>(() => CinelibCacheService());
 
   // 🔒 Libri (Dormienti)
   sl.registerLazySingleton<OpenLibraryService>(() => OpenLibraryService());
@@ -57,11 +59,12 @@ Future<void> init() async {
     () => SupabaseBookRepositoryImpl(
       openLibraryService: sl(),
       googleBooksService: sl(),
+      cacheService: sl(),
     ),
   );
 
   sl.registerLazySingleton<MovieRepository>(
-    () => SupabaseMovieRepositoryImpl(),
+    () => SupabaseMovieRepositoryImpl(tmdbService: sl(), cacheService: sl()),
   );
 
   sl.registerLazySingleton<ExploreRepository>(() => ExploreRepositoryImpl());

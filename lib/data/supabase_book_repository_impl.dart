@@ -4,12 +4,14 @@ import '../../domain/repositories/book_repository.dart';
 import '../../domain/entities/book.dart';
 import '../services/utility_services/open_library_service.dart';
 import '../services/utility_services/google_books_service.dart';
+import '../services/utility_services/cinelib_cache_service.dart';
 
 class SupabaseBookRepositoryImpl implements BookRepository {
   final SupabaseClient _supabase;
 
   final OpenLibraryService _openLibraryService;
   final GoogleBooksService _googleBooksService;
+  final CinelibCacheService _cacheService;
 
   final Future<Map<String, dynamic>?> Function(String safeBookId)?
   _fetchCachedCatalogBook;
@@ -22,12 +24,14 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     required OpenLibraryService openLibraryService,
     required GoogleBooksService googleBooksService,
     SupabaseClient? supabaseClient,
+    CinelibCacheService? cacheService,
     Future<Map<String, dynamic>?> Function(String safeBookId)?
     fetchCachedCatalogBook,
     Future<void> Function(Book book)? persistCatalogBook,
   }) : _openLibraryService = openLibraryService,
        _googleBooksService = googleBooksService,
        _supabase = supabaseClient ?? Supabase.instance.client,
+       _cacheService = cacheService ?? CinelibCacheService(),
        _fetchCachedCatalogBook = fetchCachedCatalogBook,
        _persistCatalogBook = persistCatalogBook;
 
@@ -91,10 +95,17 @@ class SupabaseBookRepositoryImpl implements BookRepository {
                 .where((row) => row['book_id'] == docId)
                 .toList();
 
-            if (bookRows.isEmpty) return null;
+            if (bookRows.isEmpty) {
+              await _cacheService.deleteBook(userId: userId, bookId: docId);
+              return null;
+            }
 
             final row = Map<String, dynamic>.from(bookRows.first);
-            await cacheBox.put(cacheKey, row);
+            await _cacheService.upsertBook(
+              userId: userId,
+              bookId: docId,
+              row: row,
+            );
 
             return _mapBookRowToEntity(row);
           });
@@ -167,6 +178,12 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     await _supabase
         .from(_userTableName)
         .upsert(rowToInsert, onConflict: 'user_id, book_id');
+
+    await _cacheService.upsertBook(
+      userId: userId,
+      bookId: docId,
+      row: rowToInsert,
+    );
   }
 
   @override
@@ -177,6 +194,8 @@ class SupabaseBookRepositoryImpl implements BookRepository {
         .delete()
         .eq('user_id', userId)
         .eq('book_id', docId);
+
+    await _cacheService.deleteBook(userId: userId, bookId: docId);
   }
 
   @override
@@ -186,11 +205,19 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     String newStatus,
   ) async {
     final docId = bookId.replaceAll('/', '_');
+    final timestamp = DateTime.now().toIso8601String();
     await _supabase
         .from(_userTableName)
-        .update({'status': newStatus})
+        .update({'status': newStatus, 'timestamp': timestamp})
         .eq('user_id', userId)
         .eq('book_id', docId);
+
+    await _cacheService.updateBookStatus(
+      userId: userId,
+      bookId: docId,
+      newStatus: newStatus,
+      timestamp: timestamp,
+    );
   }
 
   @override
