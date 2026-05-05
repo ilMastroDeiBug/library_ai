@@ -1,13 +1,11 @@
 import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
-import 'package:library_ai/models/movie_widget/review_model.dart';
 import 'package:library_ai/models/movie_widget/cast_model.dart';
 import 'package:library_ai/services/utility_services/ai_service.dart';
 import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
 
 // --- DB USE CASES (SERIE TV) ---
 
-// <-- FIX: Caso d'uso specifico per la UI delle Serie TV
 class GetSingleTvSeriesUseCase {
   final MovieRepository repository;
   GetSingleTvSeriesUseCase(this.repository);
@@ -59,14 +57,6 @@ class GetTvSeriesByCategoryUseCase {
 
   Stream<List<TvSeries>> call(String path, {int page = 1}) =>
       repository.getTvSeriesByCategory(path, page: page);
-}
-
-class GetTvSeriesReviewsUseCase {
-  final MovieRepository repository;
-  GetTvSeriesReviewsUseCase(this.repository);
-
-  Future<List<Review>> call(int seriesId) =>
-      repository.getReviews(seriesId, isTv: true);
 }
 
 class GetTvSeriesCastUseCase {

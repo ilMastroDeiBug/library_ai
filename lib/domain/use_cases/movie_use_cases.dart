@@ -1,6 +1,5 @@
 import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/entities/movie.dart';
-import 'package:library_ai/models/movie_widget/review_model.dart';
 import 'package:library_ai/models/movie_widget/cast_model.dart';
 import 'package:library_ai/services/utility_services/ai_service.dart';
 import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
@@ -15,12 +14,10 @@ class GetWatchlistUseCase {
       repository.getWatchlistStream(userId, status);
 }
 
-// <-- FIX: Caso d'uso specifico per la UI dei Film
 class GetSingleMovieUseCase {
   final MovieRepository repository;
   GetSingleMovieUseCase(this.repository);
 
-  // Trasforma la Stringa della UI nell'Int del Repository
   Stream<dynamic> call(String userId, String movieId) =>
       repository.getSingleMediaStream(userId, int.parse(movieId));
 }
@@ -68,14 +65,6 @@ class GetMoviesByCategoryUseCase {
 
   Stream<List<Movie>> call(String path, {int page = 1}) =>
       repository.getMoviesByCategory(path, page: page);
-}
-
-class GetMovieReviewsUseCase {
-  final MovieRepository repository;
-  GetMovieReviewsUseCase(this.repository);
-
-  Future<List<Review>> call(int movieId) =>
-      repository.getReviews(movieId, isTv: false);
 }
 
 class GetMovieCastUseCase {

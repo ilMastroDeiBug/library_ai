@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
-import 'package:library_ai/models/movie_widget/review_model.dart';
 import 'package:library_ai/models/movie_widget/cast_model.dart';
 import 'package:library_ai/services/utility_services/tmdb_service.dart';
 import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
@@ -293,10 +292,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
           .toList(),
     );
   }
-
-  @override
-  Future<List<Review>> getReviews(int id, {bool isTv = false}) async =>
-      _tmdbService.fetchReviews(id, isTv: isTv);
 
   @override
   Future<List<CastMember>> getCast(int id, {bool isTv = false}) async =>

@@ -2,9 +2,18 @@ import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../../domain/entities/app_user.dart';
+import '../../services/utility_services/review_author_sync_service.dart';
 
 class SupabaseUserRepositoryImpl implements UserRepository {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+  final ReviewAuthorSyncService _reviewAuthorSyncService;
+
+  SupabaseUserRepositoryImpl({
+    SupabaseClient? supabaseClient,
+    ReviewAuthorSyncService? reviewAuthorSyncService,
+  }) : _supabase = supabaseClient ?? Supabase.instance.client,
+       _reviewAuthorSyncService =
+           reviewAuthorSyncService ?? ReviewAuthorSyncService();
 
   @override
   Future<AppUser?> getUserData(String uid) async {
@@ -63,8 +72,10 @@ class SupabaseUserRepositoryImpl implements UserRepository {
           currentUser?.userMetadata ?? {},
         );
         currentMeta['display_name'] = name;
+        currentMeta['name'] = name;
 
         await _supabase.auth.updateUser(UserAttributes(data: currentMeta));
+        await _reviewAuthorSyncService.sync(userId: uid, author: name);
       }
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
@@ -92,6 +103,7 @@ class SupabaseUserRepositoryImpl implements UserRepository {
       currentMeta['avatar_url'] = avatarUrl;
 
       await _supabase.auth.updateUser(UserAttributes(data: currentMeta));
+      await _reviewAuthorSyncService.sync(userId: userId, avatarUrl: avatarUrl);
     } catch (e) {
       throw Exception('Errore durante il salvataggio dell\'avatar: $e');
     }

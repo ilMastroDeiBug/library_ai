@@ -2,17 +2,22 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/entities/app_user.dart';
+import '../../services/utility_services/review_author_sync_service.dart';
 
 class SupabaseAuthRepositoryImpl implements AuthRepository {
   final supa.SupabaseClient _supabase;
   final GoogleSignIn _googleSignIn;
+  final ReviewAuthorSyncService _reviewAuthorSyncService;
 
   SupabaseAuthRepositoryImpl({
     supa.SupabaseClient? supabaseClient,
     GoogleSignIn? googleSignIn,
+    ReviewAuthorSyncService? reviewAuthorSyncService,
     String webClientId =
         '474613371614-gjgpn9354i52qo7msde01vuq2s54k2d2.apps.googleusercontent.com',
   }) : _supabase = supabaseClient ?? supa.Supabase.instance.client,
+       _reviewAuthorSyncService =
+           reviewAuthorSyncService ?? ReviewAuthorSyncService(),
        _googleSignIn =
            googleSignIn ??
            GoogleSignIn(
@@ -80,7 +85,13 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> updateDisplayName(String name) async {
-    await _supabase.auth.updateUser(supa.UserAttributes(data: {'name': name}));
+    await _supabase.auth.updateUser(
+      supa.UserAttributes(data: {'name': name, 'display_name': name}),
+    );
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId != null) {
+      await _reviewAuthorSyncService.sync(userId: userId, author: name);
+    }
   }
 
   @override

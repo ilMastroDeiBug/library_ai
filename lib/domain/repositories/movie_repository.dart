@@ -1,6 +1,5 @@
 import '../entities/movie.dart';
 import '../entities/tv_series.dart';
-import '../../models/movie_widget/review_model.dart';
 import '../../models/movie_widget/cast_model.dart';
 import '../../models/movie_widget/watch_provider_model.dart';
 
@@ -8,7 +7,7 @@ abstract class MovieRepository {
   // Database
   Stream<List<dynamic>> getWatchlistStream(String userId, String status);
 
-  // <-- NUOVO: Stream per il singolo Film/Serie per la Detail Page
+  // Stream per il singolo Film/Serie per la Detail Page
   Stream<dynamic> getSingleMediaStream(String userId, int id);
 
   Future<void> saveMovie(Movie movie, String userId);
@@ -25,7 +24,8 @@ abstract class MovieRepository {
     int page = 1,
   });
 
-  Future<List<Review>> getReviews(int id, {bool isTv = false});
+  // RECENSIONI RIMOSSE DA QUI -> Ora gestite dal ReviewRepository
+
   Future<List<CastMember>> getCast(int id, {bool isTv = false});
   Stream<List<Movie>> searchMovies(String query);
   Stream<List<TvSeries>> searchTvSeries(String query);

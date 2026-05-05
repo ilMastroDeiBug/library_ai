@@ -1,13 +1,11 @@
-// lib/services/utility_services/tmdb_service.dart
-
 import 'dart:convert';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
+import 'package:library_ai/domain/entities/review.dart'; // IMPORT CORRETTO
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/services/utility_services/cache_wrapper.dart';
-import '../../models/movie_widget/review_model.dart';
 import '../../models/movie_widget/cast_model.dart';
 import '../../models/movie_widget/watch_provider_model.dart';
 import '../utility_services/language_service.dart';
@@ -29,7 +27,7 @@ class TmdbService {
 
   String get _language => sl<LanguageService>().currentLanguage;
 
-  // --- FILM (STREAM CACHE-THEN-NETWORK) ---
+  // --- FILM ---
   Stream<List<Movie>> fetchMoviesByCategory(
     String endpoint, {
     int page = 1,
@@ -74,7 +72,7 @@ class TmdbService {
     );
   }
 
-  // --- SERIE TV (STREAM CACHE-THEN-NETWORK) ---
+  // --- SERIE TV ---
   Stream<List<TvSeries>> fetchTvSeriesByCategory(
     String endpoint, {
     int page = 1,
@@ -116,7 +114,7 @@ class TmdbService {
     );
   }
 
-  // --- ATTORI / PERSONE (STREAM CACHE-THEN-NETWORK) ---
+  // --- ATTORI / PERSONE ---
   Stream<List<CastMember>> searchActors(String query, {int page = 1}) async* {
     if (query.isEmpty) {
       yield [];
@@ -145,13 +143,10 @@ class TmdbService {
         await _writeCache(cacheBox, cacheKey, results);
         yield results.map(_mapPersonSearchResult).toList();
       }
-    } catch (_) {
-      // Offline fallback gestito dallo yield iniziale
-    }
+    } catch (_) {}
   }
 
-  // --- COMMON (FUTURE CON CACHE OFFLINE-FALLBACK) ---
-
+  // --- COMMON ---
   Future<List<CastMember>> fetchCast(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final url = Uri.parse(
@@ -165,9 +160,7 @@ class TmdbService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List castList = data['cast'] ?? [];
-
         await _writeCache(cacheBox, cacheKey, castList);
-
         return castList
             .map((json) => CastMember.fromJson(json))
             .take(10)
@@ -176,7 +169,6 @@ class TmdbService {
         throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      // OFFLINE FALLBACK
       final cachedData = await _readCachedList(cacheBox, cacheKey);
       if (cachedData != null) {
         return cachedData
@@ -184,41 +176,52 @@ class TmdbService {
             .take(10)
             .toList();
       }
-      throw Exception('Errore connessione e nessuna cache: $e');
+      throw Exception('Errore connessione: $e');
     }
   }
 
+  // AGGIORNATO AL NUOVO MODELLO
   Future<List<Review>> fetchReviews(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
-    final url = Uri.parse(
-      '$_baseUrl/$endpoint/$id/reviews?language=$_language&page=1',
-    );
-    final cacheKey = 'tmdb_reviews_${id}_$endpoint';
     final cacheBox = Hive.box('tmdb_cache');
+    final languages = <String>[
+      _language,
+      if (_language != 'en-US') 'en-US',
+    ];
+    Object? lastError;
 
-    try {
-      final response = await _client.get(url, headers: _headers);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List results = data['results'] ?? [];
+    for (final language in languages) {
+      final cacheKey = 'tmdb_reviews_${id}_${endpoint}_$language';
 
-        await _writeCache(cacheBox, cacheKey, results);
+      try {
+        final results = await _fetchReviewRows(
+          endpoint: endpoint,
+          id: id,
+          language: language,
+          cacheBox: cacheBox,
+          cacheKey: cacheKey,
+        );
 
-        return results.map((json) => Review.fromJson(json)).take(5).toList();
-      } else {
-        throw Exception('Status code: ${response.statusCode}');
+        if (results.isNotEmpty || language == languages.last) {
+          return results.map(_mapTmdbReview).take(5).toList();
+        }
+      } catch (e) {
+        lastError = e;
+        final cachedData = await _readCachedList(cacheBox, cacheKey);
+        if (cachedData != null && cachedData.isNotEmpty) {
+          return cachedData
+              .whereType<Map>()
+              .map((json) => _mapTmdbReview(Map<String, dynamic>.from(json)))
+              .take(5)
+              .toList();
+        }
       }
-    } catch (e) {
-      // OFFLINE FALLBACK
-      final cachedData = await _readCachedList(cacheBox, cacheKey);
-      if (cachedData != null) {
-        return cachedData
-            .map((json) => Review.fromJson(Map<String, dynamic>.from(json)))
-            .take(5)
-            .toList();
-      }
-      throw Exception('Errore connessione e nessuna cache: $e');
     }
+
+    if (lastError != null) {
+      throw Exception('Errore connessione: $lastError');
+    }
+    return [];
   }
 
   Future<String?> fetchTrailerKey(int id, {bool isTv = false}) async {
@@ -232,9 +235,7 @@ class TmdbService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List results = data['results'] ?? [];
-
         await _writeCache(cacheBox, cacheKey, results);
-
         final trailer = results.firstWhere(
           (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
           orElse: () => null,
@@ -244,17 +245,15 @@ class TmdbService {
         throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      // OFFLINE FALLBACK
       final cachedData = await _readCachedList(cacheBox, cacheKey);
       if (cachedData != null) {
-        final results = cachedData;
-        final trailer = results.firstWhere(
+        final trailer = cachedData.firstWhere(
           (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
           orElse: () => null,
         );
         return trailer?['key'];
       }
-      throw Exception('Errore connessione e nessuna cache: $e');
+      throw Exception('Errore connessione: $e');
     }
   }
 
@@ -272,31 +271,26 @@ class TmdbService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'];
-
-        // Salva in cache il nodo 'results'
         if (results != null) {
           await _writeCache(cacheBox, cacheKey, results);
-          if (results.containsKey('IT')) {
+          if (results.containsKey('IT'))
             return WatchProvidersResult.fromJson(results['IT']);
-          }
         }
         return null;
       } else {
         throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      // OFFLINE FALLBACK
       final cachedData = await _readCachedMap(cacheBox, cacheKey);
       if (cachedData != null && cachedData.containsKey('IT')) {
         return WatchProvidersResult.fromJson(
           Map<String, dynamic>.from(cachedData['IT']),
         );
       }
-      return null; // Fallback silenzioso per i providers
+      return null;
     }
   }
 
-  // --- PERSON/ACTOR DETAILS CORRETTO (FUTURE CON CACHE) ---
   Future<Map<String, dynamic>> getPersonDetails(int personId) async {
     final url = Uri.parse(
       '$_baseUrl/person/$personId?language=$_language&append_to_response=combined_credits',
@@ -308,24 +302,82 @@ class TmdbService {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
         await _writeCache(cacheBox, cacheKey, data);
-
         return data;
       } else {
         throw Exception('Status code: ${response.statusCode}');
       }
     } catch (e) {
-      // OFFLINE FALLBACK
       final cachedData = await _readCachedMap(cacheBox, cacheKey);
-      if (cachedData != null) {
-        return cachedData;
-      }
-      throw Exception('Errore di Rete TMDB (Person) e nessuna cache: $e');
+      if (cachedData != null) return cachedData;
+      throw Exception('Errore di Rete TMDB (Person): $e');
     }
   }
 
   // --- HELPERS ---
+
+  Future<List<Map<String, dynamic>>> _fetchReviewRows({
+    required String endpoint,
+    required int id,
+    required String language,
+    required Box cacheBox,
+    required String cacheKey,
+  }) async {
+    final url = Uri.parse(
+      '$_baseUrl/$endpoint/$id/reviews?language=$language&page=1',
+    );
+    final response = await _client.get(url, headers: _headers);
+    if (response.statusCode != 200) {
+      throw Exception('Status code: ${response.statusCode}');
+    }
+
+    final data = json.decode(response.body);
+    final results = (data['results'] as List? ?? [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+
+    await _writeCache(cacheBox, cacheKey, results);
+    return results;
+  }
+
+  Review _mapTmdbReview(Map<String, dynamic> json) {
+    final rawAuthorDetails = json['author_details'];
+    final authorDetails = rawAuthorDetails is Map
+        ? Map<String, dynamic>.from(rawAuthorDetails)
+        : null;
+    double rating = 0.0;
+    String? avatarUrl;
+
+    if (authorDetails != null) {
+      if (authorDetails['rating'] != null) {
+        rating = (authorDetails['rating'] as num).toDouble() / 2;
+      }
+      if (authorDetails['avatar_path'] != null) {
+        final path = authorDetails['avatar_path'].toString();
+        if (path.startsWith('/http')) {
+          avatarUrl = path.substring(1);
+        } else if (path.startsWith('http')) {
+          avatarUrl = path;
+        } else if (path.startsWith('/')) {
+          avatarUrl = 'https://image.tmdb.org/t/p/w200$path';
+        }
+      }
+    }
+
+    return Review(
+      id: (json['id'] ?? DateTime.now().millisecondsSinceEpoch).toString(),
+      author: json['author']?.toString() ?? 'Utente TMDB',
+      content: json['content'] ?? '',
+      rating: rating,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+          : null,
+      avatarUrl: avatarUrl,
+      isCustom: false,
+    );
+  }
+
   Stream<List<Movie>> _streamMovies(Uri url, String cacheKey) async* {
     final cacheBox = Hive.box('tmdb_cache');
     final cachedResults = await _readCachedResults(cacheBox, cacheKey);
@@ -344,9 +396,7 @@ class TmdbService {
         await _writeCache(cacheBox, cacheKey, results);
         yield results.map(Movie.fromTmdb).toList();
       }
-    } catch (_) {
-      // Offline fallback gestito dallo yield iniziale
-    }
+    } catch (_) {}
   }
 
   Stream<List<TvSeries>> _streamTvSeries(Uri url, String cacheKey) async* {
@@ -367,40 +417,28 @@ class TmdbService {
         await _writeCache(cacheBox, cacheKey, results);
         yield results.map(TvSeries.fromTmdb).toList();
       }
-    } catch (_) {
-      // Offline fallback gestito dallo yield iniziale
-    }
+    } catch (_) {}
   }
 
   Future<void> _writeCache(Box cacheBox, String cacheKey, Object? data) {
-    final wrapper = CacheWrapper<Object?>(
-      data: data,
-      cachedAt: DateTime.now(),
-    );
+    final wrapper = CacheWrapper<Object?>(data: data, cachedAt: DateTime.now());
     return cacheBox.put(cacheKey, wrapper.toHiveMap());
   }
 
   Future<Object?> _readFreshCachedValue(Box cacheBox, String cacheKey) async {
     final wrapper = CacheWrapper.fromHive<Object?>(cacheBox.get(cacheKey));
     if (wrapper == null) {
-      if (cacheBox.containsKey(cacheKey)) {
-        await cacheBox.delete(cacheKey);
-      }
+      if (cacheBox.containsKey(cacheKey)) await cacheBox.delete(cacheKey);
       return null;
     }
-
     if (wrapper.isExpired(_cacheTtl)) {
       await cacheBox.delete(cacheKey);
       return null;
     }
-
     return wrapper.data;
   }
 
-  Future<List<dynamic>?> _readCachedList(
-    Box cacheBox,
-    String cacheKey,
-  ) async {
+  Future<List<dynamic>?> _readCachedList(Box cacheBox, String cacheKey) async {
     final cached = await _readFreshCachedValue(cacheBox, cacheKey);
     if (cached is! List) return null;
     return cached;
@@ -421,16 +459,14 @@ class TmdbService {
   ) async {
     final cached = await _readCachedList(cacheBox, cacheKey);
     if (cached is! List) return null;
-
     return cached
         .whereType<Map>()
         .map((row) => Map<String, dynamic>.from(row))
         .toList();
   }
 
-  String _sanitizeCachePart(String value) {
-    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
-  }
+  String _sanitizeCachePart(String value) =>
+      value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
 
   CastMember _mapPersonSearchResult(Map<String, dynamic> json) {
     return CastMember(

@@ -4,20 +4,23 @@ import 'package:library_ai/domain/repositories/user_repository.dart';
 import 'package:library_ai/domain/repositories/book_repository.dart';
 import 'package:library_ai/domain/repositories/movie_repository.dart';
 import 'package:library_ai/domain/repositories/explore_repository.dart';
-import 'package:library_ai/domain/repositories/favorite_repository.dart'; // <-- NUOVO
+import 'package:library_ai/domain/repositories/favorite_repository.dart';
+import 'package:library_ai/domain/repositories/review_repository.dart'; // <-- NUOVO IMPORT
 import 'package:library_ai/data/supabase_book_repository_impl.dart';
 import 'package:library_ai/data/supabase_auth_repository_impl.dart';
 import 'package:library_ai/data/supabase_user_repository_impl.dart';
 import 'package:library_ai/data/explore_repository_impl.dart';
 import 'package:library_ai/data/supabase_movie_repository_impl.dart';
-import 'package:library_ai/data/supabase_favorites_repository_impl.dart'; // <-- NUOVO
+import 'package:library_ai/data/supabase_favorites_repository_impl.dart';
+import 'package:library_ai/data/supabase_review_repository_impl.dart'; // <-- NUOVO IMPORT
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 import 'package:library_ai/domain/use_cases/explore_use_cases.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
-import 'package:library_ai/domain/use_cases/favorite_use_cases.dart'; // <-- NUOVO
+import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
+import 'package:library_ai/domain/use_cases/review_use_cases.dart'; // <-- NUOVO IMPORT
 import 'package:library_ai/services/utility_services/language_service.dart';
 import 'package:library_ai/services/utility_services/network_status_service.dart';
 import 'package:library_ai/domain/repositories/actor_repository.dart';
@@ -25,6 +28,7 @@ import 'package:library_ai/data/tmdb_actor_repository_impl.dart';
 import 'package:library_ai/domain/use_cases/actor_use_cases.dart';
 import 'package:library_ai/services/utility_services/tmdb_service.dart';
 import 'package:library_ai/services/utility_services/cinelib_cache_service.dart';
+import 'package:library_ai/services/utility_services/review_author_sync_service.dart';
 
 // Import Services Libri (DORMIENTI)
 import 'package:library_ai/services/utility_services/open_library_service.dart';
@@ -40,6 +44,9 @@ Future<void> init() async {
   // =========================================================================
   sl.registerLazySingleton<TmdbService>(() => TmdbService());
   sl.registerLazySingleton<CinelibCacheService>(() => CinelibCacheService());
+  sl.registerLazySingleton<ReviewAuthorSyncService>(
+    () => ReviewAuthorSyncService(),
+  );
 
   // 🔒 Libri (Dormienti)
   sl.registerLazySingleton<OpenLibraryService>(() => OpenLibraryService());
@@ -48,8 +55,15 @@ Future<void> init() async {
   // =========================================================================
   // REPOSITORIES
   // =========================================================================
-  sl.registerLazySingleton<AuthRepository>(() => SupabaseAuthRepositoryImpl());
-  sl.registerLazySingleton<UserRepository>(() => SupabaseUserRepositoryImpl());
+  sl.registerLazySingleton<AuthRepository>(
+    () => SupabaseAuthRepositoryImpl(reviewAuthorSyncService: sl()),
+  );
+  sl.registerLazySingleton<UserRepository>(
+    () => SupabaseUserRepositoryImpl(reviewAuthorSyncService: sl()),
+  );
+  sl.registerLazySingleton<ReviewRepository>(
+    () => SupabaseReviewRepositoryImpl(),
+  );
 
   sl.registerLazySingleton<ActorRepository>(
     () => TmdbActorRepositoryImpl(tmdbService: sl()),
@@ -70,7 +84,7 @@ Future<void> init() async {
   sl.registerLazySingleton<ExploreRepository>(() => ExploreRepositoryImpl());
 
   sl.registerLazySingleton<FavoritesRepository>(
-    () => SupabaseFavoritesRepositoryImpl(), // <-- NUOVO
+    () => SupabaseFavoritesRepositoryImpl(),
   );
 
   // =========================================================================
@@ -112,7 +126,6 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SaveMovieAnalysisUseCase(sl()));
   sl.registerLazySingleton(() => DeleteMovieUseCase(sl()));
   sl.registerLazySingleton(() => GetMoviesByCategoryUseCase(sl()));
-  sl.registerLazySingleton(() => GetMovieReviewsUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieCastUseCase(sl()));
   sl.registerLazySingleton(() => AnalyzeMovieUseCase(sl()));
   sl.registerLazySingleton(() => SearchMoviesUseCase(sl()));
@@ -123,7 +136,6 @@ Future<void> init() async {
   // TV Series...
   sl.registerLazySingleton(() => GetTvSeriesByCategoryUseCase(sl()));
   sl.registerLazySingleton(() => SearchTvSeriesUseCase(sl()));
-  sl.registerLazySingleton(() => GetTvSeriesReviewsUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesCastUseCase(sl()));
   sl.registerLazySingleton(() => AnalyzeTvSeriesUseCase(sl()));
   sl.registerLazySingleton(() => GetTvSeriesTrailerUseCase(sl()));
@@ -141,8 +153,14 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetActorDetailsUseCase(sl()));
   sl.registerLazySingleton(() => SearchActorsUseCase(sl()));
 
-  // Favorites (NUOVI)
+  // Favorites...
   sl.registerLazySingleton(() => ToggleFavoriteUseCase(sl()));
   sl.registerLazySingleton(() => GetFavoritesStreamUseCase(sl()));
   sl.registerLazySingleton(() => CheckFavoriteStatusUseCase(sl()));
+
+  // Reviews (NUOVI!)
+  sl.registerLazySingleton(() => GetMediaReviewsUseCase(sl()));
+  sl.registerLazySingleton(() => SubmitReviewUseCase(sl()));
+  sl.registerLazySingleton(() => VoteReviewUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteReviewUseCase(sl()));
 }
