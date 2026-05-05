@@ -14,7 +14,10 @@ class SupabaseAuthRepositoryImpl implements AuthRepository {
         '474613371614-gjgpn9354i52qo7msde01vuq2s54k2d2.apps.googleusercontent.com',
   }) : _supabase = supabaseClient ?? supa.Supabase.instance.client,
        _googleSignIn =
-           googleSignIn ?? GoogleSignIn(serverClientId: webClientId);
+           googleSignIn ??
+           GoogleSignIn(
+             clientId: webClientId, // <-- Fondamentale per il Web
+           );
 
   AppUser? _mapUser(supa.User? user) {
     if (user == null) return null;

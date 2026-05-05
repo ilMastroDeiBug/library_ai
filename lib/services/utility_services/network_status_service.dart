@@ -1,13 +1,8 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; // Ci serve per capire se siamo su Web (kIsWeb)
+import 'package:http/http.dart' as http;
 
 class NetworkStatusService extends ChangeNotifier {
-  static const List<(String, int)> _socketTargets = [
-    ('1.1.1.1', 53),
-    ('8.8.8.8', 53),
-  ];
-
   bool _isOnline = true;
   bool _isChecking = false;
   bool _hasResolvedInitialStatus = false;
@@ -24,7 +19,8 @@ class NetworkStatusService extends ChangeNotifier {
 
   void _startMonitoring() {
     unawaited(checkConnection());
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+    // Su Web controlliamo ogni 5 secondi, su Mobile ogni 3 per non stressare il browser
+    _timer = Timer.periodic(const Duration(seconds: kIsWeb ? 5 : 3), (_) {
       unawaited(checkConnection());
     });
   }
@@ -32,7 +28,6 @@ class NetworkStatusService extends ChangeNotifier {
   Future<void> checkConnection() async {
     if (_isChecking) return;
     _isChecking = true;
-
     try {
       final isReachable = await _hasInternetAccess();
       _updateStatus(isReachable);
@@ -44,21 +39,17 @@ class NetworkStatusService extends ChangeNotifier {
   }
 
   Future<bool> _hasInternetAccess() async {
-    for (final target in _socketTargets) {
-      Socket? socket;
-      try {
-        socket = await Socket.connect(
-          target.$1,
-          target.$2,
-          timeout: const Duration(seconds: 2),
-        );
-        await socket.close();
-        return true;
-      } catch (_) {
-        await socket?.close();
-      }
+    try {
+      // Soluzione Universale (Web + Mobile): Ping HTTP
+      // Usiamo un endpoint pubblico ultra-veloce e che permette il CORS dai browser
+      final response = await http
+          .get(Uri.parse('https://jsonplaceholder.typicode.com/todos/1'))
+          .timeout(const Duration(seconds: 3));
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false; // Se va in timeout o c'è errore, siamo offline
     }
-    return false;
   }
 
   void _updateStatus(bool nextStatus) {
@@ -67,9 +58,11 @@ class NetworkStatusService extends ChangeNotifier {
 
     _isOnline = nextStatus;
     _hasResolvedInitialStatus = true;
+
     if (nextStatus) {
       _hasEverBeenOnline = true;
     }
+
     if (didChange || wasInitial) {
       notifyListeners();
     }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,18 +23,46 @@ import 'package:library_ai/services/utility_services/network_status_service.dart
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await Supabase.initialize(
-    url: 'https://vmbshnrphkmuqtjjfdah.supabase.co',
-    anonKey: 'sb_publishable_MiRYZsjKtlT68nNzn2S-JQ_g-bBj_Gu',
-  );
+  // 1. INIZIALIZZAZIONE FIREBASE
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Errore Firebase Init: $e");
+  }
 
-  await Hive.initFlutter();
-  await Hive.openBox('cinelib_cache');
-  await Hive.openBox('tmdb_cache');
+  // 2. INIZIALIZZAZIONE SUPABASE
+  try {
+    await Supabase.initialize(
+      url: 'https://vmbshnrphkmuqtjjfdah.supabase.co',
+      anonKey: 'sb_publishable_MiRYZsjKtlT68nNzn2S-JQ_g-bBj_Gu',
+    );
+  } catch (e) {
+    debugPrint("Errore Supabase Init: $e");
+  }
 
-  await di.init();
-  di.sl<NetworkStatusService>(); // Inizializzato per usarlo nel resto dell'app!
+  // 3. INIZIALIZZAZIONE HIVE (OTTIMIZZATO PER WEB E MOBILE)
+  try {
+    await Hive.initFlutter();
+
+    // Apriamo i box. Sul web usa IndexedDB, su Mobile usa i file.
+    await Hive.openBox('cinelib_cache');
+    await Hive.openBox('tmdb_cache');
+  } catch (e) {
+    debugPrint("Errore Hive Init: $e");
+  }
+
+  // 4. INIEZIONE DELLE DIPENDENZE
+  try {
+    await di.init();
+    di
+        .sl<
+          NetworkStatusService
+        >(); // Inizializzato per usarlo nel resto dell'app
+  } catch (e) {
+    debugPrint("Errore Dependency Injection: $e");
+  }
 
   runApp(const MyApp());
 }
@@ -74,7 +103,6 @@ class MyApp extends StatelessWidget {
 // --- WIDGET BANNER OFFLINE GLOBALE ---
 class GlobalNetworkBanner extends StatefulWidget {
   final Widget child;
-
   const GlobalNetworkBanner({super.key, required this.child});
 
   @override
@@ -90,9 +118,7 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
   void initState() {
     super.initState();
     _networkService = di.sl<NetworkStatusService>();
-    // Ci agganciamo al servizio di rete
     _networkService.addListener(_onNetworkChange);
-    // Eseguiamo un controllo iniziale appena l'app si apre
     _onNetworkChange();
   }
 
@@ -104,27 +130,20 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
   }
 
   void _onNetworkChange() {
-    if (!mounted)
-      return; // Sicurezza: evita crash se il widget è stato distrutto
+    if (!mounted) return;
 
     final isOffline = !_networkService.isOnline;
     final hasResolved = _networkService.hasResolvedInitialStatus;
 
     if (hasResolved && isOffline) {
-      // 1. Forza l'apparizione del banner ogni volta che rileva l'offline
       setState(() => _isVisible = true);
-
-      // 2. Resettiamo il timer precedente (se l'utente fa attacca/stacca veloce)
       _hideTimer?.cancel();
-
-      // 3. Facciamo partire il timer di 10 secondi per nasconderlo automaticamente
       _hideTimer = Timer(const Duration(seconds: 10), () {
         if (mounted) {
           setState(() => _isVisible = false);
         }
       });
     } else {
-      // Se torna online, lo nascondiamo subito e fermiamo il timer
       if (_isVisible) {
         setState(() => _isVisible = false);
       }
@@ -136,14 +155,10 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // L'app normale sotto
         widget.child,
-
-        // Il banner animato sopra
         AnimatedPositioned(
           duration: const Duration(milliseconds: 500),
           curve: Curves.fastOutSlowIn,
-          // Se non è visibile, lo nascondiamo 150 pixel sopra lo schermo per sicurezza
           top: _isVisible ? 0 : -150,
           left: 0,
           right: 0,
@@ -160,7 +175,7 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF161618), // Sfondo in palette CineShare
+                  color: const Color(0xFF161618),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: Colors.orangeAccent.withOpacity(0.3),
@@ -176,7 +191,6 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
                 ),
                 child: Row(
                   children: [
-                    // Icona con cerchio sfumato
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -190,7 +204,6 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
                       ),
                     ),
                     const SizedBox(width: 14),
-                    // Testi
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,7 +272,6 @@ class AuthGate extends StatelessWidget {
 
 class _AuthenticatedUserGate extends StatefulWidget {
   final AppUser user;
-
   const _AuthenticatedUserGate({required this.user});
 
   @override
