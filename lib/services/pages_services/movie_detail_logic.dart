@@ -72,8 +72,9 @@ class MovieDetailLogic {
   Future<bool> toggleFavorite(BuildContext context, dynamic media) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      if (context.mounted)
+      if (context.mounted) {
         _showMinimalSnackBar(context, "Accedi per aggiungere ai preferiti.");
+      }
       return false;
     }
 
@@ -102,12 +103,13 @@ class MovieDetailLogic {
       }
       return isAdded;
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         _showMinimalSnackBar(
           context,
           "Errore nell'aggiornamento dei preferiti.",
         );
-      throw e;
+      }
+      rethrow;
     }
   }
 

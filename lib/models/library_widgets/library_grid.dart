@@ -113,9 +113,9 @@ class _LibraryGridState extends State<LibraryGrid> {
               null,
             );
           } else {
-            if (itemType == 'tv')
+            if (itemType == 'tv') {
               await sl<DeleteTvSeriesUseCase>().call(user.id, itemId as int);
-            else if (itemType == 'book')
+            } else if (itemType == 'book')
               await sl<DeleteBookUseCase>().call(user.id, itemId as String);
             else
               await sl<DeleteMovieUseCase>().call(user.id, itemId as int);
@@ -674,7 +674,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       buttons.add(
         _buildBulkBtn(
           Icons.play_circle_outline,
-          "In Corso",
+          "Stai Guardando",
           Colors.orangeAccent,
           () => _performBulkAction(
             widget.mode == AppMode.books ? 'reading' : 'watching',

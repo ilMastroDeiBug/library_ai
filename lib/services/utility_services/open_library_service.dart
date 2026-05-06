@@ -38,8 +38,9 @@ class OpenLibraryService {
               // FIX 2: IL FILTRO SPIETATO (Doppia Mandata)
               // Controlliamo che l'array delle lingue contenga effettivamente 'ita'
               final langs = json['language'] as List<dynamic>?;
-              if (langs == null)
+              if (langs == null) {
                 return false; // Se non ha la lingua definita, lo scartiamo
+              }
               return langs.contains('ita');
             })
             .map((json) => _mapOpenLibraryToBook(json))

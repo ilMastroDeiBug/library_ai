@@ -275,8 +275,8 @@ void main() {
         final byCategoryUseCase = GetMoviesByCategoryUseCase(movieRepo);
         final saveUseCase = SaveMovieUseCase(movieRepo);
 
-        await searchUseCase.call('m$i');
-        await byCategoryUseCase.call('popular', page: i + 1);
+        searchUseCase.call('m$i');
+        byCategoryUseCase.call('popular', page: i + 1);
         await saveUseCase.call(movie, 'u');
 
         verify(() => movieRepo.searchMovies('m$i')).called(1);

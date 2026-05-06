@@ -9,7 +9,7 @@ import '../injection_container.dart';
 
 class ActorDetailPage extends StatefulWidget {
   final int actorId;
-  const ActorDetailPage({Key? key, required this.actorId}) : super(key: key);
+  const ActorDetailPage({super.key, required this.actorId});
 
   @override
   State<ActorDetailPage> createState() => _ActorDetailPageState();

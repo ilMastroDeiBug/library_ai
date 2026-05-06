@@ -162,7 +162,7 @@ class CinelibCacheService {
           changed = true;
           movedRow = transform(row);
           if (key == destinationKey) {
-            nextRows.add(Map<String, dynamic>.from(movedRow!));
+            nextRows.add(Map<String, dynamic>.from(movedRow));
           }
         } else {
           nextRows.add(row);

@@ -39,7 +39,7 @@ void main() {
         ],
       );
 
-      final result = await repository.getMoviesByCategory('trending', page: 2);
+      final result = repository.getMoviesByCategory('trending', page: 2);
 
       expect(result, hasLength(1));
       verify(() => tmdb.fetchTrendingMovies(page: 2)).called(1);
@@ -64,7 +64,7 @@ void main() {
         ],
       );
 
-      final result = await repository.getMoviesByCategory('with_genres=878');
+      final result = repository.getMoviesByCategory('with_genres=878');
 
       expect(result.first.id, 2);
       verify(() => tmdb.fetchMoviesByGenre('878', page: 1)).called(1);
@@ -86,7 +86,7 @@ void main() {
         ],
       );
 
-      final result = await repository.getMoviesByCategory('popular', page: 3);
+      final result = repository.getMoviesByCategory('popular', page: 3);
 
       expect(result.first.id, 3);
       verify(() => tmdb.fetchMoviesByCategory('popular', page: 3)).called(1);
@@ -130,7 +130,7 @@ void main() {
         ],
       );
 
-      final result = await repository.getMoviesByCategory('popular');
+      final result = repository.getMoviesByCategory('popular');
 
       expect(result.map((m) => m.id).toList(), [1]);
     });
@@ -171,7 +171,7 @@ void main() {
         ],
       );
 
-      final result = await repository.getTvSeriesByCategory('popular');
+      final result = repository.getTvSeriesByCategory('popular');
 
       expect(result.map((tv) => tv.id).toList(), [11]);
     });

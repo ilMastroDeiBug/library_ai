@@ -65,7 +65,7 @@ void main() {
     });
 
     test('searchMovies returns [] for empty query without HTTP call', () async {
-      final result = await service.searchMovies('');
+      final result = service.searchMovies('');
       expect(result, isEmpty);
       verifyNever(() => client.get(any(), headers: any(named: 'headers')));
     });
@@ -73,7 +73,7 @@ void main() {
     test(
       'searchTvSeries returns [] for empty query without HTTP call',
       () async {
-        final result = await service.searchTvSeries('');
+        final result = service.searchTvSeries('');
         expect(result, isEmpty);
         verifyNever(() => client.get(any(), headers: any(named: 'headers')));
       },
@@ -186,7 +186,7 @@ void main() {
         return http.Response(movieResponse, 200);
       });
 
-      await service.fetchTrendingMovies(page: 3);
+      service.fetchTrendingMovies(page: 3);
 
       expect(captured.toString(), contains('language=it-IT'));
       expect(captured.toString(), contains('page=3'));
@@ -202,7 +202,7 @@ void main() {
         return http.Response(tvResponse, 200);
       });
 
-      await service.fetchTvTrending(page: 2);
+      service.fetchTvTrending(page: 2);
 
       expect(captured.toString(), contains('language=it-IT'));
       expect(captured.toString(), contains('page=2'));
@@ -219,7 +219,7 @@ void main() {
           return http.Response(movieResponse, 200);
         });
 
-        await service.fetchMoviesByCategory('popular', page: i + 1);
+        service.fetchMoviesByCategory('popular', page: i + 1);
 
         expect(captured.toString(), contains('/movie/popular'));
         expect(captured.toString(), contains('page=${i + 1}'));
@@ -236,7 +236,7 @@ void main() {
           return http.Response(tvResponse, 200);
         });
 
-        await service.fetchTvSeriesByCategory('popular', page: i + 1);
+        service.fetchTvSeriesByCategory('popular', page: i + 1);
 
         expect(captured.toString(), contains('/tv/popular'));
         expect(captured.toString(), contains('page=${i + 1}'));

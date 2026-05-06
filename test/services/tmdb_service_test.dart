@@ -80,7 +80,7 @@ void main() {
         ).thenAnswer((_) async => http.Response(tJsonResponse, 200));
 
         // ACT (Usa fetchTrendingMovies, non getTrendingMovies)
-        final movies = await tmdbService.fetchTrendingMovies();
+        final movies = tmdbService.fetchTrendingMovies();
 
         // ASSERT
         expect(movies, isA<List<Movie>>());
@@ -103,10 +103,7 @@ void main() {
         ).thenAnswer((_) async => http.Response('Not Found', 404));
 
         // ACT & ASSERT
-        expect(
-          () async => await tmdbService.fetchTrendingMovies(),
-          throwsException,
-        );
+        expect(() async => tmdbService.fetchTrendingMovies(), throwsException);
       },
     );
   });

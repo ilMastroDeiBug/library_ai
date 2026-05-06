@@ -46,11 +46,12 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
         userId,
         sortBy: _sortBy,
       );
-      if (mounted)
+      if (mounted) {
         setState(() {
           _reviews = reviews;
           _isLoading = false;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -185,10 +186,11 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.orangeAccent),
       );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,10 +269,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: const Icon(
-                Icons.forum_outlined,
-                color: Colors.white70,
-              ),
+              icon: const Icon(Icons.forum_outlined, color: Colors.white70),
               label: const Text(
                 "Vedi tutte le recensioni",
                 style: TextStyle(

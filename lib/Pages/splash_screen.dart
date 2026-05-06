@@ -28,7 +28,7 @@ class _SplashScreenState extends State<SplashScreen>
     _startTimer();
   }
 
-  _startTimer() async {
+  Future<void> _startTimer() async {
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
     Navigator.of(context).pushReplacement(

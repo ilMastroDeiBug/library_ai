@@ -1,12 +1,16 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart'; // Ci serve per capire se siamo su Web (kIsWeb)
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class NetworkStatusService extends ChangeNotifier {
+  static const int _failuresBeforeOffline = 2;
+  static const Duration _requestTimeout = Duration(seconds: 4);
+
   bool _isOnline = true;
   bool _isChecking = false;
   bool _hasResolvedInitialStatus = false;
   bool _hasEverBeenOnline = false;
+  int _consecutiveFailures = 0;
   Timer? _timer;
 
   bool get isOnline => _isOnline;
@@ -19,7 +23,6 @@ class NetworkStatusService extends ChangeNotifier {
 
   void _startMonitoring() {
     unawaited(checkConnection());
-    // Su Web controlliamo ogni 5 secondi, su Mobile ogni 3 per non stressare il browser
     _timer = Timer.periodic(const Duration(seconds: kIsWeb ? 5 : 3), (_) {
       unawaited(checkConnection());
     });
@@ -30,25 +33,48 @@ class NetworkStatusService extends ChangeNotifier {
     _isChecking = true;
     try {
       final isReachable = await _hasInternetAccess();
-      _updateStatus(isReachable);
+      _handleReachabilityResult(isReachable);
     } catch (_) {
-      _updateStatus(false);
+      _handleReachabilityResult(false);
     } finally {
       _isChecking = false;
     }
   }
 
   Future<bool> _hasInternetAccess() async {
-    try {
-      // Soluzione Universale (Web + Mobile): Ping HTTP
-      // Usiamo un endpoint pubblico ultra-veloce e che permette il CORS dai browser
-      final response = await http
-          .get(Uri.parse('https://jsonplaceholder.typicode.com/todos/1'))
-          .timeout(const Duration(seconds: 3));
+    const urls = [
+      'https://jsonplaceholder.typicode.com/todos/1',
+      'https://api.themoviedb.org/3/configuration',
+      'https://vmbshnrphkmuqtjjfdah.supabase.co/auth/v1/health',
+    ];
 
-      return response.statusCode == 200;
+    final results = await Future.wait(urls.map(_isEndpointReachable));
+    return results.any((isReachable) => isReachable);
+  }
+
+  Future<bool> _isEndpointReachable(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url)).timeout(_requestTimeout);
+      return response.statusCode < 500;
     } catch (_) {
-      return false; // Se va in timeout o c'è errore, siamo offline
+      return false;
+    }
+  }
+
+  void _handleReachabilityResult(bool isReachable) {
+    if (isReachable) {
+      _consecutiveFailures = 0;
+      _updateStatus(true);
+      return;
+    }
+
+    _consecutiveFailures++;
+    _hasResolvedInitialStatus = true;
+
+    if (_consecutiveFailures >= _failuresBeforeOffline) {
+      _updateStatus(false);
+    } else {
+      notifyListeners();
     }
   }
 

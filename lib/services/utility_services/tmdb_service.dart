@@ -184,10 +184,7 @@ class TmdbService {
   Future<List<Review>> fetchReviews(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final cacheBox = Hive.box('tmdb_cache');
-    final languages = <String>[
-      _language,
-      if (_language != 'en-US') 'en-US',
-    ];
+    final languages = <String>[_language, if (_language != 'en-US') 'en-US'];
     Object? lastError;
 
     for (final language in languages) {
@@ -273,8 +270,9 @@ class TmdbService {
         final results = data['results'];
         if (results != null) {
           await _writeCache(cacheBox, cacheKey, results);
-          if (results.containsKey('IT'))
+          if (results.containsKey('IT')) {
             return WatchProvidersResult.fromJson(results['IT']);
+          }
         }
         return null;
       } else {

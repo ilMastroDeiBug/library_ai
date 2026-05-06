@@ -83,28 +83,35 @@ class _GenreResultPageState extends State<GenreResultPage> {
   void _fetchInitialData() {
     _initialItemsSubscription?.cancel();
     var hasEmitted = false;
+    List<dynamic> lastEmission = const [];
 
     _initialItemsSubscription = _itemsStream(1).listen(
       (newItems) {
         hasEmitted = true;
+        lastEmission = newItems;
         if (!mounted) return;
         setState(() {
           _items = newItems;
           _isLoadingFirstTime = false;
-          if (newItems.length < 20) _hasReachedMax = true;
+          _hasReachedMax = widget.mode == AppMode.books;
         });
       },
       onDone: () {
-        if (!mounted || hasEmitted) return;
+        if (!mounted) return;
+
         setState(() {
           _isLoadingFirstTime = false;
-          _hasReachedMax = true;
+          _hasReachedMax =
+              widget.mode == AppMode.books || !hasEmitted || lastEmission.isEmpty;
         });
+
+        _fetchNextPageIfStillNearBottom();
       },
       onError: (error) {
         if (!mounted) return;
         setState(() {
           _isLoadingFirstTime = false;
+          _hasReachedMax = false;
         });
       },
     );
@@ -115,44 +122,75 @@ class _GenreResultPageState extends State<GenreResultPage> {
       _isFetchingMore = true;
     });
 
-    _currentPage++;
+    final nextPage = _currentPage + 1;
     _moreItemsSubscription?.cancel();
     var hasEmitted = false;
+    List<dynamic> lastEmission = const [];
 
-    _moreItemsSubscription = _itemsStream(_currentPage).listen(
+    _moreItemsSubscription = _itemsStream(nextPage).listen(
       (newItems) {
         hasEmitted = true;
-        if (!mounted) return;
+        lastEmission = newItems;
+        if (!mounted || newItems.isEmpty) return;
+
+        // Filtro Anti-Cloni
+        final existingIds = _items.map((e) => _getId(e)).toSet();
+        final actuallyNew = newItems
+            .where((e) => !existingIds.contains(_getId(e)))
+            .toList();
+
+        if (actuallyNew.isEmpty) return;
+
         setState(() {
-          _isFetchingMore = false;
-
-          // Filtro Anti-Cloni
-          final existingIds = _items.map((e) => _getId(e)).toSet();
-          final actuallyNew = newItems
-              .where((e) => !existingIds.contains(_getId(e)))
-              .toList();
-
-          if (actuallyNew.isEmpty && newItems.length < 20) {
-            _hasReachedMax = true;
-          } else if (actuallyNew.isNotEmpty) {
-            _items.addAll(actuallyNew);
-          }
+          _items.addAll(actuallyNew);
+          _hasReachedMax = false;
         });
       },
       onDone: () {
-        if (!mounted || hasEmitted) return;
+        if (!mounted) return;
+
         setState(() {
           _isFetchingMore = false;
-          _hasReachedMax = true;
+          if (hasEmitted && lastEmission.isNotEmpty) {
+            _currentPage = nextPage;
+            _hasReachedMax = false;
+          } else {
+            _hasReachedMax = true;
+          }
         });
+
+        _fetchNextPageIfStillNearBottom();
       },
       onError: (error) {
         if (!mounted) return;
         setState(() {
           _isFetchingMore = false;
+          _hasReachedMax = false;
         });
       },
     );
+  }
+
+  void _fetchNextPageIfStillNearBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          _isLoadingFirstTime ||
+          _isFetchingMore ||
+          _hasReachedMax ||
+          widget.mode == AppMode.books ||
+          !_scrollController.hasClients) {
+        return;
+      }
+
+      final position = _scrollController.position;
+      final isNearBottom =
+          position.maxScrollExtent <= 0 ||
+          position.pixels >= position.maxScrollExtent - 200;
+
+      if (isNearBottom) {
+        _fetchMoreData();
+      }
+    });
   }
 
   // Helper per estrarre l'ID in modo sicuro
@@ -288,16 +326,20 @@ class _GridItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String imageUrl = '';
+    String title = '';
     double rating = 0.0;
 
     if (item is Book) {
       imageUrl = item.thumbnailUrl;
+      title = item.title;
       rating = (item.rating as num).toDouble();
     } else if (item is Movie) {
       imageUrl = item.fullPosterUrl;
+      title = item.title;
       rating = (item.voteAverage as num).toDouble();
     } else if (item is TvSeries) {
       imageUrl = item.fullPosterUrl;
+      title = item.name;
       rating = (item.voteAverage as num).toDouble();
     }
 
@@ -349,15 +391,43 @@ class _GridItemCard extends StatelessWidget {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                height: 50,
                 child: Container(
+                  padding: const EdgeInsets.only(
+                    top: 25,
+                    bottom: 8,
+                    left: 6,
+                    right: 6,
+                  ),
                   decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.9),
+                        Colors.black.withOpacity(0.8),
+                        Colors.black,
+                      ],
+                    ),
+                  ),
+                  child: Text(
+                    title.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 3.0,
+                          color: Colors.black,
+                        ),
                       ],
                     ),
                   ),

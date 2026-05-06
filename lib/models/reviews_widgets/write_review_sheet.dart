@@ -38,8 +38,9 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
         _controller.text.trim(),
         _rating,
       );
-      if (mounted)
+      if (mounted) {
         Navigator.pop(context, true); // Restituisce true se ha successo
+      }
     } catch (e) {
       setState(() => _isLoading = false);
     }

@@ -322,7 +322,7 @@ class SupabaseBookRepositoryImpl implements BookRepository {
       };
 
       if (_persistCatalogBook != null) {
-        await _persistCatalogBook!(finalMergedBook);
+        await _persistCatalogBook(finalMergedBook);
       } else {
         await _supabase.from(_globalCatalogTable).upsert(catalogRow);
       }

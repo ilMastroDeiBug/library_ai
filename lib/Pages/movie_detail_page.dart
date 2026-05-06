@@ -81,8 +81,9 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       final result = await _logic.toggleFavorite(context, liveMedia);
       if (mounted) setState(() => _isFavorite = result);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() => _isFavorite = !_isFavorite); // Revert su errore
+      }
     } finally {
       if (mounted) setState(() => _isTogglingHeart = false);
     }
@@ -124,8 +125,9 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   Stream<dynamic>? _getMediaStream(String userId) {
     try {
-      if (_isTv)
+      if (_isTv) {
         return sl<GetSingleTvSeriesUseCase>().call(userId, _id.toString());
+      }
       return sl<GetSingleMovieUseCase>().call(userId, _id.toString());
     } catch (e) {
       return null;
@@ -254,7 +256,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildActionButton(
-                              label: "IN CORSO",
+                              label: "STAI GUARDANDO",
                               icon: Icons.play_circle_outline_rounded,
                               isActive: currentStatus == 'watching',
                               onTap: () => _handleStatusToggle(

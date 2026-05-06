@@ -26,7 +26,7 @@ class _LibraryPageState extends State<LibraryPage> {
   static const Color _brandColor = Colors.orangeAccent;
 
   String get _tab1Label => _isBooks ? "LETTI" : "VISTI";
-  String get _tab2Label => _isBooks ? "IN LETTURA" : "IN CORSO";
+  String get _tab2Label => _isBooks ? "IN LETTURA" : "STAI GUARDANDO";
   String get _tab3Label => _isBooks ? "DA LEGGERE" : "DA VEDERE";
   String get _tab4Label => "PREFERITI";
 
