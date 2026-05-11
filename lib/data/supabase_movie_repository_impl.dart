@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:library_ai/domain/repositories/movie_repository.dart';
@@ -16,6 +18,16 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
   final CinelibCacheService _cacheService;
 
   static const String _tableName = 'user_watchlist';
+  static const List<String> _watchlistStatuses = [
+    'towatch',
+    'watching',
+    'watched',
+  ];
+
+  final Map<String, StreamController<List<Map<String, dynamic>>>>
+      _watchlistControllers = {};
+  final Map<String, StreamController<Map<String, dynamic>?>>
+      _mediaControllers = {};
 
   SupabaseMovieRepositoryImpl({
     SupabaseClient? supabaseClient,
@@ -26,49 +38,147 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
        _cacheService = cacheService ?? CinelibCacheService();
 
   @override
-  Stream<List<dynamic>> getWatchlistStream(
-    String userId,
-    String status,
-  ) async* {
-    final cacheKey = 'watchlist_${userId}_$status';
-    final cacheBox = Hive.box('cinelib_cache');
+  Stream<List<dynamic>> getWatchlistStream(String userId, String status) {
+    late StreamController<List<dynamic>> controller;
+    StreamSubscription<List<Map<String, dynamic>>>? localSubscription;
+    StreamSubscription<List<Map<String, dynamic>>>? realtimeSubscription;
 
-    // 1. CARICA LA CACHE
-    final cachedRows = _readCachedRows(cacheBox, cacheKey);
-    if (cachedRows != null) {
-      yield _mapWatchlistRowsToEntities(cachedRows, status);
-    }
+    controller = StreamController<List<dynamic>>(
+      onListen: () {
+        () async {
+          final cacheKey = 'watchlist_${userId}_$status';
+          final cacheBox = Hive.box('cinelib_cache');
 
-    // 2. BLOCCO OFFLINE
-    if (!sl<NetworkStatusService>().isOnline) return;
-
-    // 3. STREAM SUPABASE PULITO
-    try {
-      final supabaseStream = _supabase
-          .from(_tableName)
-          .stream(primaryKey: ['id'])
-          .eq('user_id', userId)
-          .order('timestamp', ascending: false);
-
-      await for (final snapshot in supabaseStream) {
-        final rows = snapshot
-            .map((row) => Map<String, dynamic>.from(row))
-            .toList();
-        final filteredRows = rows
-            .where((row) => row['status'] == status)
-            .toList();
-
-        await cacheBox.put(cacheKey, filteredRows);
-        for (final row in filteredRows) {
-          final mediaId = row['media_id'];
-          if (mediaId != null) {
-            await cacheBox.put('media_${userId}_$mediaId', row);
+          final cachedRows = _readCachedRows(cacheBox, cacheKey);
+          if (cachedRows != null) {
+            controller.add(_mapWatchlistRowsToEntities(cachedRows, status));
+          } else {
+            await cacheBox.put(cacheKey, <Map<String, dynamic>>[]);
+            controller.add(const []);
           }
+
+          localSubscription = _watchlistController(
+            userId,
+            status,
+          ).stream.listen((rows) {
+            if (!controller.isClosed) {
+              controller.add(_mapWatchlistRowsToEntities(rows, status));
+            }
+          });
+
+          if (!sl<NetworkStatusService>().isOnline) return;
+
+          realtimeSubscription = _supabase
+              .from(_tableName)
+              .stream(primaryKey: ['id'])
+              .eq('user_id', userId)
+              .order('timestamp', ascending: false)
+              .listen(
+                (snapshot) async {
+                  final rows = snapshot
+                      .map((row) => Map<String, dynamic>.from(row))
+                      .toList();
+                  final filteredRows = rows
+                      .where((row) => row['status'] == status)
+                      .toList();
+                  final finalRows = _deduplicateRowsByMediaId(filteredRows);
+
+                  await cacheBox.put(cacheKey, finalRows);
+                  for (final row in finalRows) {
+                    final mediaId = row['media_id'];
+                    if (mediaId != null) {
+                      await cacheBox.put('media_${userId}_$mediaId', row);
+                    }
+                  }
+
+                  _emitWatchlistRows(userId, status, finalRows);
+                },
+                onError: (_) {},
+              );
+        }();
+      },
+      onCancel: () async {
+        await localSubscription?.cancel();
+        await realtimeSubscription?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  @override
+  Stream<dynamic> getSingleMediaStream(String userId, int id) {
+    late StreamController<dynamic> controller;
+    StreamSubscription<Map<String, dynamic>?>? localSubscription;
+    StreamSubscription<List<Map<String, dynamic>>>? realtimeSubscription;
+
+    controller = StreamController<dynamic>(
+      onListen: () {
+        final cacheKey = 'media_${userId}_$id';
+        final cacheBox = Hive.box('cinelib_cache');
+
+        final cachedRow = _readCachedRow(cacheBox, cacheKey);
+        if (cachedRow != null) {
+          controller.add(_mapWatchlistRowToEntity(cachedRow));
         }
 
-        yield _mapWatchlistRowsToEntities(filteredRows, status);
-      }
-    } catch (_) {}
+        localSubscription = _mediaController(userId, id).stream.listen((row) {
+          if (controller.isClosed) return;
+          controller.add(row == null ? null : _mapWatchlistRowToEntity(row));
+        });
+
+        if (!sl<NetworkStatusService>().isOnline) return;
+
+        realtimeSubscription = _supabase
+            .from(_tableName)
+            .stream(primaryKey: ['id'])
+            .eq('user_id', userId)
+            .listen(
+              (snapshot) async {
+                final filteredSnapshot = snapshot.where((row) {
+                  final rowMediaId =
+                      int.tryParse(row['media_id'].toString()) ?? 0;
+                  return rowMediaId == id;
+                }).toList();
+
+                if (filteredSnapshot.isEmpty) {
+                  final fallbackRow = _readCachedRow(cacheBox, cacheKey);
+                  await _cacheService.deleteMediaItem(
+                    userId: userId,
+                    mediaId: id,
+                  );
+
+                  if (fallbackRow != null) {
+                    final removedRow = Map<String, dynamic>.from(fallbackRow);
+                    removedRow['status'] = 'none';
+                    _emitMediaRow(userId, id, removedRow);
+                  } else {
+                    _emitMediaRow(userId, id, null);
+                  }
+                  await _emitWatchlistCache(userId);
+                  return;
+                }
+
+                final row = Map<String, dynamic>.from(filteredSnapshot.first);
+                await _cacheService.upsertMediaItem(
+                  userId: userId,
+                  mediaId: id,
+                  row: row,
+                );
+
+                _emitMediaRow(userId, id, row);
+                await _emitWatchlistCache(userId);
+              },
+              onError: (_) {},
+            );
+      },
+      onCancel: () async {
+        await localSubscription?.cancel();
+        await realtimeSubscription?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   List<Map<String, dynamic>>? _readCachedRows(Box cacheBox, String cacheKey) {
@@ -80,70 +190,19 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .toList();
   }
 
+  Map<String, dynamic>? _readCachedRow(Box cacheBox, String cacheKey) {
+    final cached = cacheBox.get(cacheKey);
+    if (cached is! Map) return null;
+    return Map<String, dynamic>.from(cached);
+  }
+
   List<dynamic> _mapWatchlistRowsToEntities(
     List<Map<String, dynamic>> rows,
     String status,
   ) {
     return rows.where((row) => row['status'] == status).map((row) {
-      final type = row['type'] as String? ?? 'movie';
-      final mediaId = int.tryParse(row['media_id'].toString()) ?? 0;
-      final rawData = Map<String, dynamic>.from(row['raw_data'] as Map? ?? {});
-      rawData['status'] = row['status'];
-      rawData['aiAnalysis'] = row['ai_analysis'];
-      rawData['type'] = type;
-
-      return (type == 'tv')
-          ? TvSeries.fromFirestore(rawData, mediaId)
-          : Movie.fromFirestore(rawData, mediaId);
+      return _mapWatchlistRowToEntity(row);
     }).toList();
-  }
-
-  @override
-  Stream<dynamic> getSingleMediaStream(String userId, int id) async* {
-    final cacheKey = 'media_${userId}_$id';
-    final cacheBox = Hive.box('cinelib_cache');
-
-    final cachedRow = _readCachedRow(cacheBox, cacheKey);
-    if (cachedRow != null) {
-      yield _mapWatchlistRowToEntity(cachedRow);
-    }
-
-    if (!sl<NetworkStatusService>().isOnline) return;
-
-    try {
-      final supabaseStream = _supabase
-          .from(_tableName)
-          .stream(primaryKey: ['id'])
-          .eq('user_id', userId);
-
-      await for (final snapshot in supabaseStream) {
-        final filteredSnapshot = snapshot.where((row) {
-          final rowMediaId = int.tryParse(row['media_id'].toString()) ?? 0;
-          return rowMediaId == id;
-        }).toList();
-
-        if (filteredSnapshot.isEmpty) {
-          await _cacheService.deleteMediaItem(userId: userId, mediaId: id);
-          yield null;
-          continue;
-        }
-
-        final row = Map<String, dynamic>.from(filteredSnapshot.first);
-        await _cacheService.upsertMediaItem(
-          userId: userId,
-          mediaId: id,
-          row: row,
-        );
-
-        yield _mapWatchlistRowToEntity(row);
-      }
-    } catch (_) {}
-  }
-
-  Map<String, dynamic>? _readCachedRow(Box cacheBox, String cacheKey) {
-    final cached = cacheBox.get(cacheKey);
-    if (cached is! Map) return null;
-    return Map<String, dynamic>.from(cached);
   }
 
   dynamic _mapWatchlistRowToEntity(Map<String, dynamic> row) {
@@ -159,6 +218,70 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         : Movie.fromFirestore(rawData, mediaId);
   }
 
+  List<Map<String, dynamic>> _deduplicateRowsByMediaId(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final uniqueMap = <String, Map<String, dynamic>>{};
+    for (final row in rows) {
+      final type = row['type'] as String? ?? 'movie';
+      final mediaId = int.tryParse(row['media_id'].toString()) ?? 0;
+      uniqueMap['$type:$mediaId'] = row;
+    }
+    return uniqueMap.values.toList();
+  }
+
+  StreamController<List<Map<String, dynamic>>> _watchlistController(
+    String userId,
+    String status,
+  ) {
+    return _watchlistControllers.putIfAbsent(
+      _watchlistKey(userId, status),
+      () => StreamController<List<Map<String, dynamic>>>.broadcast(sync: true),
+    );
+  }
+
+  StreamController<Map<String, dynamic>?> _mediaController(
+    String userId,
+    int mediaId,
+  ) {
+    return _mediaControllers.putIfAbsent(
+      _mediaKey(userId, mediaId),
+      () => StreamController<Map<String, dynamic>?>.broadcast(sync: true),
+    );
+  }
+
+  void _emitWatchlistRows(
+    String userId,
+    String status,
+    List<Map<String, dynamic>> rows,
+  ) {
+    _watchlistController(userId, status).add(_deduplicateRowsByMediaId(rows));
+  }
+
+  Future<void> _emitWatchlistCache(
+    String userId, {
+    Iterable<String>? statuses,
+  }) async {
+    final cacheBox = Hive.box('cinelib_cache');
+    for (final status in statuses ?? _watchlistStatuses) {
+      final cacheKey = 'watchlist_${userId}_$status';
+      final cachedRows = _readCachedRows(cacheBox, cacheKey) ?? [];
+      _emitWatchlistRows(userId, status, cachedRows);
+    }
+  }
+
+  void _emitMediaRow(
+    String userId,
+    int mediaId,
+    Map<String, dynamic>? row,
+  ) {
+    _mediaController(userId, mediaId).add(row);
+  }
+
+  String _watchlistKey(String userId, String status) => '$userId::$status';
+
+  String _mediaKey(String userId, int mediaId) => '$userId::$mediaId';
+
   @override
   Future<void> saveMovie(Movie movie, String userId) async {
     final payload = {
@@ -171,16 +294,27 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       'timestamp': DateTime.now().toIso8601String(),
     };
 
-    await _supabase
+    final existing = await _supabase
         .from(_tableName)
-        .upsert(payload, onConflict: 'user_id, media_id, type');
+        .select('id')
+        .eq('user_id', userId)
+        .eq('media_id', movie.id)
+        .eq('type', 'movie')
+        .maybeSingle();
 
-    // Aggiornamento cache istantaneo
+    if (existing != null) {
+      await _supabase.from(_tableName).update(payload).eq('id', existing['id']);
+    } else {
+      await _supabase.from(_tableName).insert(payload);
+    }
+
     await _cacheService.upsertMediaItem(
       userId: userId,
       mediaId: movie.id,
       row: payload,
     );
+    _emitMediaRow(userId, movie.id, payload);
+    await _emitWatchlistCache(userId);
   }
 
   @override
@@ -195,16 +329,27 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       'timestamp': DateTime.now().toIso8601String(),
     };
 
-    await _supabase
+    final existing = await _supabase
         .from(_tableName)
-        .upsert(payload, onConflict: 'user_id, media_id, type');
+        .select('id')
+        .eq('user_id', userId)
+        .eq('media_id', series.id)
+        .eq('type', 'tv')
+        .maybeSingle();
 
-    // Aggiornamento cache istantaneo
+    if (existing != null) {
+      await _supabase.from(_tableName).update(payload).eq('id', existing['id']);
+    } else {
+      await _supabase.from(_tableName).insert(payload);
+    }
+
     await _cacheService.upsertMediaItem(
       userId: userId,
       mediaId: series.id,
       row: payload,
     );
+    _emitMediaRow(userId, series.id, payload);
+    await _emitWatchlistCache(userId);
   }
 
   @override
@@ -223,10 +368,20 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       newStatus: newStatus,
       timestamp: timestamp,
     );
+
+    final cacheBox = Hive.box('cinelib_cache');
+    final updatedRow = _readCachedRow(cacheBox, 'media_${userId}_$id');
+    if (updatedRow != null) {
+      _emitMediaRow(userId, id, updatedRow);
+    }
+    await _emitWatchlistCache(userId);
   }
 
   @override
   Future<void> deleteItem(String userId, int id) async {
+    final cacheBox = Hive.box('cinelib_cache');
+    final cachedRow = _readCachedRow(cacheBox, 'media_${userId}_$id');
+
     await _supabase
         .from(_tableName)
         .delete()
@@ -234,18 +389,39 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
         .eq('media_id', id);
 
     await _cacheService.deleteMediaItem(userId: userId, mediaId: id);
+
+    if (cachedRow != null) {
+      final removedRow = Map<String, dynamic>.from(cachedRow);
+      removedRow['status'] = 'none';
+      _emitMediaRow(userId, id, removedRow);
+    } else {
+      _emitMediaRow(userId, id, null);
+    }
+    await _emitWatchlistCache(userId);
   }
 
   @override
   Future<void> saveAnalysis(String userId, int id, String analysis) async {
+    final timestamp = DateTime.now().toIso8601String();
     await _supabase
         .from(_tableName)
-        .update({
-          'ai_analysis': analysis,
-          'timestamp': DateTime.now().toIso8601String(),
-        })
+        .update({'ai_analysis': analysis, 'timestamp': timestamp})
         .eq('user_id', userId)
         .eq('media_id', id);
+
+    final cacheBox = Hive.box('cinelib_cache');
+    final cachedRow = _readCachedRow(cacheBox, 'media_${userId}_$id');
+    if (cachedRow == null) return;
+
+    cachedRow['ai_analysis'] = analysis;
+    cachedRow['timestamp'] = timestamp;
+    await _cacheService.upsertMediaItem(
+      userId: userId,
+      mediaId: id,
+      row: cachedRow,
+    );
+    _emitMediaRow(userId, id, cachedRow);
+    await _emitWatchlistCache(userId);
   }
 
   @override

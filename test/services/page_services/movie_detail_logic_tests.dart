@@ -17,6 +17,8 @@ class MockSaveMovieUseCase extends Mock implements SaveMovieUseCase {}
 
 class MockSaveTvSeriesUseCase extends Mock implements SaveTvSeriesUseCase {}
 
+class MockDeleteMovieUseCase extends Mock implements DeleteMovieUseCase {}
+
 class MockAIService extends Mock implements AIService {}
 
 class FakeMovie extends Fake implements Movie {}
@@ -27,6 +29,7 @@ void main() {
   late MockAuthRepository authRepository;
   late MockSaveMovieUseCase saveMovieUseCase;
   late MockSaveTvSeriesUseCase saveTvSeriesUseCase;
+  late MockDeleteMovieUseCase deleteMovieUseCase;
   late MockAIService aiService;
   late MovieDetailLogic logic;
 
@@ -40,12 +43,14 @@ void main() {
     authRepository = MockAuthRepository();
     saveMovieUseCase = MockSaveMovieUseCase();
     saveTvSeriesUseCase = MockSaveTvSeriesUseCase();
+    deleteMovieUseCase = MockDeleteMovieUseCase();
     aiService = MockAIService();
     logic = MovieDetailLogic(aiService: aiService);
 
     sl.registerSingleton<AuthRepository>(authRepository);
     sl.registerSingleton<SaveMovieUseCase>(saveMovieUseCase);
     sl.registerSingleton<SaveTvSeriesUseCase>(saveTvSeriesUseCase);
+    sl.registerSingleton<DeleteMovieUseCase>(deleteMovieUseCase);
   });
 
   tearDown(() async {
@@ -120,7 +125,7 @@ void main() {
       when(
         () => authRepository.currentUser,
       ).thenReturn(AppUser(id: 'u1', email: 'u1@mail.com'));
-      when(() => saveMovieUseCase.call(any(), 'u1')).thenAnswer((_) async {});
+      when(() => deleteMovieUseCase.call('u1', 1)).thenAnswer((_) async {});
 
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: SizedBox())),
@@ -135,11 +140,9 @@ void main() {
       );
       await tester.pump();
 
-      final captured =
-          verify(() => saveMovieUseCase.call(captureAny(), 'u1')).captured.first
-              as Movie;
-      expect(captured.status, 'none');
-      expect(find.text('Rimosso dalla Watchlist'), findsOneWidget);
+      verify(() => deleteMovieUseCase.call('u1', 1)).called(1);
+      verifyNever(() => saveMovieUseCase.call(any(), any()));
+      expect(find.text('Rimosso dalla libreria'), findsOneWidget);
     });
 
     testWidgets('saves tv series with toggled status', (tester) async {

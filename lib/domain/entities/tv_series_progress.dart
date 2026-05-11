@@ -1,4 +1,6 @@
 class TvSeriesProgress {
+  static const Object _unset = Object();
+
   final String userId;
   final int seriesId;
   final List<String> watchedEpisodes;
@@ -36,14 +38,16 @@ class TvSeriesProgress {
   TvSeriesProgress copyWith({
     List<String>? watchedEpisodes,
     int? streakCount,
-    DateTime? lastWatchedDate,
+    Object? lastWatchedDate = _unset,
   }) {
     return TvSeriesProgress(
       userId: userId,
       seriesId: seriesId,
       watchedEpisodes: watchedEpisodes ?? this.watchedEpisodes,
       streakCount: streakCount ?? this.streakCount,
-      lastWatchedDate: lastWatchedDate ?? this.lastWatchedDate,
+      lastWatchedDate: identical(lastWatchedDate, _unset)
+          ? this.lastWatchedDate
+          : lastWatchedDate as DateTime?,
     );
   }
 

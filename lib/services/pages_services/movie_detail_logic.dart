@@ -7,7 +7,8 @@ import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
 import 'package:library_ai/services/utility_services/tmdb_service.dart';
-import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart'; // IMPORT FONDAMENTALE
+import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart';
+import 'package:library_ai/services/utility_services/watchlist_realtime_notifier.dart';
 import '../../services/utility_services/ai_service.dart';
 
 class MovieDetailLogic {
@@ -30,72 +31,27 @@ class MovieDetailLogic {
 
     final isRemoving = currentStatus == action;
     final newStatus = isRemoving ? 'none' : action;
+    final int mediaId = media.id as int;
+    final hadPreviousOptimisticStatus = globalOptimisticStatus.value
+        .containsKey(mediaId);
+    final previousOptimisticStatus = globalOptimisticStatus.value[mediaId];
+
+    setOptimisticMediaStatus(mediaId, newStatus);
 
     dynamic mediaToSave = media;
 
-    // PRE-PROCESSING: Gestione TMDB Stagioni
     if (media is TvSeries && media.seasons.isEmpty && newStatus != 'none') {
       try {
         final fullTvData = await sl<TmdbService>().getTvSeriesDetails(media.id);
-        mediaToSave = TvSeries(
-          id: media.id,
-          name: media.name,
-          overview: media.overview,
-          posterPath: media.posterPath,
-          backdropPath: media.backdropPath,
-          voteAverage: media.voteAverage,
-          voteCount: media.voteCount,
-          firstAirDate: media.firstAirDate,
-          originalLanguage: media.originalLanguage,
-          popularity: media.popularity,
-          status: newStatus,
-          aiAnalysis: media.aiAnalysis,
+        mediaToSave = media.copyWith(
           seasons: fullTvData.seasons,
-        );
-      } catch (e) {
-        mediaToSave = TvSeries(
-          id: media.id,
-          name: media.name,
-          overview: media.overview,
-          posterPath: media.posterPath,
-          backdropPath: media.backdropPath,
-          voteAverage: media.voteAverage,
-          voteCount: media.voteCount,
-          firstAirDate: media.firstAirDate,
-          originalLanguage: media.originalLanguage,
-          popularity: media.popularity,
           status: newStatus,
-          aiAnalysis: media.aiAnalysis,
-          seasons: media.seasons,
         );
-      }
-    } else if (media is TvSeries) {
-      mediaToSave = TvSeries(
-        id: media.id,
-        name: media.name,
-        overview: media.overview,
-        posterPath: media.posterPath,
-        backdropPath: media.backdropPath,
-        voteAverage: media.voteAverage,
-        voteCount: media.voteCount,
-        firstAirDate: media.firstAirDate,
-        originalLanguage: media.originalLanguage,
-        popularity: media.popularity,
-        status: newStatus,
-        aiAnalysis: media.aiAnalysis,
-        seasons: media.seasons,
-      );
-    } else if (media is Movie) {
-      mediaToSave = media.copyWith(status: newStatus);
-    }
-
-    // ELIMINAZIONE ORFINI DAL DB (Il fix per "rimane lì")
-    if (media is TvSeries && newStatus != 'watching') {
-      try {
-        await sl<DeleteSeriesProgressUseCase>().call(user.id, media.id);
       } catch (e) {
-        debugPrint("Progresso non esistente o errore eliminazione");
+        mediaToSave = media.copyWith(status: newStatus);
       }
+    } else if (media is TvSeries || media is Movie) {
+      mediaToSave = media.copyWith(status: newStatus);
     }
 
     try {
@@ -113,6 +69,12 @@ class MovieDetailLogic {
         }
       }
 
+      if (media is TvSeries && newStatus != 'watching') {
+        try {
+          await sl<DeleteSeriesProgressUseCase>().call(user.id, media.id);
+        } catch (_) {}
+      }
+
       if (context.mounted) {
         String msg = "Rimosso dalla libreria";
         if (!isRemoving) {
@@ -120,13 +82,19 @@ class MovieDetailLogic {
           if (action == 'towatch') msg = "Aggiunto ai Da Vedere";
           if (action == 'watching') msg = "Aggiunto a In Corso";
         }
+
         _showMinimalSnackBar(context, msg);
       }
+      clearOptimisticMediaStatus(mediaId);
       return true;
     } catch (e) {
-      if (context.mounted) {
-        _showMinimalSnackBar(context, "Errore nel salvataggio. Riprova.");
+      if (hadPreviousOptimisticStatus && previousOptimisticStatus != null) {
+        setOptimisticMediaStatus(mediaId, previousOptimisticStatus);
+      } else {
+        clearOptimisticMediaStatus(mediaId);
       }
+      if (context.mounted)
+        _showMinimalSnackBar(context, "Errore nel salvataggio. Riprova.");
       return false;
     }
   }
@@ -134,43 +102,33 @@ class MovieDetailLogic {
   Future<bool> toggleFavorite(BuildContext context, dynamic media) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      if (context.mounted) {
+      if (context.mounted)
         _showMinimalSnackBar(context, "Accedi per aggiungere ai preferiti.");
-      }
       return false;
     }
 
     try {
       final isTv = media is TvSeries;
-      final int itemId = media.id;
-      final String itemType = isTv ? 'tv' : 'movie';
-      final String title = isTv ? media.name : (media as Movie).title;
-      final String posterUrl = isTv
-          ? media.fullPosterUrl
-          : (media as Movie).fullPosterUrl;
-
       final isAdded = await sl<ToggleFavoriteUseCase>().call(
         user.id,
-        itemId,
-        itemType,
-        title,
-        posterUrl,
+        media.id,
+        isTv ? 'tv' : 'movie',
+        isTv ? media.name : (media as Movie).title,
+        isTv ? media.fullPosterUrl : (media as Movie).fullPosterUrl,
       );
 
-      if (context.mounted) {
+      if (context.mounted)
         _showMinimalSnackBar(
           context,
           isAdded ? "Aggiunto ai Preferiti ❤️" : "Rimosso dai Preferiti 💔",
         );
-      }
       return isAdded;
     } catch (e) {
-      if (context.mounted) {
+      if (context.mounted)
         _showMinimalSnackBar(
           context,
           "Errore nell'aggiornamento dei preferiti.",
         );
-      }
       rethrow;
     }
   }
@@ -190,24 +148,15 @@ class MovieDetailLogic {
       );
 
       if (media is Movie) {
-        final updatedMovie = media.copyWith(aiAnalysis: analysis);
-        await sl<SaveMovieUseCase>().call(updatedMovie, user.id);
-      } else if (media is TvSeries) {
-        final updatedSeries = TvSeries(
-          id: media.id,
-          name: media.name,
-          overview: media.overview,
-          posterPath: media.posterPath,
-          backdropPath: media.backdropPath,
-          voteAverage: media.voteAverage,
-          voteCount: media.voteCount,
-          firstAirDate: media.firstAirDate,
-          status: media.status,
-          aiAnalysis: analysis,
-          popularity: media.popularity,
-          seasons: media.seasons,
+        await sl<SaveMovieUseCase>().call(
+          media.copyWith(aiAnalysis: analysis),
+          user.id,
         );
-        await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
+      } else if (media is TvSeries) {
+        await sl<SaveTvSeriesUseCase>().call(
+          media.copyWith(aiAnalysis: analysis),
+          user.id,
+        );
       }
       return analysis;
     } catch (e) {

@@ -25,7 +25,7 @@ void main() {
   group('SupabaseMovieRepositoryImpl - routing category', () {
     test('movies: trending route uses fetchTrendingMovies', () async {
       when(() => tmdb.fetchTrendingMovies(page: 2)).thenAnswer(
-        (_) async => [
+        (_) => Stream.value([
           Movie(
             id: 1,
             title: 'A',
@@ -36,10 +36,12 @@ void main() {
             voteCount: 10,
             releaseDate: '2020',
           ),
-        ],
+        ]),
       );
 
-      final result = repository.getMoviesByCategory('trending', page: 2);
+      final result = await repository
+          .getMoviesByCategory('trending', page: 2)
+          .first;
 
       expect(result, hasLength(1));
       verify(() => tmdb.fetchTrendingMovies(page: 2)).called(1);
@@ -50,7 +52,7 @@ void main() {
 
     test('movies: genre route uses fetchMoviesByGenre', () async {
       when(() => tmdb.fetchMoviesByGenre('878', page: 1)).thenAnswer(
-        (_) async => [
+        (_) => Stream.value([
           Movie(
             id: 2,
             title: 'B',
@@ -61,10 +63,10 @@ void main() {
             voteCount: 10,
             releaseDate: '2021',
           ),
-        ],
+        ]),
       );
 
-      final result = repository.getMoviesByCategory('with_genres=878');
+      final result = await repository.getMoviesByCategory('with_genres=878').first;
 
       expect(result.first.id, 2);
       verify(() => tmdb.fetchMoviesByGenre('878', page: 1)).called(1);
@@ -72,7 +74,7 @@ void main() {
 
     test('movies: default route uses fetchMoviesByCategory', () async {
       when(() => tmdb.fetchMoviesByCategory('popular', page: 3)).thenAnswer(
-        (_) async => [
+        (_) => Stream.value([
           Movie(
             id: 3,
             title: 'C',
@@ -83,10 +85,12 @@ void main() {
             voteCount: 10,
             releaseDate: '2022',
           ),
-        ],
+        ]),
       );
 
-      final result = repository.getMoviesByCategory('popular', page: 3);
+      final result = await repository
+          .getMoviesByCategory('popular', page: 3)
+          .first;
 
       expect(result.first.id, 3);
       verify(() => tmdb.fetchMoviesByCategory('popular', page: 3)).called(1);
@@ -96,7 +100,7 @@ void main() {
   group('SupabaseMovieRepositoryImpl - business filters', () {
     test('movies: filters out empty poster or zero voteCount', () async {
       when(() => tmdb.fetchMoviesByCategory('popular', page: 1)).thenAnswer(
-        (_) async => [
+        (_) => Stream.value([
           Movie(
             id: 1,
             title: 'ok',
@@ -127,17 +131,17 @@ void main() {
             voteCount: 0,
             releaseDate: '2020',
           ),
-        ],
+        ]),
       );
 
-      final result = repository.getMoviesByCategory('popular');
+      final result = await repository.getMoviesByCategory('popular').first;
 
       expect(result.map((m) => m.id).toList(), [1]);
     });
 
     test('tv: filters out empty poster or zero voteCount', () async {
       when(() => tmdb.fetchTvSeriesByCategory('popular', page: 1)).thenAnswer(
-        (_) async => [
+        (_) => Stream.value([
           TvSeries(
             id: 11,
             name: 'ok',
@@ -168,10 +172,10 @@ void main() {
             voteCount: 0,
             firstAirDate: '2021',
           ),
-        ],
+        ]),
       );
 
-      final result = repository.getTvSeriesByCategory('popular');
+      final result = await repository.getTvSeriesByCategory('popular').first;
 
       expect(result.map((tv) => tv.id).toList(), [11]);
     });

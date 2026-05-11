@@ -18,6 +18,7 @@ import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart';
+import 'package:library_ai/services/utility_services/watchlist_realtime_notifier.dart';
 
 // Pages & Widgets
 import 'package:library_ai/Pages/book_detail_page.dart';
@@ -43,7 +44,6 @@ class _LibraryGridState extends State<LibraryGrid> {
 
   bool _isSelectionMode = false;
   final Set<dynamic> _selectedItems = {};
-  final Set<dynamic> _hiddenItems = {};
   bool _isBulkActionLoading = false;
 
   List<String> get _availableFilters {
@@ -67,7 +67,6 @@ class _LibraryGridState extends State<LibraryGrid> {
       _initStream();
       _isSelectionMode = false;
       _selectedItems.clear();
-      _hiddenItems.clear();
     }
   }
 
@@ -96,6 +95,17 @@ class _LibraryGridState extends State<LibraryGrid> {
     if (user == null) return;
 
     setState(() => _isBulkActionLoading = true);
+
+    final optimisticIds = <int>{};
+    final optimisticStatuses = <int, String>{};
+    for (var item in _selectedItems) {
+      final dynamic itemId = _extractId(item);
+      if (itemId is int) {
+        optimisticIds.add(itemId);
+        optimisticStatuses[itemId] = action == 'delete' ? 'none' : action;
+      }
+    }
+    setOptimisticMediaStatuses(optimisticStatuses);
 
     try {
       for (var item in _selectedItems) {
@@ -131,20 +141,7 @@ class _LibraryGridState extends State<LibraryGrid> {
             final updated = item.copyWith(status: action);
             await sl<SaveMovieUseCase>().call(updated, user.id);
           } else if (item is TvSeries) {
-            final updated = TvSeries(
-              id: item.id,
-              name: item.name,
-              overview: item.overview,
-              posterPath: item.posterPath,
-              backdropPath: item.backdropPath,
-              voteAverage: item.voteAverage,
-              voteCount: item.voteCount,
-              firstAirDate: item.firstAirDate,
-              status: action,
-              aiAnalysis: item.aiAnalysis,
-              popularity: item.popularity,
-              seasons: item.seasons,
-            );
+            final updated = item.copyWith(status: action);
             await sl<SaveTvSeriesUseCase>().call(updated, user.id);
             if (action != 'watching') {
               try {
@@ -168,8 +165,6 @@ class _LibraryGridState extends State<LibraryGrid> {
           }
         }
       }
-
-      _hiddenItems.addAll(_selectedItems.map((e) => _extractId(e)));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -177,6 +172,7 @@ class _LibraryGridState extends State<LibraryGrid> {
         );
       }
     } finally {
+      clearOptimisticMediaStatuses(optimisticIds);
       if (mounted) {
         setState(() {
           _isSelectionMode = false;
@@ -219,97 +215,115 @@ class _LibraryGridState extends State<LibraryGrid> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Column(
+    return ValueListenableBuilder<Map<int, String>>(
+      valueListenable: globalOptimisticStatus,
+      builder: (context, optimisticMap, child) {
+        return Stack(
           children: [
-            _buildSearchAndFilterHeader(),
-            Expanded(
-              child: StreamBuilder<List<dynamic>>(
-                stream: _dataStream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      !snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.orangeAccent,
-                      ),
-                    );
-                  }
+            Column(
+              children: [
+                _buildSearchAndFilterHeader(),
+                Expanded(
+                  child: StreamBuilder<List<dynamic>>(
+                    stream: _dataStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting &&
+                          !snapshot.hasData) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.orangeAccent,
+                          ),
+                        );
+                      }
 
-                  final allItems = snapshot.data ?? [];
-                  final filteredItems = _applyLocalFilters(allItems);
+                      final allItems = snapshot.data ?? [];
+                      // PASSIAMO LA MAPPA AL FILTRO
+                      final filteredItems = _applyLocalFilters(
+                        allItems,
+                        optimisticMap,
+                      );
 
-                  if (filteredItems.isEmpty) {
-                    return _buildEmptyState();
-                  }
+                      if (filteredItems.isEmpty) return _buildEmptyState();
 
-                  return GridView.builder(
-                    padding: const EdgeInsets.only(
-                      top: 10,
-                      left: 15,
-                      right: 15,
-                      bottom: 150,
-                    ),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: filteredItems.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.68,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
+                      return GridView.builder(
+                        padding: const EdgeInsets.only(
+                          top: 10,
+                          left: 15,
+                          right: 15,
+                          bottom: 150,
                         ),
-                    itemBuilder: (context, index) {
-                      final item = filteredItems[index];
-                      return _buildItemCard(context, item);
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: filteredItems.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              childAspectRatio: 0.68,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                            ),
+                        itemBuilder: (context, index) {
+                          return _buildItemCard(context, filteredItems[index]);
+                        },
+                      );
                     },
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
+            if (_isBulkActionLoading)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black54,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.orangeAccent,
+                    ),
+                  ),
+                ),
+              ),
+            if (_isSelectionMode &&
+                _selectedItems.isNotEmpty &&
+                !_isBulkActionLoading)
+              Positioned(
+                bottom: 130,
+                left: 20,
+                right: 20,
+                child: _buildBulkActionBar(),
+              ),
           ],
-        ),
-        if (_isBulkActionLoading)
-          Positioned.fill(
-            child: Container(
-              color: Colors.black54,
-              child: const Center(
-                child: CircularProgressIndicator(color: Colors.orangeAccent),
-              ),
-            ),
-          ),
-        if (_isSelectionMode &&
-            _selectedItems.isNotEmpty &&
-            !_isBulkActionLoading)
-          Positioned(
-            bottom: 130,
-            left: 20,
-            right: 20,
-            child: _buildBulkActionBar(),
-          ),
-      ],
+        );
+      },
     );
   }
 
-  List<dynamic> _applyLocalFilters(List<dynamic> items) {
+  List<dynamic> _applyLocalFilters(
+    List<dynamic> items,
+    Map<int, String> optimisticMap,
+  ) {
     final seenIds = <dynamic>{};
 
     return items.where((item) {
       final id = _extractId(item);
 
-      // SCUDO ANTI-DOPPIONI (Ignora cloni del DB)
+      // Scudo Anti-Doppioni del DB
       if (seenIds.contains(id)) return false;
       seenIds.add(id);
 
-      if (_hiddenItems.contains(id)) return false;
+      // SCUDO OPTIMISTIC UI CORRETTO
+      if (widget.status != 'favorites' &&
+          id is int &&
+          optimisticMap.containsKey(id)) {
+        final optStatus = optimisticMap[id];
+        // Se lo stato ottimistico dice che è stato rimosso o si trova in un'altra tab, NASCONDILO.
+        if (optStatus == 'none' || optStatus != widget.status) {
+          return false;
+        }
+      }
 
       String title = _extractTitle(item);
-
       if (_searchQuery.isNotEmpty &&
-          !title.toLowerCase().contains(_searchQuery)) {
+          !title.toLowerCase().contains(_searchQuery))
         return false;
-      }
 
       if (_selectedFilter != 'Tutti') {
         final type = _extractType(item);
@@ -448,43 +462,40 @@ class _LibraryGridState extends State<LibraryGrid> {
             );
             return;
           }
-          final bool isFullUrl =
-              item.posterUrl != null && item.posterUrl!.startsWith('http');
-          final String barePath = isFullUrl
+          final String barePath =
+              (item.posterUrl != null && item.posterUrl!.startsWith('http'))
               ? item.posterUrl!.replaceAll(
                   RegExp(r'https://image\.tmdb\.org/t/p/w\d+'),
                   '',
                 )
               : (item.posterUrl ?? '');
 
-          dynamic stubMedia;
-          if (item.itemType == 'movie') {
-            stubMedia = Movie(
-              id: item.itemId,
-              title: item.title,
-              overview: '',
-              posterPath: barePath,
-              backdropPath: barePath,
-              voteAverage: 0.0,
-              voteCount: 0,
-              releaseDate: '',
-              popularity: 0.0,
-              status: 'none',
-            );
-          } else {
-            stubMedia = TvSeries(
-              id: item.itemId,
-              name: item.title,
-              overview: '',
-              posterPath: barePath,
-              backdropPath: barePath,
-              voteAverage: 0.0,
-              voteCount: 0,
-              firstAirDate: '',
-              popularity: 0.0,
-              status: 'none',
-            );
-          }
+          dynamic stubMedia = (item.itemType == 'movie')
+              ? Movie(
+                  id: item.itemId,
+                  title: item.title,
+                  overview: '',
+                  posterPath: barePath,
+                  backdropPath: barePath,
+                  voteAverage: 0.0,
+                  voteCount: 0,
+                  releaseDate: '',
+                  popularity: 0.0,
+                  status: 'none',
+                )
+              : TvSeries(
+                  id: item.itemId,
+                  name: item.title,
+                  overview: '',
+                  posterPath: barePath,
+                  backdropPath: barePath,
+                  voteAverage: 0.0,
+                  voteCount: 0,
+                  firstAirDate: '',
+                  popularity: 0.0,
+                  status: 'none',
+                );
+
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -504,12 +515,11 @@ class _LibraryGridState extends State<LibraryGrid> {
         );
       },
       onLongPress: () {
-        if (!_isSelectionMode) {
+        if (!_isSelectionMode)
           setState(() {
             _isSelectionMode = true;
             _selectedItems.add(item);
           });
-        }
       },
       child: Stack(
         fit: StackFit.expand,
@@ -718,7 +728,6 @@ class _LibraryGridState extends State<LibraryGrid> {
         ),
       );
     }
-
     return buttons;
   }
 

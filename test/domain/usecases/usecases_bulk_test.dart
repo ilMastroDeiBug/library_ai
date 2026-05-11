@@ -12,8 +12,6 @@ import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/models/app_mode.dart';
 import 'package:library_ai/domain/entities/category.dart';
-import 'package:library_ai/models/movie_widget/cast_model.dart';
-import 'package:library_ai/models/movie_widget/review_model.dart';
 import 'package:library_ai/models/movie_widget/watch_provider_model.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -59,19 +57,6 @@ void main() {
       verify(() => movieRepo.updateStatus('u1', 1, 'watched')).called(1);
     });
 
-    test('GetMovieReviewsUseCase enforces isTv false', () async {
-      when(() => movieRepo.getReviews(7, isTv: false)).thenAnswer(
-        (_) async => [
-          Review(author: 'a', content: 'c', createdAt: '2020-01-01'),
-        ],
-      );
-      final useCase = GetMovieReviewsUseCase(movieRepo);
-
-      final list = await useCase.call(7);
-      expect(list.length, 1);
-      verify(() => movieRepo.getReviews(7, isTv: false)).called(1);
-    });
-
     test('GetMovieTrailerUseCase enforces isTv false', () async {
       when(
         () => movieRepo.getTrailerKey(9, isTv: false),
@@ -110,15 +95,6 @@ void main() {
   });
 
   group('TV use cases bulk forwarding', () {
-    test('GetTvSeriesReviewsUseCase enforces isTv true', () async {
-      when(
-        () => movieRepo.getReviews(1, isTv: true),
-      ).thenAnswer((_) async => []);
-      final useCase = GetTvSeriesReviewsUseCase(movieRepo);
-      await useCase.call(1);
-      verify(() => movieRepo.getReviews(1, isTv: true)).called(1);
-    });
-
     test('GetTvSeriesCastUseCase enforces isTv true', () async {
       when(() => movieRepo.getCast(2, isTv: true)).thenAnswer((_) async => []);
       final useCase = GetTvSeriesCastUseCase(movieRepo);
@@ -253,10 +229,12 @@ void main() {
 
     for (var i = 0; i < 20; i++) {
       test('Movie search/category/save forwarding #$i', () async {
-        when(() => movieRepo.searchMovies('m$i')).thenAnswer((_) async => []);
+        when(
+          () => movieRepo.searchMovies('m$i'),
+        ).thenAnswer((_) => Stream.value([]));
         when(
           () => movieRepo.getMoviesByCategory('popular', page: i + 1),
-        ).thenAnswer((_) async => []);
+        ).thenAnswer((_) => Stream.value([]));
 
         final movie = Movie(
           id: i,
