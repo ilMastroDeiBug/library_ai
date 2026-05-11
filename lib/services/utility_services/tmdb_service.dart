@@ -3,7 +3,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
-import 'package:library_ai/domain/entities/review.dart'; // IMPORT CORRETTO
+import 'package:library_ai/domain/entities/review.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/services/utility_services/cache_wrapper.dart';
 import '../../models/movie_widget/cast_model.dart';
@@ -114,6 +114,27 @@ class TmdbService {
     );
   }
 
+  // --- FIX: RECUPERO DETTAGLI CON LE STAGIONI ---
+  Future<TvSeries> getTvSeriesDetails(int seriesId) async {
+    final languageCode = sl<LanguageService>().currentLanguage;
+    // FIX: Niente $_apiKey, passiamo gli headers protetti di TmdbService
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/tv/$seriesId?language=$languageCode'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final jsonMap = json.decode(response.body);
+      return TvSeries.fromTmdb(
+        jsonMap,
+      ); // Questo mappa correttamente le "seasons"
+    } else {
+      throw Exception(
+        'Impossibile recuperare i dettagli della Serie TV da TMDB',
+      );
+    }
+  }
+
   // --- ATTORI / PERSONE ---
   Stream<List<CastMember>> searchActors(String query, {int page = 1}) async* {
     if (query.isEmpty) {
@@ -180,7 +201,6 @@ class TmdbService {
     }
   }
 
-  // AGGIORNATO AL NUOVO MODELLO
   Future<List<Review>> fetchReviews(int id, {bool isTv = false}) async {
     final endpoint = isTv ? 'tv' : 'movie';
     final cacheBox = Hive.box('tmdb_cache');

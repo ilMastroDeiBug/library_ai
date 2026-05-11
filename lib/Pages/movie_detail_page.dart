@@ -16,6 +16,8 @@ import '../models/movie_widget/movie_reviews_section.dart';
 import '../models/movie_widget/movie_cast_section.dart';
 import '../models/movie_widget/trailer_player_widget.dart';
 import '../models/movie_widget/watch_provider_widgets.dart';
+// IMPORTANTE: Importiamo la nuova sezione del tracking
+import 'package:library_ai/models/movie_widget/tv_series_tracker_section.dart';
 
 class MovieDetailPage extends StatefulWidget {
   final dynamic media;
@@ -134,6 +136,25 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     }
   }
 
+  // Estrae in modo sicuro le stagioni per evitare crash
+  Map<int, int> _extractSeasonsMap(dynamic liveMedia) {
+    if (liveMedia is! TvSeries) return {};
+    Map<int, int> map = {};
+    if (liveMedia.seasons.isEmpty) return map;
+
+    for (var s in liveMedia.seasons) {
+      if (s is Map) {
+        final sNum = s['season_number'] ?? 0;
+        final epCount = s['episode_count'] ?? 0;
+        if (sNum > 0) {
+          // Ignoriamo la stagione 0 (Spciali)
+          map[sNum] = epCount;
+        }
+      }
+    }
+    return map;
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = sl<AuthRepository>().currentUser;
@@ -237,6 +258,28 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       const SizedBox(height: 20),
                       MovieStatsBar(movie: displayMovieForStats),
                       const SizedBox(height: 30),
+
+                      // INIEZIONE CONDIZIONALE DELLA SEZIONE TRACKER
+                      if (_isTv &&
+                          currentStatus == 'watching' &&
+                          user != null) ...[
+                        const Text(
+                          "PROGRESSO VISIONE",
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TvSeriesTrackerSection(
+                          userId: user.id,
+                          seriesId: _id,
+                          episodesPerSeason: _extractSeasonsMap(liveMedia),
+                        ),
+                        const SizedBox(height: 30),
+                      ],
 
                       // I TRE BOTTONI OTTIMIZZATI
                       Row(

@@ -11,6 +11,8 @@ class TvSeries {
   final String firstAirDate; // Invece di releaseDate
   final String originalLanguage;
   final double popularity;
+  final List<dynamic>
+  seasons; // AGGIUNTO: Risolve l'errore della mappa stagioni
 
   // Campi locali (Database)
   final String status;
@@ -26,6 +28,7 @@ class TvSeries {
     required this.voteCount,
     required this.firstAirDate,
     required this.popularity,
+    this.seasons = const [], // Default array vuoto
     this.originalLanguage = '',
     this.status = 'none',
     this.aiAnalysis,
@@ -51,6 +54,7 @@ class TvSeries {
       firstAirDate: json['first_air_date'] ?? '',
       originalLanguage: json['original_language'] ?? '',
       popularity: (json['popularity'] as num?)?.toDouble() ?? 0.0,
+      seasons: json['seasons'] ?? [], // Mappatura da TMDB
       status: 'none',
     );
   }
@@ -71,8 +75,9 @@ class TvSeries {
           data['releaseDate'] ??
           '', // Su DB usiamo releaseDate come campo comune
       originalLanguage: data['originalLanguage'] ?? '',
-      status: data['status'] ?? 'none',
       popularity: (data['popularity'] as num?)?.toDouble() ?? 0,
+      seasons: data['seasons'] ?? [], // Mappatura da Firestore
+      status: data['status'] ?? 'none',
       aiAnalysis: data['aiAnalysis'],
     );
   }
@@ -87,9 +92,43 @@ class TvSeries {
       'voteCount': voteCount,
       'releaseDate': firstAirDate,
       'originalLanguage': originalLanguage,
+      'popularity': popularity,
+      'seasons': seasons, // Salvataggio
       'status': status,
       'aiAnalysis': aiAnalysis,
       'type': 'tv', // Flag fondamentale per distinguere nel DB
     };
+  }
+
+  TvSeries copyWith({
+    int? id,
+    String? name,
+    String? overview,
+    String? posterPath,
+    String? backdropPath,
+    double? voteAverage,
+    int? voteCount,
+    String? firstAirDate,
+    String? originalLanguage,
+    double? popularity,
+    List<dynamic>? seasons,
+    String? status,
+    String? aiAnalysis,
+  }) {
+    return TvSeries(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      overview: overview ?? this.overview,
+      posterPath: posterPath ?? this.posterPath,
+      backdropPath: backdropPath ?? this.backdropPath,
+      voteAverage: voteAverage ?? this.voteAverage,
+      voteCount: voteCount ?? this.voteCount,
+      firstAirDate: firstAirDate ?? this.firstAirDate,
+      originalLanguage: originalLanguage ?? this.originalLanguage,
+      popularity: popularity ?? this.popularity,
+      seasons: seasons ?? this.seasons,
+      status: status ?? this.status,
+      aiAnalysis: aiAnalysis ?? this.aiAnalysis,
+    );
   }
 }

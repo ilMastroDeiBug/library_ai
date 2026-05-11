@@ -10,17 +10,20 @@ import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/domain/entities/favorite_item.dart';
+import 'package:library_ai/domain/entities/tv_series_progress.dart';
 
 // Use Cases
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
+import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart';
 
-// Pages
+// Pages & Widgets
 import 'package:library_ai/Pages/book_detail_page.dart';
 import 'package:library_ai/Pages/movie_detail_page.dart';
 import 'package:library_ai/Pages/actor_detail_page.dart';
+import 'package:library_ai/models/movie_widget/streak_widget.dart';
 
 class LibraryGrid extends StatefulWidget {
   final AppMode mode;
@@ -38,11 +41,8 @@ class _LibraryGridState extends State<LibraryGrid> {
 
   late Stream<List<dynamic>> _dataStream;
 
-  // --- STATO SELEZIONE MULTIPLA ---
   bool _isSelectionMode = false;
   final Set<dynamic> _selectedItems = {};
-
-  // UI OTTIMISTICA: Nasconde istantaneamente gli item spostati/eliminati
   final Set<dynamic> _hiddenItems = {};
   bool _isBulkActionLoading = false;
 
@@ -67,7 +67,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       _initStream();
       _isSelectionMode = false;
       _selectedItems.clear();
-      _hiddenItems.clear(); // Resettiamo la cache visiva
+      _hiddenItems.clear();
     }
   }
 
@@ -91,7 +91,6 @@ class _LibraryGridState extends State<LibraryGrid> {
     }
   }
 
-  // --- AZIONI DI GRUPPO (BULK) CORRETTE ---
   void _performBulkAction(String action) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return;
@@ -115,13 +114,19 @@ class _LibraryGridState extends State<LibraryGrid> {
           } else {
             if (itemType == 'tv') {
               await sl<DeleteTvSeriesUseCase>().call(user.id, itemId as int);
-            } else if (itemType == 'book')
+              try {
+                await sl<DeleteSeriesProgressUseCase>().call(
+                  user.id,
+                  itemId as int,
+                );
+              } catch (_) {}
+            } else if (itemType == 'book') {
               await sl<DeleteBookUseCase>().call(user.id, itemId as String);
-            else
+            } else {
               await sl<DeleteMovieUseCase>().call(user.id, itemId as int);
+            }
           }
         } else {
-          // UTILIZZIAMO I SAVE USE CASES AFFIDABILI (Come nella Detail Page)
           if (item is Movie) {
             final updated = item.copyWith(status: action);
             await sl<SaveMovieUseCase>().call(updated, user.id);
@@ -138,8 +143,14 @@ class _LibraryGridState extends State<LibraryGrid> {
               status: action,
               aiAnalysis: item.aiAnalysis,
               popularity: item.popularity,
+              seasons: item.seasons,
             );
             await sl<SaveTvSeriesUseCase>().call(updated, user.id);
+            if (action != 'watching') {
+              try {
+                await sl<DeleteSeriesProgressUseCase>().call(user.id, item.id);
+              } catch (_) {}
+            }
           } else if (item is Book) {
             final updated = Book(
               id: item.id,
@@ -158,7 +169,6 @@ class _LibraryGridState extends State<LibraryGrid> {
         }
       }
 
-      // OPTIMISTIC UI: Nascondiamo subito le locandine dalla griglia!
       _hiddenItems.addAll(_selectedItems.map((e) => _extractId(e)));
     } catch (e) {
       if (mounted) {
@@ -240,7 +250,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                       left: 15,
                       right: 15,
                       bottom: 150,
-                    ), // Spazio per la bulk bar
+                    ),
                     physics: const BouncingScrollPhysics(),
                     itemCount: filteredItems.length,
                     gridDelegate:
@@ -260,8 +270,6 @@ class _LibraryGridState extends State<LibraryGrid> {
             ),
           ],
         ),
-
-        // LOADING OVERLAY
         if (_isBulkActionLoading)
           Positioned.fill(
             child: Container(
@@ -271,13 +279,11 @@ class _LibraryGridState extends State<LibraryGrid> {
               ),
             ),
           ),
-
-        // LA FLOATING ACTION BAR PER LA MULTISELEZIONE IN VETRO
         if (_isSelectionMode &&
             _selectedItems.isNotEmpty &&
             !_isBulkActionLoading)
           Positioned(
-            bottom: 130, // Rialzata per evitare la BottomNavigationBar
+            bottom: 130,
             left: 20,
             right: 20,
             child: _buildBulkActionBar(),
@@ -287,19 +293,24 @@ class _LibraryGridState extends State<LibraryGrid> {
   }
 
   List<dynamic> _applyLocalFilters(List<dynamic> items) {
+    final seenIds = <dynamic>{};
+
     return items.where((item) {
-      // 1. OPTIMISTIC UI: Se l'abbiamo appena spostato, non mostrarlo
-      if (_hiddenItems.contains(_extractId(item))) return false;
+      final id = _extractId(item);
+
+      // SCUDO ANTI-DOPPIONI (Ignora cloni del DB)
+      if (seenIds.contains(id)) return false;
+      seenIds.add(id);
+
+      if (_hiddenItems.contains(id)) return false;
 
       String title = _extractTitle(item);
 
-      // 2. Ricerca Testuale
       if (_searchQuery.isNotEmpty &&
           !title.toLowerCase().contains(_searchQuery)) {
         return false;
       }
 
-      // 3. Filtro Chip (Tutti, Film, Serie)
       if (_selectedFilter != 'Tutti') {
         final type = _extractType(item);
         if (_selectedFilter == 'Film' && type != 'movie') return false;
@@ -341,7 +352,6 @@ class _LibraryGridState extends State<LibraryGrid> {
                 ),
               ),
               const SizedBox(width: 10),
-              // TASTO SELEZIONA
               TextButton(
                 onPressed: () {
                   setState(() {
@@ -388,9 +398,8 @@ class _LibraryGridState extends State<LibraryGrid> {
                       backgroundColor: Colors.white.withOpacity(0.05),
                       side: BorderSide.none,
                       showCheckmark: false,
-                      onSelected: (selected) {
-                        setState(() => _selectedFilter = filter);
-                      },
+                      onSelected: (selected) =>
+                          setState(() => _selectedFilter = filter),
                     ),
                   );
                 },
@@ -402,6 +411,7 @@ class _LibraryGridState extends State<LibraryGrid> {
   }
 
   Widget _buildItemCard(BuildContext context, dynamic item) {
+    final user = sl<AuthRepository>().currentUser;
     String imageUrl = "";
     String overlayName = "";
 
@@ -428,7 +438,6 @@ class _LibraryGridState extends State<LibraryGrid> {
           return;
         }
 
-        // NAVIGAZIONE
         if (item is FavoriteItem) {
           if (item.itemType == 'person') {
             Navigator.push(
@@ -599,7 +608,19 @@ class _LibraryGridState extends State<LibraryGrid> {
               ],
             ),
           ),
-
+          if (item is TvSeries && user != null)
+            Positioned(
+              top: 6,
+              left: 6,
+              child: StreamBuilder<TvSeriesProgress?>(
+                stream: sl<GetSeriesProgressUseCase>().call(user.id, item.id),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data == null)
+                    return const SizedBox.shrink();
+                  return StreakWidget(progress: snapshot.data!);
+                },
+              ),
+            ),
           if (_isSelectionMode)
             Positioned(
               top: 5,
@@ -625,18 +646,15 @@ class _LibraryGridState extends State<LibraryGrid> {
     );
   }
 
-  // --- LA BARRA DELLE AZIONI DI GRUPPO IN GLASSMORPHISM ---
   Widget _buildBulkActionBar() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), // Sfocatura
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(
-              0xFF1E1E1E,
-            ).withOpacity(0.65), // Semitrasparente!
+            color: const Color(0xFF1E1E1E).withOpacity(0.65),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.1)),
             boxShadow: [
@@ -658,8 +676,6 @@ class _LibraryGridState extends State<LibraryGrid> {
 
   List<Widget> _getBulkActionButtons() {
     List<Widget> buttons = [];
-
-    // Bottone Elimina (sempre presente)
     buttons.add(
       _buildBulkBtn(
         Icons.delete_outline,
@@ -669,7 +685,6 @@ class _LibraryGridState extends State<LibraryGrid> {
       ),
     );
 
-    // Sezioni Da Vedere
     if (widget.status == 'towatch' || widget.status == 'toread') {
       buttons.add(
         _buildBulkBtn(
@@ -691,9 +706,7 @@ class _LibraryGridState extends State<LibraryGrid> {
           ),
         ),
       );
-    }
-    // Sezioni In Corso
-    else if (widget.status == 'watching' || widget.status == 'reading') {
+    } else if (widget.status == 'watching' || widget.status == 'reading') {
       buttons.add(
         _buildBulkBtn(
           Icons.check_circle_outline,

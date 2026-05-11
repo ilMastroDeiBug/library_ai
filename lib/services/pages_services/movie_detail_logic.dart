@@ -6,6 +6,8 @@ import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
+import 'package:library_ai/services/utility_services/tmdb_service.dart';
+import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart'; // IMPORT FONDAMENTALE
 import '../../services/utility_services/ai_service.dart';
 
 class MovieDetailLogic {
@@ -14,7 +16,6 @@ class MovieDetailLogic {
   MovieDetailLogic({AIService? aiService})
     : _aiService = aiService ?? AIService();
 
-  // Ritorna TRUE se va a buon fine, così l'Optimistic UI è sicura
   Future<bool> handleStatusAction(
     BuildContext context,
     dynamic media,
@@ -30,12 +31,13 @@ class MovieDetailLogic {
     final isRemoving = currentStatus == action;
     final newStatus = isRemoving ? 'none' : action;
 
-    try {
-      if (media is Movie) {
-        final updatedMovie = media.copyWith(status: newStatus);
-        await sl<SaveMovieUseCase>().call(updatedMovie, user.id);
-      } else if (media is TvSeries) {
-        final updatedSeries = TvSeries(
+    dynamic mediaToSave = media;
+
+    // PRE-PROCESSING: Gestione TMDB Stagioni
+    if (media is TvSeries && media.seasons.isEmpty && newStatus != 'none') {
+      try {
+        final fullTvData = await sl<TmdbService>().getTvSeriesDetails(media.id);
+        mediaToSave = TvSeries(
           id: media.id,
           name: media.name,
           overview: media.overview,
@@ -44,11 +46,71 @@ class MovieDetailLogic {
           voteAverage: media.voteAverage,
           voteCount: media.voteCount,
           firstAirDate: media.firstAirDate,
+          originalLanguage: media.originalLanguage,
+          popularity: media.popularity,
           status: newStatus,
           aiAnalysis: media.aiAnalysis,
-          popularity: media.popularity,
+          seasons: fullTvData.seasons,
         );
-        await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
+      } catch (e) {
+        mediaToSave = TvSeries(
+          id: media.id,
+          name: media.name,
+          overview: media.overview,
+          posterPath: media.posterPath,
+          backdropPath: media.backdropPath,
+          voteAverage: media.voteAverage,
+          voteCount: media.voteCount,
+          firstAirDate: media.firstAirDate,
+          originalLanguage: media.originalLanguage,
+          popularity: media.popularity,
+          status: newStatus,
+          aiAnalysis: media.aiAnalysis,
+          seasons: media.seasons,
+        );
+      }
+    } else if (media is TvSeries) {
+      mediaToSave = TvSeries(
+        id: media.id,
+        name: media.name,
+        overview: media.overview,
+        posterPath: media.posterPath,
+        backdropPath: media.backdropPath,
+        voteAverage: media.voteAverage,
+        voteCount: media.voteCount,
+        firstAirDate: media.firstAirDate,
+        originalLanguage: media.originalLanguage,
+        popularity: media.popularity,
+        status: newStatus,
+        aiAnalysis: media.aiAnalysis,
+        seasons: media.seasons,
+      );
+    } else if (media is Movie) {
+      mediaToSave = media.copyWith(status: newStatus);
+    }
+
+    // ELIMINAZIONE ORFINI DAL DB (Il fix per "rimane lì")
+    if (media is TvSeries && newStatus != 'watching') {
+      try {
+        await sl<DeleteSeriesProgressUseCase>().call(user.id, media.id);
+      } catch (e) {
+        debugPrint("Progresso non esistente o errore eliminazione");
+      }
+    }
+
+    try {
+      if (isRemoving) {
+        if (media is Movie) {
+          await sl<DeleteMovieUseCase>().call(user.id, media.id);
+        } else {
+          await sl<DeleteTvSeriesUseCase>().call(user.id, media.id);
+        }
+      } else {
+        if (mediaToSave is Movie) {
+          await sl<SaveMovieUseCase>().call(mediaToSave, user.id);
+        } else {
+          await sl<SaveTvSeriesUseCase>().call(mediaToSave, user.id);
+        }
       }
 
       if (context.mounted) {
@@ -143,6 +205,7 @@ class MovieDetailLogic {
           status: media.status,
           aiAnalysis: analysis,
           popularity: media.popularity,
+          seasons: media.seasons,
         );
         await sl<SaveTvSeriesUseCase>().call(updatedSeries, user.id);
       }

@@ -2,6 +2,7 @@
 import '../models/app_mode.dart';
 import '../models/home_widgets/home_content_builders.dart';
 import '../models/home_widgets/home_cinema_switcher.dart';
+import '../models/home_widgets/home_tv_progress_section.dart'; // IMPORT AGGIUNTO
 import 'search_page.dart';
 import '../injection_container.dart';
 import '../services/utility_services/language_service.dart';
@@ -37,7 +38,6 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _cinemaPageController = PageController(initialPage: 0);
-    // Ascoltiamo il doppio tap dalla NavigationHub
     widget.reselectNotifier?.addListener(_onReselect);
   }
 
@@ -50,11 +50,9 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // Funzione chiamata quando premi di nuovo l'icona Home nella bottom bar
   void _onReselect() {
     if (!mounted) return;
 
-    // 1. Torna in cima
     final activeController = _selectedCinemaType == CinemaType.movies
         ? _movieScrollController
         : _tvScrollController;
@@ -67,16 +65,13 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // 2. Forza l'aggiornamento ricreando i Widget interni
     _forceRefresh();
   }
 
   Future<void> _forceRefresh() async {
     setState(() {
-      _refreshKey =
-          UniqueKey(); // Cambiando chiave, i widget si distruggono e si ricaricano
+      _refreshKey = UniqueKey();
     });
-    // Piccola pausa per mostrare l'animazione di refresh
     await Future.delayed(const Duration(milliseconds: 800));
   }
 
@@ -292,7 +287,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Aggiunto il controller e il RefreshIndicator
   Widget _buildCinemaPage(CinemaType type, ScrollController controller) {
     final Set<int> seenIds = {};
     final sections = HomeContentBuilder.buildCinemaContent(
@@ -305,9 +299,8 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xFF1E1E1E),
       onRefresh: _forceRefresh,
       child: ListView.builder(
-        key:
-            _refreshKey, // La chiave magica che resetta tutto quando tiriamo giù
-        controller: controller, // Ci agganciamo al controller per scrollare
+        key: _refreshKey,
+        controller: controller,
         padding: const EdgeInsets.only(top: 0, bottom: 100),
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
@@ -324,7 +317,11 @@ class _HomePageState extends State<HomePage> {
                     cinemaType: type,
                     seenIds: seenIds,
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
+                  // INIEZIONE DELLA SEZIONE STREAK "STAI GUARDANDO" SOTTO AL BANNER!
+                  if (type == CinemaType.tvSeries)
+                    const HomeTvProgressSection(),
+                  const SizedBox(height: 10),
                 ],
               ),
             );
