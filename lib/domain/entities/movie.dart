@@ -38,7 +38,7 @@ class Movie {
       : 'https://placehold.co/500x750/png?text=No+Poster'; // Servizio stabile
 
   String get fullBackdropUrl => backdropPath.isNotEmpty
-      ? 'https://image.tmdb.org/t/p/w780$backdropPath'
+      ? 'https://image.tmdb.org/t/p/original$backdropPath'
       : ''; // Per il backdrop lasciamo vuoto, la UI gestirà il gradiente
 
   factory Movie.fromTmdb(Map<String, dynamic> json) {

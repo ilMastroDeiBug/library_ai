@@ -34,6 +34,11 @@ import 'package:library_ai/data/supabase_tv_progress_repository_impl.dart';
 // IMPORTA IL FILE DOVE HAI MESSO GLI USE CASE DEL PROGRESSO!
 import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart'; // Sostituisci col nome reale del file se diverso
 
+// Rating
+import 'package:library_ai/domain/repositories/rating_repository.dart';
+import 'package:library_ai/data/repositories/supabase_rating_repository_impl.dart';
+import 'package:library_ai/domain/use_cases/save_rating_use_case.dart';
+
 // Import Services Libri (DORMIENTI)
 import 'package:library_ai/services/utility_services/open_library_service.dart';
 import 'package:library_ai/services/utility_services/google_books_service.dart';
@@ -97,6 +102,13 @@ Future<void> init() async {
   sl.registerLazySingleton<TvProgressRepository>(
     () => SupabaseTvProgressRepositoryImpl(
       supabaseClient: Supabase.instance.client,
+    ),
+  );
+
+  // REGISTRAZIONE REPOSITORY RATING
+  sl.registerLazySingleton<RatingRepository>(
+    () => SupabaseRatingRepositoryImpl(
+      supabase: Supabase.instance.client,
     ),
   );
 
@@ -182,4 +194,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SubmitReviewUseCase(sl()));
   sl.registerLazySingleton(() => VoteReviewUseCase(sl()));
   sl.registerLazySingleton(() => DeleteReviewUseCase(sl()));
+
+  // Ratings...
+  sl.registerLazySingleton(() => SaveRatingUseCase(sl()));
 }

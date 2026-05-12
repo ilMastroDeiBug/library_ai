@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../injection_container.dart';
 import '../../domain/use_cases/auth_use_cases.dart';
 import '../../main.dart'; // <-- IMPORTIAMO MAIN.DART PER AVERE AUTHGATE
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class DeleteAccountDialog extends StatefulWidget {
   const DeleteAccountDialog({super.key});
@@ -31,7 +32,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Errore durante l'eliminazione.")),
+          SnackBar(content: Text(AppLocalizations.of(context)!.settingsDeleteError)),
         );
         Navigator.pop(context);
       }
@@ -43,21 +44,21 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
     return AlertDialog(
       backgroundColor: const Color(0xFF1E1E1E),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Row(
+      title: Row(
         children: [
           Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
           SizedBox(width: 10),
-          Text("Elimina Account", style: TextStyle(color: Colors.white)),
+          Text(AppLocalizations.of(context)!.settingsDeleteAccount, style: const TextStyle(color: Colors.white)),
         ],
       ),
-      content: const Text(
-        "Sei sicuro di voler eliminare il tuo account?\n\nQuesta azione è IRREVERSIBILE. Tutti i tuoi salvataggi, librerie e analisi AI andranno persi per sempre.",
-        style: TextStyle(color: Colors.white70, height: 1.5),
+      content: Text(
+        AppLocalizations.of(context)!.settingsDeleteWarning,
+        style: const TextStyle(color: Colors.white70, height: 1.5),
       ),
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: const Text("Annulla", style: TextStyle(color: Colors.white54)),
+          child: Text(AppLocalizations.of(context)!.cancel, style: const TextStyle(color: Colors.white54)),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
@@ -77,9 +78,9 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                     strokeWidth: 2,
                   ),
                 )
-              : const Text(
-                  "Elimina per sempre",
-                  style: TextStyle(fontWeight: FontWeight.bold),
+              : Text(
+                  AppLocalizations.of(context)!.settingsDeleteForever,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
         ),
       ],

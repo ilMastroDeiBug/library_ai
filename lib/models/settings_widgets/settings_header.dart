@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class SettingsHeader extends StatelessWidget {
   final AppUser? user;
@@ -102,7 +103,7 @@ class SettingsHeader extends StatelessWidget {
 
           // Informazioni Utente
           Text(
-            user?.displayName ?? "Utente Misterioso",
+            user?.displayName ?? AppLocalizations.of(context)!.settingsUnknownUser,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,

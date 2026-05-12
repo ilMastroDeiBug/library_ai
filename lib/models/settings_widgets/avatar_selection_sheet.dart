@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class AvatarSelectionSheet extends StatefulWidget {
   final String userId;
@@ -75,7 +76,7 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Errore salvataggio: $e'),
+            content: Text('${AppLocalizations.of(context)!.settingsSaveError}$e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -116,9 +117,9 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                "SCEGLI IL TUO AVATAR",
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)!.settingsChooseAvatar,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 2.0,
@@ -216,9 +217,9 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                               strokeWidth: 3,
                             ),
                           )
-                        : const Text(
-                            "SALVA AVATAR",
-                            style: TextStyle(
+                        : Text(
+                            AppLocalizations.of(context)!.settingsSaveAvatar,
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               letterSpacing: 1.5,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/use_cases/review_use_cases.dart';
 import '../../injection_container.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class WriteReviewSheet extends StatefulWidget {
   final int mediaId;
@@ -63,9 +64,9 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "La tua Recensione",
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.writeReviewTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -93,7 +94,7 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
             maxLines: 4,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: "Cosa ne pensi?",
+              hintText: AppLocalizations.of(context)!.writeReviewHint,
               hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
               filled: true,
               fillColor: Colors.black26,
@@ -118,9 +119,9 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
               onPressed: _isLoading ? null : _submit,
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.black)
-                  : const Text(
-                      "Pubblica",
-                      style: TextStyle(
+                  : Text(
+                      AppLocalizations.of(context)!.writeReviewPublish,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),

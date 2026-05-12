@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class AIAnalysisSection extends StatelessWidget {
   final String? analysisText;
@@ -35,13 +36,13 @@ class AIAnalysisSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.psychology, color: _brandColor),
-                SizedBox(width: 10),
+                const Icon(Icons.psychology, color: _brandColor),
+                const SizedBox(width: 10),
                 Text(
-                  "VERDETTO DELL'ARCHITETTO",
-                  style: TextStyle(
+                  AppLocalizations.of(context)!.aiAnalysisTitle,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -99,7 +100,7 @@ class AIAnalysisSection extends StatelessWidget {
                 )
               : const Icon(Icons.psychology, color: Colors.black),
           label: Text(
-            isAnalyzing ? "STO PENSANDO..." : "RICHIEDI ANALISI AI",
+           isAnalyzing ? AppLocalizations.of(context)!.aiAnalysisThinking : AppLocalizations.of(context)!.aiAnalysisRequest,
             style: const TextStyle(
               color: Colors.black,
               fontWeight: FontWeight.w900,

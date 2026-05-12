@@ -72,11 +72,9 @@ class SupabaseTvProgressRepositoryImpl implements TvProgressRepository {
               .eq('user_id', userId)
               .listen(
                 (events) {
-                  final filteredEvents = events.where((row) {
-                    final rowSeriesId =
-                        int.tryParse(row['series_id'].toString()) ?? 0;
-                    return rowSeriesId == seriesId;
-                  }).toList();
+                  final filteredEvents = events
+                      .where((row) => row['series_id'] == seriesId)
+                      .toList();
 
                   if (filteredEvents.isEmpty) {
                     _emitProgressRemoval(userId, seriesId);

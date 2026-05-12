@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_mode.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class HomeCinemaSwitcher extends StatelessWidget {
   final CinemaType selectedType;
@@ -16,9 +17,9 @@ class HomeCinemaSwitcher extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildTab(context, "Film", CinemaType.movies),
+        _buildTab(context, AppLocalizations.of(context)!.movies, CinemaType.movies),
         const SizedBox(width: 25),
-        _buildTab(context, "Serie TV", CinemaType.tvSeries),
+        _buildTab(context, AppLocalizations.of(context)!.tvSeries, CinemaType.tvSeries),
       ],
     );
   }

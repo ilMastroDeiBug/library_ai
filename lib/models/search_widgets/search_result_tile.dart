@@ -5,6 +5,7 @@ import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
 import 'package:library_ai/models/app_mode.dart';
 import 'package:library_ai/models/movie_widget/cast_model.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 import '../../Pages/book_detail_page.dart';
 import '../../Pages/movie_detail_page.dart';
@@ -36,8 +37,8 @@ class SearchResultTile extends StatelessWidget {
     } else if (item is Movie) {
       title = item.title;
       subtitle = item.releaseDate.isNotEmpty
-          ? "Film • ${item.releaseDate.split('-')[0]}"
-          : "Film";
+          ? AppLocalizations.of(context)!.searchMoviePrefix(item.releaseDate.split('-')[0])
+          : AppLocalizations.of(context)!.searchMovieOnly;
       imageUrl = item.fullPosterUrl;
       defaultIcon = Icons.movie_creation_rounded;
       onTap = () => Navigator.push(
@@ -47,8 +48,8 @@ class SearchResultTile extends StatelessWidget {
     } else if (item is TvSeries) {
       title = item.name;
       subtitle = item.firstAirDate.isNotEmpty
-          ? "Serie TV • ${item.firstAirDate.split('-')[0]}"
-          : "Serie TV";
+          ? AppLocalizations.of(context)!.searchTvPrefix(item.firstAirDate.split('-')[0])
+          : AppLocalizations.of(context)!.searchTvOnly;
       imageUrl = item.fullPosterUrl;
       defaultIcon = Icons.live_tv_rounded;
       onTap = () => Navigator.push(

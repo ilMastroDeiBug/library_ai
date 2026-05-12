@@ -18,6 +18,7 @@ import '../domain/use_cases/actor_use_cases.dart';
 import 'book_detail_page.dart';
 import 'movie_detail_page.dart';
 import 'actor_detail_page.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class SearchResultTile extends StatelessWidget {
   final dynamic item;
@@ -46,8 +47,8 @@ class SearchResultTile extends StatelessWidget {
     } else if (item is Movie) {
       title = item.title;
       subtitle = item.releaseDate.isNotEmpty
-          ? "Film • ${item.releaseDate.split('-')[0]}"
-          : "Film";
+          ? "${AppLocalizations.of(context)!.movies} • ${item.releaseDate.split('-')[0]}"
+          : AppLocalizations.of(context)!.movies;
       imageUrl = item.fullPosterUrl;
       defaultIcon = Icons.movie_creation_rounded;
       onTap = () => Navigator.push(
@@ -57,8 +58,8 @@ class SearchResultTile extends StatelessWidget {
     } else if (item is TvSeries) {
       title = item.name;
       subtitle = item.firstAirDate.isNotEmpty
-          ? "Serie TV • ${item.firstAirDate.split('-')[0]}"
-          : "Serie TV";
+          ? "${AppLocalizations.of(context)!.tvSeries} • ${item.firstAirDate.split('-')[0]}"
+          : AppLocalizations.of(context)!.tvSeries;
       imageUrl = item.fullPosterUrl;
       defaultIcon = Icons.live_tv_rounded;
       onTap = () => Navigator.push(
@@ -240,7 +241,7 @@ class UniversalSearchDelegate extends SearchDelegate {
     if (mode == AppMode.books) {
       return _buildMessage(
         Icons.auto_stories_rounded,
-        "Ricerca disabilitata.\nIl Vault dei Libri è in arrivo!",
+        AppLocalizations.of(context)!.searchBooksDisabled,
       );
     }
 
@@ -256,7 +257,7 @@ class UniversalSearchDelegate extends SearchDelegate {
     if (mode == AppMode.books) {
       return _buildMessage(
         Icons.auto_stories_rounded,
-        "Ricerca disabilitata.\nIl Vault dei Libri è in arrivo!",
+        AppLocalizations.of(context)!.searchBooksDisabled,
       );
     }
 
@@ -516,8 +517,8 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton(0, "Film & Serie TV")),
-          Expanded(child: _buildTabButton(1, "Attori")),
+          Expanded(child: _buildTabButton(0, AppLocalizations.of(context)!.moviesAndTv)),
+          Expanded(child: _buildTabButton(1, AppLocalizations.of(context)!.actors)),
         ],
       ),
     );
@@ -568,7 +569,7 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
             ),
             const SizedBox(height: 16),
             Text(
-              "Cerca ${_searchType == 0 ? 'Film o Serie TV' : 'Attori'}",
+              _searchType == 0 ? AppLocalizations.of(context)!.searchMoviesTv : AppLocalizations.of(context)!.searchActors,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.3),
                 fontSize: 16,
@@ -592,7 +593,7 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
     if (_results.isEmpty) {
       return Center(
         child: Text(
-          "Nessun risultato trovato",
+          AppLocalizations.of(context)!.noResultsFound,
           style: TextStyle(color: Colors.white.withOpacity(0.5)),
         ),
       );

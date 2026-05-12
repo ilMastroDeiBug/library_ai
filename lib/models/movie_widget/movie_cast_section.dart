@@ -6,6 +6,7 @@ import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 import '../../Pages/actor_detail_page.dart'; // <-- Aggiunto l'import della nuova pagina
 import 'cast_model.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class MovieCastSection extends StatelessWidget {
   final int id;
@@ -22,9 +23,9 @@ class MovieCastSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "CAST",
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)!.castTitle,
+          style: const TextStyle(
             color: Colors.white30,
             letterSpacing: 2.0,
             fontSize: 12,
@@ -54,9 +55,9 @@ class MovieCastSection extends StatelessWidget {
                 if (snapshot.hasError ||
                     !snapshot.hasData ||
                     snapshot.data!.isEmpty) {
-                  return const Text(
-                    "Info cast non disponibili.",
-                    style: TextStyle(color: Colors.white24),
+                  return Text(
+                    AppLocalizations.of(context)!.castUnavailable,
+                    style: const TextStyle(color: Colors.white24),
                   );
                 }
 

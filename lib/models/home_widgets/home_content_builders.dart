@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../services/pages_services/home_service.dart';
 import '../../models/book_widgets/book_section.dart';
 import '../../injection_container.dart';
@@ -13,36 +13,185 @@ import '../../models/app_mode.dart';
 import '../../domain/entities/movie.dart';
 import '../../domain/entities/tv_series.dart';
 import '../../services/utility_services/language_service.dart';
-import 'cinema_horizontal.dart'; // Assicurati che l'import sia corretto per CinemaHorizontalList
+import 'cinema_horizontal.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class HomeContentBuilder {
-  static List<Widget> buildBookContent() {
+  static List<Widget> buildBookContent(BuildContext context) {
     return HomeService.bookSections.map((data) {
       if (data.containsKey('header')) {
-        return _SectionHeader(text: data['header']);
+        return _SectionHeader(text: _translateHomeString(context, data['header']));
       }
       return Column(
         children: [
-          BookSection(title: data['title'], categoryQuery: data['query']),
+          BookSection(
+            title: _translateHomeString(context, data['title'] ?? ''),
+            categoryQuery: data['query'],
+          ),
           const SizedBox(height: 10),
         ],
       );
     }).toList();
   }
 
-  static List<Widget> buildCinemaContent({
+  static String _translateHomeString(BuildContext context, String original) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) return original;
+
+    switch (original) {
+      // Headers
+      case 'NARRATIVA':
+        return l10n.homeHeaderFiction;
+      case 'CONOSCENZA & SVILUPPO':
+        return l10n.homeHeaderKnowledge;
+      case 'ALTRI INTERESSI':
+        return l10n.homeHeaderOtherInterests;
+      case 'FILM IN EVIDENZA':
+        return l10n.homeHeaderFeaturedMovies;
+      case 'AZIONE & ADRENALINA':
+        return l10n.homeHeaderAction;
+      case 'SENTIMENTO & STORIA':
+        return l10n.homeHeaderDrama;
+      case 'FANTASTICO & DARK':
+        return l10n.homeHeaderFantasy;
+      case 'INTRATTENIMENTO':
+        return l10n.homeHeaderEntertainment;
+      case 'SERIE TV IN EVIDENZA':
+        return l10n.homeHeaderFeaturedTv;
+      case 'SENSE OF WONDER':
+        return l10n.homeHeaderWonder;
+      case 'DRAMMA & TENSIONE':
+        return l10n.homeHeaderTvDrama;
+      case 'INTRATTENIMENTO TV':
+        return l10n.homeHeaderTvEntertainment;
+
+      // Titles (Books)
+      case 'Bestsellers & Classici':
+        return l10n.homeTitleBestsellers;
+      case 'Thriller & Suspense':
+        return l10n.homeTitleThriller;
+      case 'Sci-Fi & Cyberpunk':
+        return l10n.homeTitleSciFi;
+      case 'Fantasy Epico':
+        return l10n.homeTitleFantasyEpico;
+      case 'Avventura':
+        return l10n.homeTitleAdventure;
+      case 'Romance & Love Stories':
+        return l10n.homeTitleRomance;
+      case 'Horror & Dark':
+        return l10n.homeTitleHorror;
+      case 'Gialli & Mistery':
+        return l10n.homeTitleMystery;
+      case 'Romanzi Storici':
+        return l10n.homeTitleHistoricalFiction;
+      case 'Mindset & Crescita':
+        return l10n.homeTitleMindset;
+      case 'Business & Finanza':
+        return l10n.homeTitleBusiness;
+      case 'Psicologia':
+        return l10n.homeTitlePsychology;
+      case 'Filosofia':
+        return l10n.homeTitlePhilosophy;
+      case 'Scienza & Tecnologia':
+        return l10n.homeTitleScience;
+      case 'Storia':
+        return l10n.homeTitleHistory;
+      case 'Biografie':
+        return l10n.homeTitleBiography;
+      case 'Arte & Design':
+        return l10n.homeTitleArtDesign;
+      case 'Graphic Novels & Manga':
+        return l10n.homeTitleGraphicManga;
+      case 'Cucina & Food':
+        return l10n.homeTitleCooking;
+      case 'Viaggi':
+        return l10n.homeTitleTravel;
+
+      // Titles (Cinema/TV)
+      case 'Al Cinema ora':
+        return l10n.inTheatersNow;
+      case 'Più Popolari':
+        return l10n.mostPopular;
+      case 'Grandi Successi (Top)':
+        return l10n.topRated;
+      case 'Prossime Uscite':
+        return l10n.upcoming;
+      case 'Trend della Settimana':
+      case 'Trending della Settimana':
+        return l10n.trending;
+      case 'In onda Oggi':
+        return l10n.airingToday;
+      case 'Novità in arrivo':
+        return l10n.onTheAir;
+      case 'Le Migliori di sempre':
+        return l10n.bestOfAllTime;
+
+      // Genres (Cinema/TV)
+      case 'Azione':
+        return l10n.homeTitleAction;
+      case 'Thriller':
+        return l10n.homeTitleThriller;
+      case 'Crime':
+        return l10n.homeTitleCrime;
+      case 'Guerra':
+        return l10n.homeTitleWar;
+      case 'Drammatico':
+        return l10n.homeTitleDrama;
+      case 'Romantico':
+        return l10n.homeTitleRomance;
+      case 'Storico':
+        return l10n.homeTitleHistory;
+      case 'Western':
+        return l10n.homeTitleWestern;
+      case 'Fantasy':
+        return l10n.homeTitleFantasyEpico;
+      case 'Horror':
+        return l10n.homeTitleHorror;
+      case 'Mistero':
+        return l10n.homeTitleMystery;
+      case 'Animazione':
+        return l10n.homeTitleAnimation;
+      case 'Commedia':
+        return l10n.homeTitleComedy;
+      case 'Per la Famiglia':
+        return l10n.homeTitleFamily;
+      case 'Musica':
+        return l10n.homeTitleMusic;
+      case 'Documentari':
+        return l10n.homeTitleDocumentaries;
+      case 'Sci-Fi & Fantasy':
+        return l10n.homeTitleSciFiFantasy;
+      case 'Action & Adventure':
+        return l10n.homeTitleActionAdventure;
+      case 'Guerra & Politica':
+        return l10n.homeTitleWarPolitics;
+      case 'Soap Opera':
+        return l10n.homeTitleSoap;
+      case 'Kids':
+        return l10n.homeTitleKids;
+      case 'Reality & Talk':
+        return l10n.homeTitleRealityTalk;
+
+      default:
+        return original;
+    }
+  }
+
+  static List<Widget> buildCinemaContent(
+    BuildContext context, {
     required CinemaType type,
     required Set<int> seenIds,
   }) {
-    final sections = (type == CinemaType.movies)
-        ? HomeService.movieSections
-        : HomeService.tvSections;
+    final sections =
+        (type == CinemaType.movies)
+            ? HomeService.movieSections
+            : HomeService.tvSections;
     return sections.map((section) {
       if (section.containsKey('header')) {
-        return _SectionHeader(text: section['header']);
+        return _SectionHeader(text: _translateHomeString(context, section['header']));
       }
       return CinemaHorizontalList(
-        title: section['title'],
+        title: _translateHomeString(context, section['title'] ?? ''),
         path: section['path'],
         isTv: type == CinemaType.tvSeries,
         seenIds: seenIds,
@@ -77,9 +226,11 @@ class HomeContentBuilder {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => item is Book
-                    ? BookDetailPage(book: item)
-                    : MovieDetailPage(media: item),
+                builder:
+                    (_) =>
+                        item is Book
+                            ? BookDetailPage(book: item)
+                            : MovieDetailPage(media: item),
               ),
             );
           },
@@ -95,25 +246,23 @@ class HomeContentBuilder {
   ) async* {
     try {
       if (mode == AppMode.books) {
-        // I libri sono rimasti dei Future
         final books = await sl<GetBooksByCategoryUseCase>().call("Fantasy");
         yield List<dynamic>.from(books);
         return;
       }
 
-      // Risolto il problema del cast dinamico
-      final Stream<List<dynamic>> stream = cinemaType == CinemaType.movies
-          ? sl<GetMoviesByCategoryUseCase>()
-                .call("trending")
-                .map((items) => List<dynamic>.from(items))
-          : sl<GetTvSeriesByCategoryUseCase>()
-                .call("trending")
-                .map((items) => List<dynamic>.from(items));
+      final Stream<List<dynamic>> stream =
+          cinemaType == CinemaType.movies
+              ? sl<GetMoviesByCategoryUseCase>().call("trending").map(
+                (items) => List<dynamic>.from(items),
+              )
+              : sl<GetTvSeriesByCategoryUseCase>().call("trending").map(
+                (items) => List<dynamic>.from(items),
+              );
 
       await for (final items in stream) {
         if (seenIds != null && items.isNotEmpty) {
           for (var item in items.take(5)) {
-            // Controllo sicuro prima di accedere all'ID
             if (item is Movie) seenIds.add(item.id);
             if (item is TvSeries) seenIds.add(item.id);
           }

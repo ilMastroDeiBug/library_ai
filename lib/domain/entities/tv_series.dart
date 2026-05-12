@@ -36,7 +36,7 @@ class TvSeries {
       : 'https://placehold.co/500x750/png?text=No+Poster';
 
   String get fullBackdropUrl => backdropPath.isNotEmpty
-      ? 'https://image.tmdb.org/t/p/w780$backdropPath'
+      ? 'https://image.tmdb.org/t/p/original$backdropPath'
       : '';
 
   TvSeries copyWith({

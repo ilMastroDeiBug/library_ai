@@ -18,6 +18,8 @@ import 'package:library_ai/domain/entities/app_user.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 import 'package:library_ai/services/utility_services/network_status_service.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:library_ai/l10n/app_localizations.dart'; // File generato fisicamente in lib/l10n
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,30 +73,38 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CineShare',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: Colors.orangeAccent,
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.orangeAccent,
-          secondary: Colors.orangeAccent,
-          surface: Color(0xFF0A0A0C),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: false,
-        ),
-        useMaterial3: true,
-      ),
-      // LA MAGIA È QUI: Il builder avvolge l'intera app (Navigator)
-      builder: (context, child) {
-        return GlobalNetworkBanner(child: child ?? const SizedBox.shrink());
+    return ListenableBuilder(
+      listenable: di.sl<LanguageService>(),
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'CineShare',
+          debugShowCheckedModeBanner: false,
+          locale: Locale(di.sl<LanguageService>().shortCode),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            primaryColor: Colors.orangeAccent,
+            scaffoldBackgroundColor: Colors.black,
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.orangeAccent,
+              secondary: Colors.orangeAccent,
+              surface: Color(0xFF0A0A0C),
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: false,
+            ),
+            useMaterial3: true,
+          ),
+          // LA MAGIA È QUI: Il builder avvolge l'intera app (Navigator)
+          builder: (context, child) {
+            return GlobalNetworkBanner(child: child ?? const SizedBox.shrink());
+          },
+          home: const SplashScreen(),
+        );
       },
-      home: const SplashScreen(),
     );
   }
 }
@@ -208,9 +218,9 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            'SEI OFFLINE',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.offlineTitle,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
                               fontSize: 14,
@@ -219,7 +229,7 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Nessun problema, goditi la tua libreria.',
+                            AppLocalizations.of(context)!.offlineSubtitle,
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.6),
                               fontSize: 12,

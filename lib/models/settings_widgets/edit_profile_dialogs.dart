@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class EditProfileDialogs {
   static const Color _brandColor = Colors.orangeAccent;
@@ -27,9 +28,9 @@ class EditProfileDialogs {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Modifica Nome",
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)!.settingsEditName,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -41,7 +42,7 @@ class EditProfileDialogs {
                 style: const TextStyle(color: Colors.white, fontSize: 16),
                 cursorColor: _brandColor,
                 decoration: InputDecoration(
-                  hintText: "Inserisci nuovo nome",
+                  hintText: AppLocalizations.of(context)!.settingsEnterNewName,
                   hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                   filled: true,
                   fillColor: Colors.black26,
@@ -64,9 +65,9 @@ class EditProfileDialogs {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      "ANNULLA",
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.cancel.toUpperCase(),
+                      style: const TextStyle(
                         color: Colors.white54,
                         fontWeight: FontWeight.bold,
                       ),
@@ -92,9 +93,9 @@ class EditProfileDialogs {
                         Navigator.pop(context);
                       }
                     },
-                    child: const Text(
-                      "SALVA",
-                      style: TextStyle(fontWeight: FontWeight.w900),
+                    child: Text(
+                      AppLocalizations.of(context)!.save.toUpperCase(),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                   ),
                 ],
@@ -129,9 +130,9 @@ class EditProfileDialogs {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "La tua Biografia",
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)!.settingsYourBio,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -149,7 +150,7 @@ class EditProfileDialogs {
                 maxLines: 4,
                 maxLength: 150, // Limite per la UI
                 decoration: InputDecoration(
-                  hintText: "Racconta qualcosa di te...",
+                  hintText: AppLocalizations.of(context)!.settingsTellUsAboutYou,
                   hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                   filled: true,
                   fillColor: Colors.black26,
@@ -176,9 +177,9 @@ class EditProfileDialogs {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      "ANNULLA",
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.cancel.toUpperCase(),
+                      style: const TextStyle(
                         color: Colors.white54,
                         fontWeight: FontWeight.bold,
                       ),
@@ -202,9 +203,9 @@ class EditProfileDialogs {
                       onSave(controller.text.trim());
                       Navigator.pop(context);
                     },
-                    child: const Text(
-                      "SALVA",
-                      style: TextStyle(fontWeight: FontWeight.w900),
+                    child: Text(
+                      AppLocalizations.of(context)!.save.toUpperCase(),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                   ),
                 ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -6,8 +7,8 @@ class AboutPage extends StatelessWidget {
   // Funzioni provvisorie per gestire i click
   void _openDonation(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Presto potrai supportarmi con Ko-fi o PayPal!"),
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.aboutDonationMsg),
         backgroundColor: Colors.orangeAccent,
       ),
     );
@@ -16,8 +17,8 @@ class AboutPage extends StatelessWidget {
 
   void _showRewardedAd(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Caricamento sponsor... (Integrazione AdMob in arrivo)"),
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.aboutAdMsg),
         backgroundColor: Colors.white,
       ),
     );
@@ -27,9 +28,9 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0C), // Tema CineShare
+      backgroundColor: const Color.fromARGB(255, 0, 0, 0), // Tema CineShare
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color.fromARGB(0, 0, 0, 0),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
@@ -76,7 +77,7 @@ class AboutPage extends StatelessWidget {
             ),
             Center(
               child: Text(
-                "Versione 1.0.0 (Beta)",
+                AppLocalizations.of(context)!.aboutVersion,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.5),
                   fontSize: 14,
@@ -87,9 +88,9 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 40),
 
             // LA STORIA
-            const Text(
-              "Dietro le quinte",
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.aboutBehindTheScenes,
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -110,20 +111,19 @@ class AboutPage extends StatelessWidget {
                     fontSize: 15,
                     height: 1.5,
                   ),
-                  children: const [
+                  children: [
                     TextSpan(
-                      text: "Ciao! Sono lo sviluppatore di CineShare e ho ",
+                      text: AppLocalizations.of(context)!.aboutStoryPart1,
                     ),
                     TextSpan(
-                      text: "16 anni",
-                      style: TextStyle(
+                      text: AppLocalizations.of(context)!.aboutStoryAge,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.orangeAccent,
                       ),
                     ),
                     TextSpan(
-                      text:
-                          ".\n\nHo costruito questa piattaforma da solo, unendo gestione dei media e Intelligenza Artificiale.\n\n",
+                      text: AppLocalizations.of(context)!.aboutStoryPart2,
                     ),
                   ],
                 ),
@@ -133,9 +133,9 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 40),
 
             // OBIETTIVO FUTURO
-            const Text(
-              "Il Prossimo Obiettivo",
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.aboutNextGoal,
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -164,9 +164,9 @@ class AboutPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Sbarco su iOS & Libri",
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.aboutIosGoalTitle,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -174,7 +174,7 @@ class AboutPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          "L'account sviluppatore Apple costa 99\$/anno. Con il tuo supporto porterò CineShare su iPhone e sbloccherò l'intera sezione Libri, grazie al servizio di ISBN!",
+                          AppLocalizations.of(context)!.aboutIosGoalDesc,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.7),
                             fontSize: 13,
@@ -190,9 +190,9 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 40),
 
             // SEZIONE SUPPORTO
-            const Text(
-              "Come puoi aiutarmi?",
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.aboutHowToHelp,
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -202,24 +202,24 @@ class AboutPage extends StatelessWidget {
 
             _buildSupportButton(
               icon: Icons.local_cafe_rounded,
-              title: "Offrimi un Caffè (Server)",
-              subtitle: "Supporta questo progetto",
+              title: AppLocalizations.of(context)!.aboutDonateCoffeeTitle,
+              subtitle: AppLocalizations.of(context)!.aboutDonateCoffeeSubtitle,
               color: Colors.orangeAccent,
               onTap: () => _openDonation(context),
             ),
             const SizedBox(height: 12),
             _buildSupportButton(
               icon: Icons.play_circle_outline_rounded,
-              title: "Guarda uno Sponsor",
-              subtitle: "Supportami gratis guardando un video di 30s",
+              title: AppLocalizations.of(context)!.aboutWatchAdTitle,
+              subtitle: AppLocalizations.of(context)!.aboutWatchAdSubtitle,
               color: const Color.fromARGB(255, 248, 248, 248),
               onTap: () => _showRewardedAd(context),
             ),
             const SizedBox(height: 12),
             _buildSupportButton(
               icon: Icons.star_rate_rounded,
-              title: "Lascia 5 Stelle",
-              subtitle: "Aiuta l'algoritmo a far crescere l'app",
+              title: AppLocalizations.of(context)!.aboutRateTitle,
+              subtitle: AppLocalizations.of(context)!.aboutRateSubtitle,
               color: Colors.yellow.shade700,
               onTap: () {
                 // TODO: Integrare in_app_review

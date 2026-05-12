@@ -135,11 +135,9 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
             .eq('user_id', userId)
             .listen(
               (snapshot) async {
-                final filteredSnapshot = snapshot.where((row) {
-                  final rowMediaId =
-                      int.tryParse(row['media_id'].toString()) ?? 0;
-                  return rowMediaId == id;
-                }).toList();
+                final filteredSnapshot = snapshot
+                    .where((row) => row['media_id'] == id)
+                    .toList();
 
                 if (filteredSnapshot.isEmpty) {
                   final fallbackRow = _readCachedRow(cacheBox, cacheKey);

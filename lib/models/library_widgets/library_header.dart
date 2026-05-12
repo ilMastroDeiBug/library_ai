@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import '../../pages/settings_page.dart';
 import '../app_mode.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class LibraryHeader extends StatelessWidget {
   final AppMode mode;
@@ -55,7 +56,9 @@ class LibraryHeader extends StatelessWidget {
 
           // 2. TITOLO GIGANTE
           Text(
-            mode == AppMode.books ? "Il tuo\nVault" : "La tua\nWatchlist",
+            mode == AppMode.books
+                ? AppLocalizations.of(context)!.libHeaderVault
+                : AppLocalizations.of(context)!.libHeaderWatchlist,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 42,

@@ -18,6 +18,8 @@ import '../models/movie_widget/trailer_player_widget.dart';
 import '../models/movie_widget/watch_provider_widgets.dart';
 // IMPORTANTE: Importiamo la nuova sezione del tracking
 import 'package:library_ai/models/movie_widget/tv_series_tracker_section.dart';
+import '../models/movie_widget/emoji_rating_widget.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class MovieDetailPage extends StatefulWidget {
   final dynamic media;
@@ -39,6 +41,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   String? _optimisticStatus;
   bool _isTogglingStatus = false;
 
+  Stream<dynamic>? _mediaStream;
+
   static const Color _brandColor = Colors.orangeAccent;
   static const Color _backgroundColor = Colors.black;
 
@@ -49,6 +53,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   void initState() {
     super.initState();
     _initFavoriteStream();
+    final user = sl<AuthRepository>().currentUser;
+    if (user != null) {
+      _mediaStream = _getMediaStream(user.id);
+    }
   }
 
   @override
@@ -68,6 +76,17 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
             }
           });
     }
+  }
+
+  void _showRatingBottomSheet(BuildContext context, dynamic media) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return EmojiRatingWidget(media: media);
+      },
+    );
   }
 
   void _handleFavoriteToggle(dynamic liveMedia) async {
@@ -117,6 +136,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       );
       if (mounted && !success) {
         setState(() => _optimisticStatus = streamStatus); // Revert se fallisce
+      } else if (mounted && success && action == 'watched' && !isRemoving) {
+        _showRatingBottomSheet(context, liveMedia);
       }
     } catch (e) {
       if (mounted) setState(() => _optimisticStatus = streamStatus);
@@ -160,7 +181,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     final user = sl<AuthRepository>().currentUser;
 
     return StreamBuilder<dynamic>(
-      stream: user != null ? _getMediaStream(user.id) : null,
+      stream: _mediaStream,
       builder: (context, snapshot) {
         dynamic liveMedia = widget.media;
         if (snapshot.hasData && snapshot.data != null) {
@@ -263,9 +284,9 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       if (_isTv &&
                           currentStatus == 'watching' &&
                           user != null) ...[
-                        const Text(
-                          "PROGRESSO VISIONE",
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.viewProgress,
+                          style: const TextStyle(
                             color: Colors.white38,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.5,
@@ -286,7 +307,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                         children: [
                           Expanded(
                             child: _buildActionButton(
-                              label: "DA VEDERE",
+                              label: AppLocalizations.of(context)!.toWatch.toUpperCase(),
                               icon: Icons.bookmark_add_outlined,
                               isActive: currentStatus == 'towatch',
                               onTap: () => _handleStatusToggle(
@@ -299,7 +320,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildActionButton(
-                              label: "STAI GUARDANDO",
+                              label: AppLocalizations.of(context)!.watching.toUpperCase(),
                               icon: Icons.play_circle_outline_rounded,
                               isActive: currentStatus == 'watching',
                               onTap: () => _handleStatusToggle(
@@ -312,7 +333,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildActionButton(
-                              label: "VISTO",
+                              label: AppLocalizations.of(context)!.watchedAction.toUpperCase(),
                               icon: Icons.check_circle_outline,
                               isActive: currentStatus == 'watched',
                               onTap: () => _handleStatusToggle(
@@ -337,9 +358,9 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      const Text(
-                        "TRAMA",
-                        style: TextStyle(
+                      Text(
+                        AppLocalizations.of(context)!.plot,
+                        style: const TextStyle(
                           color: Colors.white38,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
@@ -350,7 +371,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       Text(
                         overview.isNotEmpty
                             ? overview
-                            : "Nessuna trama disponibile.",
+                            : AppLocalizations.of(context)!.noPlotAvailable,
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 16,

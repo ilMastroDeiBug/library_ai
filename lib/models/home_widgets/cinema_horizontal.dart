@@ -139,11 +139,6 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Icon(
-                    Icons.arrow_forward,
-                    color: Colors.white54,
-                    size: 16,
-                  ),
                 ],
               ),
             ),

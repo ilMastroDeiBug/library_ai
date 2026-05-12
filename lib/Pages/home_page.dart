@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../models/app_mode.dart';
 import '../models/home_widgets/home_content_builders.dart';
 import '../models/home_widgets/home_cinema_switcher.dart';
@@ -6,6 +6,7 @@ import '../models/home_widgets/home_tv_progress_section.dart'; // IMPORT AGGIUNT
 import 'search_page.dart';
 import '../injection_container.dart';
 import '../services/utility_services/language_service.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class HomePage extends StatefulWidget {
   final AppMode mode;
@@ -179,9 +180,9 @@ class _HomePageState extends State<HomePage> {
               },
             )
           else
-            const Text(
-              "La Biblioteca",
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.homeLibrary,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -229,10 +230,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 30),
-            const Text(
-              "Il Vault Definitivo",
+            Text(
+              AppLocalizations.of(context)!.homeVaultTitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
@@ -240,10 +241,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 15),
-            const Text(
-              "Stiamo costruendo un ecosistema perfetto per i tuoi libri: dati curati, copertine in HD e analisi IA avanzate.\n\nNon scendiamo a compromessi sulla qualità. In arrivo nei prossimi aggiornamenti.",
+            Text(
+              AppLocalizations.of(context)!.homeVaultDesc,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 16,
                 height: 1.5,
@@ -253,19 +254,19 @@ class _HomePageState extends State<HomePage> {
             ElevatedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
+                  SnackBar(
                     content: Text(
-                      "✨ Grazie! Ti avviseremo non appena il Vault dei libri sarà sbloccato.",
+                      AppLocalizations.of(context)!.homeVaultNotifyMsg,
                     ),
                     behavior: SnackBarBehavior.floating,
-                    backgroundColor: Color(0xFF2C2C2C),
+                    backgroundColor: const Color(0xFF2C2C2C),
                   ),
                 );
               },
               icon: const Icon(Icons.notifications_active_rounded),
-              label: const Text(
-                "Avvisami al rilascio",
-                style: TextStyle(fontWeight: FontWeight.bold),
+              label: Text(
+                AppLocalizations.of(context)!.homeNotifyMe,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _brandColor,
@@ -290,6 +291,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildCinemaPage(CinemaType type, ScrollController controller) {
     final Set<int> seenIds = {};
     final sections = HomeContentBuilder.buildCinemaContent(
+      context,
       type: type,
       seenIds: seenIds,
     );

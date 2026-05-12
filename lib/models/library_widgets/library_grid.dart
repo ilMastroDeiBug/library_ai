@@ -25,6 +25,7 @@ import 'package:library_ai/Pages/book_detail_page.dart';
 import 'package:library_ai/Pages/movie_detail_page.dart';
 import 'package:library_ai/Pages/actor_detail_page.dart';
 import 'package:library_ai/models/movie_widget/streak_widget.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class LibraryGrid extends StatefulWidget {
   final AppMode mode;
@@ -47,11 +48,12 @@ class _LibraryGridState extends State<LibraryGrid> {
   bool _isBulkActionLoading = false;
 
   List<String> get _availableFilters {
-    if (widget.mode == AppMode.books) return ['Tutti'];
+    final l10n = AppLocalizations.of(context);
+    if (widget.mode == AppMode.books) return [l10n?.libFilterAll ?? 'Tutti'];
     if (widget.status == 'favorites') {
-      return ['Tutti', 'Film', 'Serie TV', 'Attori'];
+      return [l10n?.libFilterAll ?? 'Tutti', l10n?.libFilterMovies ?? 'Film', l10n?.libFilterTvSeries ?? 'Serie TV', l10n?.libFilterActors ?? 'Attori'];
     }
-    return ['Tutti', 'Film', 'Serie TV'];
+    return [l10n?.libFilterAll ?? 'Tutti', l10n?.libFilterMovies ?? 'Film', l10n?.libFilterTvSeries ?? 'Serie TV'];
   }
 
   @override
@@ -325,11 +327,12 @@ class _LibraryGridState extends State<LibraryGrid> {
           !title.toLowerCase().contains(_searchQuery))
         return false;
 
-      if (_selectedFilter != 'Tutti') {
+      final l10n = AppLocalizations.of(context);
+      if (_selectedFilter != (l10n?.libFilterAll ?? 'Tutti')) {
         final type = _extractType(item);
-        if (_selectedFilter == 'Film' && type != 'movie') return false;
-        if (_selectedFilter == 'Serie TV' && type != 'tv') return false;
-        if (_selectedFilter == 'Attori' && type != 'person') return false;
+        if (_selectedFilter == (l10n?.libFilterMovies ?? 'Film') && type != 'movie') return false;
+        if (_selectedFilter == (l10n?.libFilterTvSeries ?? 'Serie TV') && type != 'tv') return false;
+        if (_selectedFilter == (l10n?.libFilterActors ?? 'Attori') && type != 'person') return false;
       }
       return true;
     }).toList();
@@ -348,7 +351,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                   onChanged: (value) =>
                       setState(() => _searchQuery = value.toLowerCase()),
                   decoration: InputDecoration(
-                    hintText: 'Cerca nella lista...',
+                    hintText: AppLocalizations.of(context)!.libSearchHint,
                     hintStyle: const TextStyle(color: Colors.white38),
                     prefixIcon: const Icon(
                       Icons.search_rounded,
@@ -374,7 +377,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                   });
                 },
                 child: Text(
-                  _isSelectionMode ? "Annulla" : "Seleziona",
+                  _isSelectionMode ? AppLocalizations.of(context)!.libCancel : AppLocalizations.of(context)!.libSelect,
                   style: TextStyle(
                     color: _isSelectionMode
                         ? Colors.redAccent
@@ -685,7 +688,7 @@ class _LibraryGridState extends State<LibraryGrid> {
     buttons.add(
       _buildBulkBtn(
         Icons.delete_outline,
-        "Elimina",
+        AppLocalizations.of(context)!.libBulkDelete,
         Colors.redAccent,
         () => _performBulkAction('delete'),
       ),
@@ -695,7 +698,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       buttons.add(
         _buildBulkBtn(
           Icons.play_circle_outline,
-          "Stai Guardando",
+          AppLocalizations.of(context)!.libBulkWatching,
           Colors.orangeAccent,
           () => _performBulkAction(
             widget.mode == AppMode.books ? 'reading' : 'watching',
@@ -705,7 +708,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       buttons.add(
         _buildBulkBtn(
           Icons.check_circle_outline,
-          widget.mode == AppMode.books ? "Letti" : "Visti",
+          widget.mode == AppMode.books ? AppLocalizations.of(context)!.libBulkRead : AppLocalizations.of(context)!.libBulkWatched,
           Colors.greenAccent,
           () => _performBulkAction(
             widget.mode == AppMode.books ? 'read' : 'watched',
@@ -716,7 +719,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       buttons.add(
         _buildBulkBtn(
           Icons.check_circle_outline,
-          widget.mode == AppMode.books ? "Letti" : "Visti",
+          widget.mode == AppMode.books ? AppLocalizations.of(context)!.libBulkRead : AppLocalizations.of(context)!.libBulkWatched,
           Colors.greenAccent,
           () => _performBulkAction(
             widget.mode == AppMode.books ? 'read' : 'watched',
@@ -771,10 +774,10 @@ class _LibraryGridState extends State<LibraryGrid> {
           const SizedBox(height: 16),
           Text(
             _searchQuery.isNotEmpty
-                ? "NESSUN RISULTATO"
+                ? AppLocalizations.of(context)!.libEmptyNoResults
                 : (widget.status == 'favorites'
-                      ? "NESSUN PREFERITO"
-                      : "NESSUN ELEMENTO"),
+                      ? AppLocalizations.of(context)!.libEmptyNoFavorites
+                      : AppLocalizations.of(context)!.libEmptyNoItems),
             style: TextStyle(
               color: Colors.white.withOpacity(0.2),
               letterSpacing: 2.5,

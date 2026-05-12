@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/entities/movie.dart';
 import 'package:library_ai/domain/entities/tv_series.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class AiHeroBanner extends StatefulWidget {
   final List<dynamic> items;
@@ -115,7 +116,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     _timer?.cancel();
   }
 
-  Map<String, String> _extractData(dynamic item) {
+  Map<String, String> _extractData(dynamic item, BuildContext context) {
     if (item is Book) {
       return {
         'title': item.title,
@@ -128,7 +129,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
         'image': item.fullBackdropUrl.isNotEmpty
             ? item.fullBackdropUrl
             : item.fullPosterUrl,
-        'subtitle': "FILM DEL GIORNO",
+        'subtitle': AppLocalizations.of(context)!.heroBannerMovieOfDay,
       };
     } else if (item is TvSeries) {
       return {
@@ -136,7 +137,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
         'image': item.fullBackdropUrl.isNotEmpty
             ? item.fullBackdropUrl
             : item.fullPosterUrl,
-        'subtitle': "SERIE TV IN TENDENZA",
+        'subtitle': AppLocalizations.of(context)!.heroBannerTvTrending,
       };
     }
     return {'title': '', 'image': '', 'subtitle': ''};
@@ -171,21 +172,21 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
 
                 final int actualIndex = index % _dailyItems.length;
                 final item = _dailyItems[actualIndex];
-                final data = _extractData(item);
+                final data = _extractData(item, context);
 
                 // MATEMATICA TRANSIZIONE
                 double delta = index - _currentPageValue;
                 double clampedDelta = delta.clamp(-1.0, 1.0);
                 double absDelta = clampedDelta.abs();
 
-                // 1. Scala morbida per dare profondità
-                double scale = 1.0 - (absDelta * 0.15);
+                // 1. Nessuna scala per evitare spazi neri
+                double scale = 1.0;
 
-                // 2. L'immagine diventa una card (angoli tondi) appena si stacca dal centro
-                double cornerRadius = absDelta * 32;
+                // 2. Nessun raggio per mantenere l'immagine a schermo intero
+                double cornerRadius = 0.0;
 
-                // 3. Opacità per far scomparire le card laterali
-                double cardOpacity = 1.0 - (absDelta * 0.4);
+                // 3. Nessuna variazione di opacità per evitare effetti di fade nero
+                double cardOpacity = 1.0;
 
                 // 4. Fade ultra-rapido per il testo (sparisce prima dell'immagine)
                 double textOpacity = (1.0 - (absDelta * 2.5)).clamp(0.0, 1.0);
@@ -333,18 +334,18 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(
+                                        const Icon(
                                           Icons.info_outline_rounded,
                                           color: Colors.black,
                                           size: 20,
                                         ),
-                                        SizedBox(width: 8),
+                                        const SizedBox(width: 8),
                                         Text(
-                                          "Maggiori Info",
-                                          style: TextStyle(
+                                          AppLocalizations.of(context)!.heroBannerMoreInfo,
+                                          style: const TextStyle(
                                             color: Colors.black,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 14,

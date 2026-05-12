@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:library_ai/domain/entities/book.dart';
 import '../../pages/reviews_page.dart';
 import 'star_rating.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class BookStatsBar extends StatelessWidget {
   final Book book;
@@ -23,7 +24,7 @@ class BookStatsBar extends StatelessWidget {
           children: [
             // Pagine
             _buildStatColumn(
-              label: "LUNGHEZZA",
+              label: AppLocalizations.of(context)!.bookStatsLength,
               icon: Icons.menu_book_rounded,
               value: book.pageCount != null ? "${book.pageCount}" : "-",
               valueSize: 16,
@@ -40,9 +41,9 @@ class BookStatsBar extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    "VALUTAZIONE",
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.bookStatsRating,
+                    style: const TextStyle(
                       color: Colors.white38,
                       fontSize: 10,
                       letterSpacing: 1,
@@ -73,7 +74,7 @@ class BookStatsBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "${book.ratingsCount} recensioni",
+                    AppLocalizations.of(context)!.bookStatsReviews(book.ratingsCount),
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.5),
                       fontSize: 10,

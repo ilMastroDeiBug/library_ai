@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
-import '../../domain/use_cases/tv_series_progress_use_cases.dart'; // IMPORT AGGIORNATO
+import '../../domain/use_cases/tv_series_progress_use_cases.dart';
 import '../../domain/entities/tv_series_progress.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class TvSeriesTrackerSection extends StatefulWidget {
   final String userId;
@@ -22,6 +23,7 @@ class TvSeriesTrackerSection extends StatefulWidget {
 class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
   int _selectedSeason = 1;
   bool _hasAutoSelectedSeason = false;
+  late Stream<TvSeriesProgress?> _progressStream;
 
   @override
   void initState() {
@@ -29,6 +31,10 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
     if (widget.episodesPerSeason.isNotEmpty) {
       _selectedSeason = widget.episodesPerSeason.keys.first;
     }
+    _progressStream = sl<GetSeriesProgressUseCase>().call(
+      widget.userId,
+      widget.seriesId,
+    );
   }
 
   // Auto-scroll all'ultima stagione guardata alla prima lettura dei dati
@@ -60,8 +66,8 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
         ? Colors.redAccent
         : Colors.orangeAccent;
     final titleText = isCurrentlyWatched
-        ? "Rimuovere da qui in poi?"
-        : "Contrassegnare fino a qui?";
+        ? AppLocalizations.of(context)!.trackerRemoveFromHere
+        : AppLocalizations.of(context)!.trackerMarkUpToHere;
 
     showModalBottomSheet(
       context: context,
@@ -85,7 +91,7 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
               ),
               const SizedBox(height: 24),
               Text(
-                "STAGIONE $season • EPISODIO $episode",
+                AppLocalizations.of(context)!.trackerSeasonEpisode(season, episode),
                 style: TextStyle(
                   color: titleColor,
                   fontSize: 13,
@@ -112,9 +118,9 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       onPressed: () => Navigator.pop(bottomSheetContext),
-                      child: const Text(
-                        "ANNULLA",
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.trackerCancel,
+                        style: const TextStyle(
                           color: Colors.white54,
                           fontWeight: FontWeight.bold,
                         ),
@@ -146,9 +152,9 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
                           isCurrentlyWatched,
                         );
                       },
-                      child: const Text(
-                        "CONFERMA",
-                        style: TextStyle(fontWeight: FontWeight.w900),
+                      child: Text(
+                        AppLocalizations.of(context)!.trackerConfirm,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
@@ -167,10 +173,7 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
     if (widget.episodesPerSeason.isEmpty) return const SizedBox.shrink();
 
     return StreamBuilder<TvSeriesProgress?>(
-      stream: sl<GetSeriesProgressUseCase>().call(
-        widget.userId,
-        widget.seriesId,
-      ),
+      stream: _progressStream,
       builder: (context, snapshot) {
         final progress =
             snapshot.data ??
@@ -213,7 +216,7 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
                       ),
                       child: Center(
                         child: Text(
-                          "Stagione $seasonNumber",
+                          AppLocalizations.of(context)!.trackerSeasonLabel(seasonNumber),
                           style: TextStyle(
                             color: isSelected ? Colors.black : Colors.white70,
                             fontWeight: FontWeight.bold,

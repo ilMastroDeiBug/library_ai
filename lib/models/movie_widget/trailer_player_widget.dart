@@ -4,6 +4,7 @@ import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class TrailerPlayerWidget extends StatefulWidget {
   final int mediaId;
@@ -91,9 +92,9 @@ class _TrailerPlayerWidgetState extends State<TrailerPlayerWidget> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "TRAILER UFFICIALE",
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.trailerTitle,
+              style: const TextStyle(
                 color: Colors.white38,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,

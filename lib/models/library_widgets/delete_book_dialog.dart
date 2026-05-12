@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class DeleteBookDialog extends StatelessWidget {
   final String bookTitle;
@@ -21,27 +22,27 @@ class DeleteBookDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.warning_amber_rounded,
               color: Colors.redAccent,
               size: 28,
             ),
-            SizedBox(width: 10),
-            Text("Eliminare?", style: TextStyle(color: Colors.white)),
+            const SizedBox(width: 10),
+            Text(AppLocalizations.of(context)!.deleteBookTitle, style: const TextStyle(color: Colors.white)),
           ],
         ),
         content: Text(
-          "Rimuovere \"$bookTitle\" dalla libreria è un'azione irreversibile.",
+          AppLocalizations.of(context)!.deleteBookContent(bookTitle),
           style: TextStyle(color: Colors.white.withOpacity(0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "ANNULLA",
-              style: TextStyle(color: Colors.white54),
+            child: Text(
+              AppLocalizations.of(context)!.cancel,
+              style: const TextStyle(color: Colors.white54),
             ),
           ),
           ElevatedButton(
@@ -54,7 +55,7 @@ class DeleteBookDialog extends StatelessWidget {
               onConfirm();
               Navigator.of(context).pop(); // Chiude il dialog
             },
-            child: const Text("ELIMINA"),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),

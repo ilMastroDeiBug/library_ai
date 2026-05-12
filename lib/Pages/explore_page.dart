@@ -5,6 +5,7 @@ import '../../domain/use_cases/explore_use_cases.dart';
 import '../models/category_card.dart';
 import '../models/home_widgets/home_cinema_switcher.dart';
 import 'search_page.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class ExplorePage extends StatefulWidget {
   final AppMode mode;
@@ -29,9 +30,9 @@ class _ExplorePageState extends State<ExplorePage> {
   // Getter per comodità
   bool get isTvSeries => _selectedCinemaType == CinemaType.tvSeries;
 
-  String _getTitle() {
-    if (widget.mode == AppMode.books) return "Esplora\nLibri";
-    return isTvSeries ? "Esplora\nSerie TV" : "Esplora\nCinema";
+  String _getTitle(BuildContext context) {
+    if (widget.mode == AppMode.books) return AppLocalizations.of(context)!.exploreBooks;
+    return isTvSeries ? AppLocalizations.of(context)!.exploreTv : AppLocalizations.of(context)!.exploreCinema;
   }
 
   @override
@@ -48,150 +49,173 @@ class _ExplorePageState extends State<ExplorePage> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // HEADER IMMERSIVO
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. MENU E ICONA SEZIONE
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          // Sfondo Logo (solo cinema/tv)
+          if (widget.mode != AppMode.books)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.2,
+                child: Align(
+                  alignment: const Alignment(
+                    0,
+                    -0.65,
+                  ), // Più in alto per stare "dietro" il titolo
+                  child: Image.asset(
+                    'assets/images/logoCine.png',
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // HEADER IMMERSIVO
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 1. MENU E ICONA SEZIONE
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: widget.onOpenDrawer,
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.1),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.menu_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            widget.mode == AppMode.books
+                                ? Icons.auto_stories_rounded
+                                : Icons.movie_filter_rounded,
+                            color: _brandColor.withOpacity(0.4),
+                            size: 32,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 35),
+
+                      // 2. TITOLO GIGANTE
+                      Text(
+                        _getTitle(context),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          height: 1.05,
+                          letterSpacing: -1.5,
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // 3. BARRA DI RICERCA
                       GestureDetector(
-                        onTap: widget.onOpenDrawer,
+                        onTap: () => showSearch(
+                          context: context,
+                          delegate: UniversalSearchDelegate(mode: widget.mode),
+                        ),
                         child: Container(
-                          padding: const EdgeInsets.all(10),
+                          height: 50,
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.05),
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(25),
                             border: Border.all(
                               color: Colors.white.withOpacity(0.1),
                             ),
                           ),
-                          child: const Icon(
-                            Icons.menu_rounded,
-                            color: Colors.white,
-                            size: 24,
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 18),
+                              Icon(
+                                Icons.search_rounded,
+                                color: Colors.white.withOpacity(0.4),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                widget.mode == AppMode.books
+                                    ? AppLocalizations.of(context)!.searchBooksPaused
+                                    : AppLocalizations.of(context)!.searchPlaceholder,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.3),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      Icon(
-                        widget.mode == AppMode.books
-                            ? Icons.auto_stories_rounded
-                            : Icons.movie_filter_rounded,
-                        color: _brandColor.withOpacity(0.4),
-                        size: 32,
-                      ),
+
+                      const SizedBox(height: 25),
+
+                      // 4. SWITCHER FILM/SERIE TV
+                      if (widget.mode == AppMode.movies)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: HomeCinemaSwitcher(
+                            selectedType: _selectedCinemaType,
+                            onTypeChanged: (newType) {
+                              setState(() {
+                                _selectedCinemaType = newType;
+                              });
+                            },
+                          ),
+                        ),
                     ],
                   ),
+                ),
+              ),
 
-                  const SizedBox(height: 35),
-
-                  // 2. TITOLO GIGANTE
-                  Text(
-                    _getTitle(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 42,
-                      fontWeight: FontWeight.w900,
-                      height: 1.05,
-                      letterSpacing: -1.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // 3. BARRA DI RICERCA
-                  GestureDetector(
-                    onTap: () => showSearch(
-                      context: context,
-                      delegate: UniversalSearchDelegate(mode: widget.mode),
-                    ),
-                    child: Container(
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+              // 🔒 BLOCCO LIBRI: Sostituiamo la griglia con il messaggio Coming Soon
+              if (widget.mode == AppMode.books)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildComingSoonBooks(context),
+                )
+              else
+                // GRIGLIA CATEGORIE CINEMA/TV
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 15, 20, 120),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 1.3,
+                          crossAxisSpacing: 15,
+                          mainAxisSpacing: 15,
                         ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => CategoryCard(
+                        category: categories[index],
+                        mode: widget.mode,
+                        isTvSeries: isTvSeries,
                       ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 18),
-                          Icon(
-                            Icons.search_rounded,
-                            color: Colors.white.withOpacity(0.4),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            widget.mode == AppMode.books
-                                ? "Ricerca libri sospesa..."
-                                : "Cerca un titolo, regista o autore...",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.3),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
+                      childCount: categories.length,
                     ),
                   ),
-
-                  const SizedBox(height: 25),
-
-                  // 4. SWITCHER FILM/SERIE TV
-                  if (widget.mode == AppMode.movies)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: HomeCinemaSwitcher(
-                        selectedType: _selectedCinemaType,
-                        onTypeChanged: (newType) {
-                          setState(() {
-                            _selectedCinemaType = newType;
-                          });
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            ),
+                ),
+            ],
           ),
-
-          // 🔒 BLOCCO LIBRI: Sostituiamo la griglia con il messaggio Coming Soon
-          if (widget.mode == AppMode.books)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _buildComingSoonBooks(context),
-            )
-          else
-            // GRIGLIA CATEGORIE CINEMA/TV
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 15, 20, 120),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.3,
-                  crossAxisSpacing: 15,
-                  mainAxisSpacing: 15,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => CategoryCard(
-                    category: categories[index],
-                    mode: widget.mode,
-                    isTvSeries: isTvSeries,
-                  ),
-                  childCount: categories.length,
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -211,20 +235,20 @@ class _ExplorePageState extends State<ExplorePage> {
               color: Colors.white.withOpacity(0.2),
             ),
             const SizedBox(height: 20),
-            const Text(
-              "Esplorazione in Pausa",
+            Text(
+              AppLocalizations.of(context)!.exploreBooksPaused,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 15),
-            const Text(
-              "Stiamo mappando i generi letterari perfetti per garantirti risultati precisi e in lingua italiana.",
+            Text(
+              AppLocalizations.of(context)!.exploreBooksPausedDesc,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 15,
                 height: 1.5,

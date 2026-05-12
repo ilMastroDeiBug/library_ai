@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:library_ai/domain/entities/movie.dart'; // Assicurati di puntare alla nuova Entity
+import 'package:library_ai/domain/entities/movie.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class MovieStatsBar extends StatelessWidget {
   final Movie movie;
@@ -46,7 +47,7 @@ class MovieStatsBar extends StatelessWidget {
 
         // Sezione Conteggio Voti
         Text(
-          "${_formatVoteCount(movie.voteCount)} voti",
+          "${_formatVoteCount(movie.voteCount)} ${AppLocalizations.of(context)!.statsVotes}",
           style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13),
         ),
       ],

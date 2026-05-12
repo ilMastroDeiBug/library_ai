@@ -1,10 +1,11 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/Pages/about_page.dart'; // Aggiusta il path se necessario
 import '../../models/app_mode.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 // Import Widget Modulari
 import '../models/side_menu_widgets/side_menu_header.dart';
@@ -73,11 +74,11 @@ class SideMenu extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               physics: const BouncingScrollPhysics(),
                               children: [
-                                _buildSectionLabel("ESPLORA"),
+                                _buildSectionLabel(AppLocalizations.of(context)!.sideMenuExplore),
                                 const SizedBox(height: 10),
                                 SideMenuItem(
                                   icon: Icons.movie_filter_rounded,
-                                  text: "Cinema & Serie TV",
+                                  text: AppLocalizations.of(context)!.sideMenuCinemaTv,
                                   isSelected: !isSocialActive,
                                   activeColor: _brandColor,
                                   onTap: () {
@@ -86,11 +87,11 @@ class SideMenu extends StatelessWidget {
                                   },
                                 ),
                                 const SizedBox(height: 30),
-                                _buildSectionLabel("COMMUNITY"),
+                                _buildSectionLabel(AppLocalizations.of(context)!.sideMenuCommunity),
                                 const SizedBox(height: 10),
                                 SideMenuItem(
                                   icon: Icons.public_rounded,
-                                  text: "CineShare Social",
+                                  text: AppLocalizations.of(context)!.sideMenuSocial,
                                   isSelected: isSocialActive,
                                   activeColor: _brandColor,
                                   onTap: () {
@@ -107,11 +108,11 @@ class SideMenu extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                _buildSectionLabel("IL PROGETTO"),
+                                _buildSectionLabel(AppLocalizations.of(context)!.sideMenuProject),
                                 const SizedBox(height: 10),
                                 SideMenuItem(
                                   icon: Icons.info_outline_rounded,
-                                  text: "Info & Supporto",
+                                  text: AppLocalizations.of(context)!.sideMenuInfoSupport,
                                   isSelected: false,
                                   activeColor: _brandColor,
                                   onTap: () {

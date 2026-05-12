@@ -10,6 +10,7 @@ import 'package:library_ai/services/utility_services/tmdb_service.dart';
 import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart';
 import 'package:library_ai/services/utility_services/watchlist_realtime_notifier.dart';
 import '../../services/utility_services/ai_service.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class MovieDetailLogic {
   final AIService _aiService;
@@ -25,7 +26,7 @@ class MovieDetailLogic {
   ) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      if (context.mounted) _showMinimalSnackBar(context, "Accedi per salvare.");
+      if (context.mounted) _showMinimalSnackBar(context, AppLocalizations.of(context)!.logicLoginToSave);
       return false;
     }
 
@@ -76,11 +77,12 @@ class MovieDetailLogic {
       }
 
       if (context.mounted) {
-        String msg = "Rimosso dalla libreria";
+        final l10n = AppLocalizations.of(context)!;
+        String msg = l10n.logicRemovedFromLibrary;
         if (!isRemoving) {
-          if (action == 'watched') msg = "Segnato come Visto";
-          if (action == 'towatch') msg = "Aggiunto ai Da Vedere";
-          if (action == 'watching') msg = "Aggiunto a In Corso";
+          if (action == 'watched') msg = l10n.logicMarkedAsWatched;
+          if (action == 'towatch') msg = l10n.logicAddedToWatchlist;
+          if (action == 'watching') msg = l10n.logicAddedToWatching;
         }
 
         _showMinimalSnackBar(context, msg);
@@ -94,7 +96,7 @@ class MovieDetailLogic {
         clearOptimisticMediaStatus(mediaId);
       }
       if (context.mounted)
-        _showMinimalSnackBar(context, "Errore nel salvataggio. Riprova.");
+        _showMinimalSnackBar(context, AppLocalizations.of(context)!.logicSaveError);
       return false;
     }
   }
@@ -103,7 +105,7 @@ class MovieDetailLogic {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
       if (context.mounted)
-        _showMinimalSnackBar(context, "Accedi per aggiungere ai preferiti.");
+        _showMinimalSnackBar(context, AppLocalizations.of(context)!.logicLoginToFavorite);
       return false;
     }
 
@@ -117,17 +119,19 @@ class MovieDetailLogic {
         isTv ? media.fullPosterUrl : (media as Movie).fullPosterUrl,
       );
 
-      if (context.mounted)
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
         _showMinimalSnackBar(
           context,
-          isAdded ? "Aggiunto ai Preferiti ❤️" : "Rimosso dai Preferiti 💔",
+          isAdded ? l10n.logicAddedToFavorites : l10n.logicRemovedFromFavorites,
         );
+      }
       return isAdded;
     } catch (e) {
       if (context.mounted)
         _showMinimalSnackBar(
           context,
-          "Errore nell'aggiornamento dei preferiti.",
+          AppLocalizations.of(context)!.logicFavoriteError,
         );
       rethrow;
     }

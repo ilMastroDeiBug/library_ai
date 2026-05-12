@@ -13,6 +13,7 @@ import '../domain/entities/tv_series.dart';
 import 'movie_detail_page.dart';
 import 'book_detail_page.dart';
 import '../services/utility_services/language_service.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class GenreResultPage extends StatefulWidget {
   final CategoryEntity category;
@@ -281,7 +282,7 @@ class _GenreResultPageState extends State<GenreResultPage> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      "Nessun risultato",
+                      AppLocalizations.of(context)!.genreNoResults,
                       style: TextStyle(color: Colors.white.withOpacity(0.5)),
                     ),
                   ],

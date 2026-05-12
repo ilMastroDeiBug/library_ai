@@ -6,6 +6,7 @@ import '../domain/use_cases/actor_use_cases.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../domain/use_cases/favorite_use_cases.dart';
 import '../injection_container.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class ActorDetailPage extends StatefulWidget {
   final int actorId;
@@ -59,7 +60,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     if (actor == null) return;
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      if (mounted) _showMinimalSnackBar("Accedi per aggiungere ai preferiti.");
+      if (mounted) _showMinimalSnackBar(AppLocalizations.of(context)!.actorLoginToFavorite);
       return;
     }
 
@@ -85,13 +86,13 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
       if (mounted) {
         setState(() => _optimisticIsFavorite = isAdded);
         _showMinimalSnackBar(
-          isAdded ? "Aggiunto ai Preferiti ❤️" : "Rimosso dai Preferiti 💔",
+          isAdded ? AppLocalizations.of(context)!.actorAddedToFavorites : AppLocalizations.of(context)!.actorRemovedFromFavorites,
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _optimisticIsFavorite = !targetValue);
-        _showMinimalSnackBar("Errore nell'aggiornamento dei preferiti.");
+        _showMinimalSnackBar(AppLocalizations.of(context)!.actorFavoriteError);
       }
     } finally {
       if (mounted) setState(() => _isTogglingHeart = false);
@@ -143,7 +144,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
         ),
         body: Center(
           child: Text(
-            'Errore: $errorMessage',
+            '${AppLocalizations.of(context)!.actorError}$errorMessage',
             style: const TextStyle(color: Colors.white70),
           ),
         ),
@@ -241,11 +242,11 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                   const SizedBox(height: 28),
                   _buildStatsRow(actor!),
                   const SizedBox(height: 40),
-                  _buildSectionTitle('BIOGRAFIA'),
+                  _buildSectionTitle(AppLocalizations.of(context)!.actorBiographyTitle),
                   const SizedBox(height: 16),
-                  _buildExpandableBiography(actor!),
+                  _buildExpandableBiography(actor!, context),
                   const SizedBox(height: 40),
-                  _buildSectionTitle('FILMOGRAFIA'),
+                  _buildSectionTitle(AppLocalizations.of(context)!.actorFilmographyTitle),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -254,7 +255,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 50.0),
-              child: _buildFilmography(actor!.credits),
+              child: _buildFilmography(actor!.credits, context),
             ),
           ),
         ],
@@ -378,10 +379,10 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     );
   }
 
-  Widget _buildExpandableBiography(Actor actor) {
+  Widget _buildExpandableBiography(Actor actor, BuildContext context) {
     final bio = actor.biography.isNotEmpty
         ? actor.biography
-        : 'Nessuna biografia disponibile per questo attore.';
+        : AppLocalizations.of(context)!.actorNoBio;
     return GestureDetector(
       onTap: () => setState(() => _isBioExpanded = !_isBioExpanded),
       child: AnimatedCrossFade(
@@ -403,10 +404,10 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
               ),
             ),
             if (bio.length > 150)
-              const Padding(
-                padding: EdgeInsets.only(top: 8.0),
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
-                  "Leggi di più",
+                  AppLocalizations.of(context)!.actorReadMore,
                   style: TextStyle(
                     color: _brandColor,
                     fontSize: 13,
@@ -427,10 +428,10 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                 height: 1.6,
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 8.0),
               child: Text(
-                "Mostra meno",
+                AppLocalizations.of(context)!.actorShowLess,
                 style: TextStyle(
                   color: _brandColor,
                   fontSize: 13,
@@ -444,13 +445,13 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     );
   }
 
-  Widget _buildFilmography(List<ActorCredit> credits) {
+  Widget _buildFilmography(List<ActorCredit> credits, BuildContext context) {
     if (credits.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.0),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Text(
-          'Nessuna informazione sulla filmografia.',
-          style: TextStyle(color: Colors.white30),
+          AppLocalizations.of(context)!.actorNoFilmography,
+          style: const TextStyle(color: Colors.white30),
         ),
       );
     }

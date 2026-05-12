@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class SocialBottomBar extends StatelessWidget {
   final int currentIndex;
@@ -24,19 +25,22 @@ class SocialBottomBar extends StatelessWidget {
         selectedItemColor: Colors.purpleAccent,
         unselectedItemColor: Colors.grey,
         onTap: onTap,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dynamic_feed),
-            label: 'Feed',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Amici'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Messaggi',
+            icon: const Icon(Icons.dynamic_feed),
+            label: AppLocalizations.of(context)!.socialFeed,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle_outlined),
-            label: 'Profilo',
+            icon: const Icon(Icons.people),
+            label: AppLocalizations.of(context)!.socialFriends,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.chat_bubble_outline),
+            label: AppLocalizations.of(context)!.socialMessages,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.account_circle_outlined),
+            label: AppLocalizations.of(context)!.socialProfile,
           ),
         ],
       ),

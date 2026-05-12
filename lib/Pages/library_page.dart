@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/injection_container.dart';
 import '../models/app_mode.dart';
 import '../models/library_widgets/library_grid.dart';
 import '../models/library_widgets/library_header.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class LibraryPage extends StatefulWidget {
   final AppMode mode;
@@ -25,10 +26,14 @@ class _LibraryPageState extends State<LibraryPage> {
 
   static const Color _brandColor = Colors.orangeAccent;
 
-  String get _tab1Label => _isBooks ? "LETTI" : "VISTI";
-  String get _tab2Label => _isBooks ? "IN LETTURA" : "STAI GUARDANDO";
-  String get _tab3Label => _isBooks ? "DA LEGGERE" : "DA VEDERE";
-  String get _tab4Label => "PREFERITI";
+  String _tab1Label(BuildContext context) =>
+      _isBooks ? AppLocalizations.of(context)!.libTabRead : AppLocalizations.of(context)!.watched;
+  String _tab2Label(BuildContext context) =>
+      _isBooks ? AppLocalizations.of(context)!.libTabReading : AppLocalizations.of(context)!.watching;
+  String _tab3Label(BuildContext context) =>
+      _isBooks ? AppLocalizations.of(context)!.libTabToRead : AppLocalizations.of(context)!.toWatch;
+  String _tab4Label(BuildContext context) =>
+      AppLocalizations.of(context)!.favorites;
 
   String get _status1 => _isBooks ? "read" : "watched";
   String get _status2 => _isBooks ? "reading" : "watching";
@@ -40,40 +45,62 @@ class _LibraryPageState extends State<LibraryPage> {
     return Scaffold(
       backgroundColor: Colors.black,
       floatingActionButton: _isBooks ? _buildStyledFab() : null,
-      body: StreamBuilder(
-        stream: sl<AuthRepository>().userStream,
-        builder: (context, snapshot) {
-          final authUser = snapshot.data;
-          if (authUser == null) {
-            return const SizedBox.shrink();
-          }
-
-          return FutureBuilder(
-            future: sl<GetUserDataUseCase>().call(authUser.id),
-            builder: (context, profileSnapshot) {
-              final user = profileSnapshot.data ?? authUser;
-
-              return DefaultTabController(
-                length: 4, // <-- ORA SONO 4 TAB
-                child: NestedScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  headerSliverBuilder: (context, innerBoxIsScrolled) {
-                    return [_buildSliverAppBar(user)];
-                  },
-                  body: TabBarView(
-                    physics: const BouncingScrollPhysics(),
-                    children: [
-                      LibraryGrid(mode: widget.mode, status: _status1),
-                      LibraryGrid(mode: widget.mode, status: _status2),
-                      LibraryGrid(mode: widget.mode, status: _status3),
-                      LibraryGrid(mode: widget.mode, status: _status4),
-                    ],
+      body: Stack(
+        children: [
+          // Sfondo Logo (solo watchlist o ovunque se preferito)
+          if (!_isBooks)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.2, // Più visibile e colorato
+                child: Align(
+                  alignment: const Alignment(
+                    0,
+                    0.5,
+                  ), // Più in basso rispetto al centro
+                  child: Image.asset(
+                    'assets/images/logoCine.png',
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    fit: BoxFit.contain,
                   ),
                 ),
+              ),
+            ),
+          StreamBuilder(
+            stream: sl<AuthRepository>().userStream,
+            builder: (context, snapshot) {
+              final authUser = snapshot.data;
+              if (authUser == null) {
+                return const SizedBox.shrink();
+              }
+
+              return FutureBuilder(
+                future: sl<GetUserDataUseCase>().call(authUser.id),
+                builder: (context, profileSnapshot) {
+                  final user = profileSnapshot.data ?? authUser;
+
+                  return DefaultTabController(
+                    length: 4, // <-- ORA SONO 4 TAB
+                    child: NestedScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      headerSliverBuilder: (context, innerBoxIsScrolled) {
+                        return [_buildSliverAppBar(user)];
+                      },
+                      body: TabBarView(
+                        physics: const BouncingScrollPhysics(),
+                        children: [
+                          LibraryGrid(mode: widget.mode, status: _status1),
+                          LibraryGrid(mode: widget.mode, status: _status2),
+                          LibraryGrid(mode: widget.mode, status: _status3),
+                          LibraryGrid(mode: widget.mode, status: _status4),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -124,10 +151,10 @@ class _LibraryPageState extends State<LibraryPage> {
               letterSpacing: 1.0,
             ),
             tabs: [
-              Tab(text: _tab1Label),
-              Tab(text: _tab2Label),
-              Tab(text: _tab3Label),
-              Tab(text: _tab4Label),
+              Tab(text: _tab1Label(context)),
+              Tab(text: _tab2Label(context)),
+              Tab(text: _tab3Label(context)),
+              Tab(text: _tab4Label(context)),
             ],
           ),
         ),
@@ -165,9 +192,9 @@ class _LibraryPageState extends State<LibraryPage> {
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          "Inserimento manuale in fase di sviluppo.",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        content: Text(
+          AppLocalizations.of(context)!.libManualInsertWip,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF333333),
         behavior: SnackBarBehavior.floating,

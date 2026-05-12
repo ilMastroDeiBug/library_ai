@@ -6,6 +6,7 @@ import '../../injection_container.dart';
 import '../../models/reviews_widgets/write_review_sheet.dart';
 import '../../Pages/all_reviews_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class MovieReviewsSection extends StatefulWidget {
   final int id;
@@ -62,7 +63,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
     if (user == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Accedi per votare")));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.reviewsLoginToVote)));
       return;
     }
     if (!review.isCustom) return; // Non si votano le TMDB
@@ -100,7 +101,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
     final user = sl<AuthRepository>().currentUser;
     if (user == null || !review.isWrittenBy(user.id)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Puoi eliminare solo le tue recensioni")),
+        SnackBar(content: Text(AppLocalizations.of(context)!.reviewsDeleteOnlyYours)),
       );
       return;
     }
@@ -109,24 +110,24 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text(
-          "Eliminare recensione?",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          AppLocalizations.of(context)!.reviewsDeleteTitle,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          "Questa azione non puo essere annullata.",
-          style: TextStyle(color: Colors.white70),
+        content: Text(
+          AppLocalizations.of(context)!.reviewsDeleteDesc,
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Annulla"),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "Elimina",
-              style: TextStyle(color: Colors.redAccent),
+            child: Text(
+              AppLocalizations.of(context)!.delete,
+              style: const TextStyle(color: Colors.redAccent),
             ),
           ),
         ],
@@ -146,7 +147,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
       if (mounted) {
         setState(() => _reviews = previousReviews);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Impossibile eliminare la recensione")),
+          SnackBar(content: Text(AppLocalizations.of(context)!.reviewsDeleteError)),
         );
       }
     }
@@ -156,7 +157,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Accedi per scrivere una recensione")),
+        SnackBar(content: Text(AppLocalizations.of(context)!.reviewsLoginToWrite)),
       );
       return;
     }
@@ -198,9 +199,9 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              "RECENSIONI",
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.reviewsTitle,
+              style: const TextStyle(
                 color: Colors.white38,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
@@ -221,15 +222,15 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
-              items: const [
+              items: [
                 DropdownMenuItem(
                   value: 'relevance',
-                  child: Text("Più rilevanti"),
+                  child: Text(AppLocalizations.of(context)!.reviewsSortRelevance),
                 ),
-                DropdownMenuItem(value: 'recent', child: Text("Più recenti")),
+                DropdownMenuItem(value: 'recent', child: Text(AppLocalizations.of(context)!.reviewsSortRecent)),
                 DropdownMenuItem(
                   value: 'rating_desc',
-                  child: Text("Voti più alti"),
+                  child: Text(AppLocalizations.of(context)!.reviewsSortRating),
                 ),
               ],
               onChanged: (val) {
@@ -248,7 +249,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Text(
-                "Nessuna recensione. Sii il primo!",
+                AppLocalizations.of(context)!.reviewsEmpty,
                 style: TextStyle(color: Colors.white.withOpacity(0.5)),
               ),
             ),
@@ -270,9 +271,9 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                 ),
               ),
               icon: const Icon(Icons.forum_outlined, color: Colors.white70),
-              label: const Text(
-                "Vedi tutte le recensioni",
-                style: TextStyle(
+              label: Text(
+                AppLocalizations.of(context)!.reviewsViewAll,
+                style: const TextStyle(
                   color: Colors.white70,
                   fontWeight: FontWeight.bold,
                 ),
@@ -297,9 +298,9 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
               Icons.edit_note_rounded,
               color: Colors.orangeAccent,
             ),
-            label: const Text(
-              "Scrivi una recensione",
-              style: TextStyle(
+            label: Text(
+              AppLocalizations.of(context)!.reviewsWrite,
+              style: const TextStyle(
                 color: Colors.orangeAccent,
                 fontWeight: FontWeight.bold,
               ),
@@ -353,7 +354,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                     ),
                     if (!review.isCustom)
                       Text(
-                        "Da TMDB",
+                        AppLocalizations.of(context)!.reviewsFromTMDB,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.3),
                           fontSize: 10,
@@ -364,7 +365,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
               ),
               if (canDelete)
                 IconButton(
-                  tooltip: "Elimina recensione",
+                  tooltip: AppLocalizations.of(context)!.reviewsDeleteTooltip,
                   icon: const Icon(
                     Icons.delete_outline_rounded,
                     color: Colors.redAccent,

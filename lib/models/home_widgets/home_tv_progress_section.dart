@@ -9,6 +9,7 @@ import '../../domain/entities/tv_series.dart';
 import '../../Pages/movie_detail_page.dart';
 import '../movie_widget/streak_widget.dart';
 import '../../services/utility_services/watchlist_realtime_notifier.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class HomeTvProgressSection extends StatelessWidget {
   const HomeTvProgressSection({super.key});
@@ -53,9 +54,9 @@ class HomeTvProgressSection extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        "STAI GUARDANDO",
-                        style: TextStyle(
+                      Text(
+                        AppLocalizations.of(context)!.homeWatching,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

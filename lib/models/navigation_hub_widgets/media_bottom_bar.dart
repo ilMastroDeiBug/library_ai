@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../models/app_mode.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class MediaBottomBar extends StatelessWidget {
   final int currentIndex;
@@ -47,16 +48,16 @@ class MediaBottomBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildNavItem(0, Icons.home_rounded, 'Home'),
+              _buildNavItem(0, Icons.home_rounded, AppLocalizations.of(context)!.navHome),
               _buildNavItem(
                 1,
                 currentMode == AppMode.books
                     ? Icons.menu_book_rounded
                     : Icons.movie_filter_rounded,
-                currentMode == AppMode.books ? 'Vault' : 'Watchlist',
+                currentMode == AppMode.books ? AppLocalizations.of(context)!.navVault : AppLocalizations.of(context)!.watchlist,
               ),
-              _buildNavItem(2, Icons.explore_rounded, 'Esplora'),
-              _buildNavItem(3, Icons.auto_awesome_rounded, 'AI'),
+              _buildNavItem(2, Icons.explore_rounded, AppLocalizations.of(context)!.navExplore),
+              _buildNavItem(3, Icons.auto_awesome_rounded, AppLocalizations.of(context)!.navAI),
             ],
           ),
         ),

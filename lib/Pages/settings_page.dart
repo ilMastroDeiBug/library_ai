@@ -14,6 +14,7 @@ import '../models/settings_widgets/edit_profile_dialogs.dart';
 import '../models/settings_widgets/delete_account_dialog.dart';
 // IMPORT DEL NUOVO POPUP DEGLI AVATAR
 import '../models/settings_widgets/avatar_selection_sheet.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -104,7 +105,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Impossibile salvare la lingua: ${e.toString().replaceAll("Exception: ", "")}',
+              '${AppLocalizations.of(context)!.settingsLanguageError}${e.toString().replaceAll("Exception: ", "")}',
             ),
             backgroundColor: Colors.redAccent,
           ),
@@ -149,9 +150,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 25),
-                  const Text(
-                    "SELEZIONA LINGUA",
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.settingsLanguageTitle,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
@@ -160,7 +161,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    "Applica a interfaccia e risultati di ricerca",
+                    AppLocalizations.of(context)!.settingsLanguageDesc,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.5),
                       fontSize: 13,
@@ -285,7 +286,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   titlePadding: const EdgeInsets.only(bottom: 16),
                   centerTitle: true,
                   title: Text(
-                    "IL MIO PROFILO",
+                    AppLocalizations.of(context)!.settingsProfileTitle,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontWeight: FontWeight.w900,
@@ -322,7 +323,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         user: _currentUser,
                         bio:
                             _currentUser?.bio ??
-                            "Nessuna biografia impostata. Racconta chi sei.",
+                            AppLocalizations.of(context)!.settingsNoBio,
                         onPhotoTap: () {
                           if (_currentUser == null) return;
                           // Lancia il popup di selezione avatar integrato
@@ -343,13 +344,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
                       const SizedBox(height: 40),
 
-                      _buildSectionTitle("ESPERIENZA", Icons.tune_rounded),
+                      _buildSectionTitle(AppLocalizations.of(context)!.settingsExperience, Icons.tune_rounded),
                       _buildSettingsGroup([
                         SettingsTile(
                           icon: Icons.translate_rounded,
-                          title: "Lingua Contenuti",
+                          title: AppLocalizations.of(context)!.settingsContentLanguage,
                           subtitle:
-                              "Attualmente ${_getLanguageName(sl<LanguageService>().currentLanguage)}",
+                              "${AppLocalizations.of(context)!.settingsCurrently} ${_getLanguageName(sl<LanguageService>().currentLanguage)}",
                           onTap: _showLanguagePicker,
                           isTop: true,
                           isBottom: true,
@@ -360,16 +361,16 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 30),
 
                       _buildSectionTitle(
-                        "GESTIONE ACCOUNT",
+                        AppLocalizations.of(context)!.settingsAccountManagement,
                         Icons.manage_accounts_rounded,
                       ),
                       _buildSettingsGroup([
                         SettingsTile(
                           icon: Icons.badge_rounded,
-                          title: "Nome Visualizzato",
+                          title: AppLocalizations.of(context)!.settingsDisplayName,
                           subtitle:
                               _currentUser?.displayName ??
-                              "Tocca per impostare",
+                              AppLocalizations.of(context)!.settingsTapToSet,
                           isTop: true,
                           iconColor: Colors.orange,
                           onTap: () {
@@ -386,8 +387,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         SettingsTile(
                           icon: Icons.format_quote_rounded,
-                          title: "Biografia",
-                          subtitle: "Modifica la tua descrizione",
+                          title: AppLocalizations.of(context)!.settingsBio,
+                          subtitle: AppLocalizations.of(context)!.settingsEditDesc,
                           iconColor: Colors.purpleAccent,
                           onTap: () {
                             if (_currentUser == null) return;
@@ -402,8 +403,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         SettingsTile(
                           icon: Icons.delete_outline_rounded,
-                          title: "Elimina Account",
-                          subtitle: "Rimuovi permanentemente i dati",
+                          title: AppLocalizations.of(context)!.settingsDeleteAccount,
+                          subtitle: AppLocalizations.of(context)!.settingsDeleteAccountDesc,
                           iconColor: Colors.redAccent,
                           textColor: Colors.redAccent,
                           isBottom: true,
@@ -452,9 +453,9 @@ class _SettingsPageState extends State<SettingsPage> {
                             Icons.power_settings_new_rounded,
                             size: 22,
                           ),
-                          label: const Text(
-                            "DISCONNETTI",
-                            style: TextStyle(
+                          label: Text(
+                            AppLocalizations.of(context)!.settingsLogout,
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.5,
                               fontSize: 14,

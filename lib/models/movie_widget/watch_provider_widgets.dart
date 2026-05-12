@@ -7,6 +7,7 @@ import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 import 'watch_provider_model.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class WatchProvidersWidget extends StatefulWidget {
   final int mediaId;
@@ -57,7 +58,7 @@ class _WatchProvidersWidgetState extends State<WatchProvidersWidget> {
   Future<void> _launchUrl(String urlString) async {
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      debugPrint("Impossibile aprire il link: $url");
+      debugPrint("${AppLocalizations.of(context)!.providersLinkError}$url");
     }
   }
 
@@ -81,9 +82,9 @@ class _WatchProvidersWidgetState extends State<WatchProvidersWidget> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "GUARDA ORA SU",
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.providersWatchNow,
+              style: const TextStyle(
                 color: Colors.white38,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
@@ -94,12 +95,12 @@ class _WatchProvidersWidgetState extends State<WatchProvidersWidget> {
 
             // Priorità: Mostriamo prima gli abbonamenti (Netflix, Prime), poi il noleggio
             if (data.flatrate.isNotEmpty) ...[
-              _buildProviderRow("In Abbonamento", data.flatrate, data.link),
+              _buildProviderRow(AppLocalizations.of(context)!.providersFlatrate, data.flatrate, data.link),
               const SizedBox(height: 15),
             ],
 
             if (data.rent.isNotEmpty && data.flatrate.isEmpty) ...[
-              _buildProviderRow("A Noleggio", data.rent, data.link),
+              _buildProviderRow(AppLocalizations.of(context)!.providersRent, data.rent, data.link),
               const SizedBox(height: 15),
             ],
 
@@ -112,9 +113,9 @@ class _WatchProvidersWidgetState extends State<WatchProvidersWidget> {
                   size: 16,
                   color: Colors.orangeAccent,
                 ),
-                label: const Text(
-                  "Tutte le opzioni di acquisto",
-                  style: TextStyle(color: Colors.orangeAccent),
+                label: Text(
+                  AppLocalizations.of(context)!.providersAllOptions,
+                  style: const TextStyle(color: Colors.orangeAccent),
                 ),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,

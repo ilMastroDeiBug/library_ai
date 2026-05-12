@@ -6,6 +6,7 @@ import '../domain/repositories/auth_repository.dart';
 import '../domain/use_cases/review_use_cases.dart';
 import '../injection_container.dart';
 import '../models/reviews_widgets/write_review_sheet.dart';
+import 'package:library_ai/l10n/app_localizations.dart';
 
 class AllReviewsPage extends StatefulWidget {
   final int mediaId;
@@ -62,11 +63,11 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
   void _handleVote(Review review, int vote) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      _showSnackBar("Accedi per votare le recensioni.");
+      _showSnackBar(AppLocalizations.of(context)!.allReviewsLoginToVote);
       return;
     }
     if (!review.isCustom) {
-      _showSnackBar("Le recensioni di TMDB non possono essere votate.");
+      _showSnackBar(AppLocalizations.of(context)!.allReviewsTmdbCannotVote);
       return;
     }
 
@@ -105,7 +106,7 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
   Future<void> _handleDelete(Review review) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null || !review.isWrittenBy(user.id)) {
-      _showSnackBar("Puoi eliminare solo le tue recensioni.");
+      _showSnackBar(AppLocalizations.of(context)!.allReviewsDeleteOnlyYours);
       return;
     }
 
@@ -113,24 +114,24 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text(
-          "Eliminare recensione?",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          AppLocalizations.of(context)!.allReviewsDeleteTitle,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          "Questa azione non puo essere annullata.",
-          style: TextStyle(color: Colors.white70),
+        content: Text(
+          AppLocalizations.of(context)!.allReviewsDeleteDesc,
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Annulla"),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "Elimina",
-              style: TextStyle(color: Colors.redAccent),
+            child: Text(
+              AppLocalizations.of(context)!.delete,
+              style: const TextStyle(color: Colors.redAccent),
             ),
           ),
         ],
@@ -146,11 +147,11 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
 
     try {
       await sl<DeleteReviewUseCase>().call(review.id, user.id);
-      _showSnackBar("Recensione eliminata.");
+      _showSnackBar(AppLocalizations.of(context)!.allReviewsDeleted);
     } catch (_) {
       if (mounted) {
         setState(() => _reviews = previousReviews);
-        _showSnackBar("Impossibile eliminare la recensione.");
+        _showSnackBar(AppLocalizations.of(context)!.allReviewsDeleteError);
       }
     }
   }
@@ -158,7 +159,7 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
   void _openWriteReview() async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
-      _showSnackBar("Accedi per scrivere una recensione.");
+      _showSnackBar(AppLocalizations.of(context)!.allReviewsLoginToWrite);
       return;
     }
 
@@ -229,9 +230,9 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
         onPressed: _openWriteReview,
         backgroundColor: Colors.orangeAccent,
         icon: const Icon(Icons.edit_rounded, color: Colors.black),
-        label: const Text(
-          "Scrivi",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        label: Text(
+          AppLocalizations.of(context)!.allReviewsWrite,
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
       body: Column(
@@ -244,8 +245,8 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
               children: [
                 Text(
                   _reviews != null
-                      ? "${_reviews!.length} Recensioni"
-                      : "Caricamento...",
+                      ? AppLocalizations.of(context)!.allReviewsCount(_reviews!.length)
+                      : AppLocalizations.of(context)!.allReviewsLoading,
                   style: const TextStyle(
                     color: Colors.white54,
                     fontWeight: FontWeight.w600,
@@ -273,19 +274,19 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
-                    items: const [
+                    items: [
                       DropdownMenuItem(
                         value: 'relevance',
-                        child: Text("Rilevanti"),
+                        child: Text(AppLocalizations.of(context)!.allReviewsSortRelevant),
                       ),
-                      DropdownMenuItem(value: 'recent', child: Text("Recenti")),
+                      DropdownMenuItem(value: 'recent', child: Text(AppLocalizations.of(context)!.allReviewsSortRecent)),
                       DropdownMenuItem(
                         value: 'rating_desc',
-                        child: Text("Voti Alti"),
+                        child: Text(AppLocalizations.of(context)!.allReviewsSortHighRating),
                       ),
                       DropdownMenuItem(
                         value: 'rating_asc',
-                        child: Text("Voti Bassi"),
+                        child: Text(AppLocalizations.of(context)!.allReviewsSortLowRating),
                       ),
                     ],
                     onChanged: (val) {
@@ -330,7 +331,7 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      "Ancora nessuna recensione.",
+                                      AppLocalizations.of(context)!.allReviewsEmpty,
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.5),
                                         fontSize: 16,
@@ -449,7 +450,7 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
               ),
               if (canDelete)
                 IconButton(
-                  tooltip: "Elimina recensione",
+                  tooltip: AppLocalizations.of(context)!.allReviewsDeleteTooltip,
                   icon: const Icon(
                     Icons.delete_outline_rounded,
                     color: Colors.redAccent,
