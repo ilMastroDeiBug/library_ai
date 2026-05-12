@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
@@ -622,13 +622,9 @@ class _LibraryGridState extends State<LibraryGrid> {
             Positioned(
               top: 6,
               left: 6,
-              child: StreamBuilder<TvSeriesProgress?>(
-                stream: sl<GetSeriesProgressUseCase>().call(user.id, item.id),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData || snapshot.data == null)
-                    return const SizedBox.shrink();
-                  return StreakWidget(progress: snapshot.data!);
-                },
+              child: _TvSeriesProgressIndicator(
+                userId: user.id,
+                seriesId: item.id,
               ),
             ),
           if (_isSelectionMode)
@@ -787,6 +783,60 @@ class _LibraryGridState extends State<LibraryGrid> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TvSeriesProgressIndicator extends StatefulWidget {
+  final String userId;
+  final int seriesId;
+
+  const _TvSeriesProgressIndicator({
+    super.key,
+    required this.userId,
+    required this.seriesId,
+  });
+
+  @override
+  State<_TvSeriesProgressIndicator> createState() =>
+      _TvSeriesProgressIndicatorState();
+}
+
+class _TvSeriesProgressIndicatorState
+    extends State<_TvSeriesProgressIndicator> {
+  late Stream<TvSeriesProgress?> _progressStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _progressStream = sl<GetSeriesProgressUseCase>().call(
+      widget.userId,
+      widget.seriesId,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _TvSeriesProgressIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.seriesId != widget.seriesId) {
+      _progressStream = sl<GetSeriesProgressUseCase>().call(
+        widget.userId,
+        widget.seriesId,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<TvSeriesProgress?>(
+      stream: _progressStream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+        return StreakWidget(progress: snapshot.data!);
+      },
     );
   }
 }

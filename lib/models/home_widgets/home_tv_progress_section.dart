@@ -96,20 +96,45 @@ class HomeTvProgressSection extends StatelessWidget {
   }
 }
 
-class _ActiveSeriesCard extends StatelessWidget {
+class _ActiveSeriesCard extends StatefulWidget {
   final TvSeriesProgress progress;
   final String userId;
 
   const _ActiveSeriesCard({required this.progress, required this.userId});
 
   @override
+  State<_ActiveSeriesCard> createState() => _ActiveSeriesCardState();
+}
+
+class _ActiveSeriesCardState extends State<_ActiveSeriesCard> {
+  late Stream<dynamic> _tvSeriesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _tvSeriesStream = sl<GetSingleTvSeriesUseCase>().call(
+      widget.userId,
+      widget.progress.seriesId.toString(),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _ActiveSeriesCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.progress.seriesId != widget.progress.seriesId) {
+      _tvSeriesStream = sl<GetSingleTvSeriesUseCase>().call(
+        widget.userId,
+        widget.progress.seriesId.toString(),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Recuperiamo i dati della serie TV dal DB tramite ID per avere la locandina
     return StreamBuilder<dynamic>(
-      stream: sl<GetSingleTvSeriesUseCase>().call(
-        userId,
-        progress.seriesId.toString(),
-      ),
+      stream: _tvSeriesStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
           return Padding(
@@ -169,7 +194,7 @@ class _ActiveSeriesCard extends StatelessWidget {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: StreakWidget(progress: progress),
+                  child: StreakWidget(progress: widget.progress),
                 ),
               ],
             ),

@@ -294,20 +294,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       'timestamp': DateTime.now().toIso8601String(),
     };
 
-    final existing = await _supabase
-        .from(_tableName)
-        .select('id')
-        .eq('user_id', userId)
-        .eq('media_id', movie.id)
-        .eq('type', 'movie')
-        .maybeSingle();
-
-    if (existing != null) {
-      await _supabase.from(_tableName).update(payload).eq('id', existing['id']);
-    } else {
-      await _supabase.from(_tableName).insert(payload);
-    }
-
+    // Optimistic Update
     await _cacheService.upsertMediaItem(
       userId: userId,
       mediaId: movie.id,
@@ -315,6 +302,24 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
     );
     _emitMediaRow(userId, movie.id, payload);
     await _emitWatchlistCache(userId);
+
+    try {
+      final existing = await _supabase
+          .from(_tableName)
+          .select('id')
+          .eq('user_id', userId)
+          .eq('media_id', movie.id)
+          .eq('type', 'movie')
+          .maybeSingle();
+
+      if (existing != null) {
+        await _supabase.from(_tableName).update(payload).eq('id', existing['id']);
+      } else {
+        await _supabase.from(_tableName).insert(payload);
+      }
+    } catch (_) {
+      // Ignora errore: cache locale aggiornata per offline
+    }
   }
 
   @override
@@ -329,20 +334,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       'timestamp': DateTime.now().toIso8601String(),
     };
 
-    final existing = await _supabase
-        .from(_tableName)
-        .select('id')
-        .eq('user_id', userId)
-        .eq('media_id', series.id)
-        .eq('type', 'tv')
-        .maybeSingle();
-
-    if (existing != null) {
-      await _supabase.from(_tableName).update(payload).eq('id', existing['id']);
-    } else {
-      await _supabase.from(_tableName).insert(payload);
-    }
-
+    // Optimistic Update
     await _cacheService.upsertMediaItem(
       userId: userId,
       mediaId: series.id,
@@ -350,18 +342,31 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
     );
     _emitMediaRow(userId, series.id, payload);
     await _emitWatchlistCache(userId);
+
+    try {
+      final existing = await _supabase
+          .from(_tableName)
+          .select('id')
+          .eq('user_id', userId)
+          .eq('media_id', series.id)
+          .eq('type', 'tv')
+          .maybeSingle();
+
+      if (existing != null) {
+        await _supabase.from(_tableName).update(payload).eq('id', existing['id']);
+      } else {
+        await _supabase.from(_tableName).insert(payload);
+      }
+    } catch (_) {
+      // Ignora errore per offline
+    }
   }
 
   @override
   Future<void> updateStatus(String userId, int id, String newStatus) async {
     final timestamp = DateTime.now().toIso8601String();
 
-    await _supabase
-        .from(_tableName)
-        .update({'status': newStatus, 'timestamp': timestamp})
-        .eq('user_id', userId)
-        .eq('media_id', id);
-
+    // Optimistic Update
     await _cacheService.updateMediaStatus(
       userId: userId,
       mediaId: id,
@@ -375,6 +380,14 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       _emitMediaRow(userId, id, updatedRow);
     }
     await _emitWatchlistCache(userId);
+
+    try {
+      await _supabase
+          .from(_tableName)
+          .update({'status': newStatus, 'timestamp': timestamp})
+          .eq('user_id', userId)
+          .eq('media_id', id);
+    } catch (_) {}
   }
 
   @override
@@ -382,12 +395,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
     final cacheBox = Hive.box('cinelib_cache');
     final cachedRow = _readCachedRow(cacheBox, 'media_${userId}_$id');
 
-    await _supabase
-        .from(_tableName)
-        .delete()
-        .eq('user_id', userId)
-        .eq('media_id', id);
-
+    // Optimistic Update
     await _cacheService.deleteMediaItem(userId: userId, mediaId: id);
 
     if (cachedRow != null) {
@@ -398,30 +406,41 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       _emitMediaRow(userId, id, null);
     }
     await _emitWatchlistCache(userId);
+
+    try {
+      await _supabase
+          .from(_tableName)
+          .delete()
+          .eq('user_id', userId)
+          .eq('media_id', id);
+    } catch (_) {}
   }
 
   @override
   Future<void> saveAnalysis(String userId, int id, String analysis) async {
     final timestamp = DateTime.now().toIso8601String();
-    await _supabase
-        .from(_tableName)
-        .update({'ai_analysis': analysis, 'timestamp': timestamp})
-        .eq('user_id', userId)
-        .eq('media_id', id);
-
+    // Optimistic Update
     final cacheBox = Hive.box('cinelib_cache');
     final cachedRow = _readCachedRow(cacheBox, 'media_${userId}_$id');
-    if (cachedRow == null) return;
+    if (cachedRow != null) {
+      cachedRow['ai_analysis'] = analysis;
+      cachedRow['timestamp'] = timestamp;
+      await _cacheService.upsertMediaItem(
+        userId: userId,
+        mediaId: id,
+        row: cachedRow,
+      );
+      _emitMediaRow(userId, id, cachedRow);
+      await _emitWatchlistCache(userId);
+    }
 
-    cachedRow['ai_analysis'] = analysis;
-    cachedRow['timestamp'] = timestamp;
-    await _cacheService.upsertMediaItem(
-      userId: userId,
-      mediaId: id,
-      row: cachedRow,
-    );
-    _emitMediaRow(userId, id, cachedRow);
-    await _emitWatchlistCache(userId);
+    try {
+      await _supabase
+          .from(_tableName)
+          .update({'ai_analysis': analysis, 'timestamp': timestamp})
+          .eq('user_id', userId)
+          .eq('media_id', id);
+    } catch (_) {}
   }
 
   @override

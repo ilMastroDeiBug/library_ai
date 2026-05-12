@@ -51,6 +51,7 @@ class SupabaseBookRepositoryImpl implements BookRepository {
           .stream(primaryKey: ['id'])
           .eq('user_id', userId)
           .order('timestamp', ascending: false)
+          .handleError((_) {})
           .asyncMap((snapshot) async {
             final rows = snapshot
                 .map((row) => Map<String, dynamic>.from(row))
@@ -90,6 +91,7 @@ class SupabaseBookRepositoryImpl implements BookRepository {
           .from(_userTableName)
           .stream(primaryKey: ['id'])
           .eq('user_id', userId)
+          .handleError((_) {})
           .asyncMap((snapshot) async {
             final bookRows = snapshot
                 .where((row) => row['book_id'] == docId)
@@ -175,27 +177,33 @@ class SupabaseBookRepositoryImpl implements BookRepository {
       'timestamp': DateTime.now().toIso8601String(),
     };
 
-    await _supabase
-        .from(_userTableName)
-        .upsert(rowToInsert, onConflict: 'user_id, book_id');
-
+    // Optimistic Update
     await _cacheService.upsertBook(
       userId: userId,
       bookId: docId,
       row: rowToInsert,
     );
+
+    try {
+      await _supabase
+          .from(_userTableName)
+          .upsert(rowToInsert, onConflict: 'user_id, book_id');
+    } catch (_) {}
   }
 
   @override
   Future<void> deleteBook(String userId, String bookId) async {
     final docId = bookId.replaceAll('/', '_');
-    await _supabase
-        .from(_userTableName)
-        .delete()
-        .eq('user_id', userId)
-        .eq('book_id', docId);
-
+    // Optimistic Update
     await _cacheService.deleteBook(userId: userId, bookId: docId);
+
+    try {
+      await _supabase
+          .from(_userTableName)
+          .delete()
+          .eq('user_id', userId)
+          .eq('book_id', docId);
+    } catch (_) {}
   }
 
   @override
@@ -206,18 +214,21 @@ class SupabaseBookRepositoryImpl implements BookRepository {
   ) async {
     final docId = bookId.replaceAll('/', '_');
     final timestamp = DateTime.now().toIso8601String();
-    await _supabase
-        .from(_userTableName)
-        .update({'status': newStatus, 'timestamp': timestamp})
-        .eq('user_id', userId)
-        .eq('book_id', docId);
-
+    // Optimistic Update
     await _cacheService.updateBookStatus(
       userId: userId,
       bookId: docId,
       newStatus: newStatus,
       timestamp: timestamp,
     );
+
+    try {
+      await _supabase
+          .from(_userTableName)
+          .update({'status': newStatus, 'timestamp': timestamp})
+          .eq('user_id', userId)
+          .eq('book_id', docId);
+    } catch (_) {}
   }
 
   @override
@@ -227,14 +238,31 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     String analysis,
   ) async {
     final docId = bookId.replaceAll('/', '_');
-    await _supabase
-        .from(_userTableName)
-        .update({
-          'ai_analysis': analysis,
-          'timestamp': DateTime.now().toIso8601String(),
-        })
-        .eq('user_id', userId)
-        .eq('book_id', docId);
+    final timestamp = DateTime.now().toIso8601String();
+
+    // Optimistic Update
+    final cacheBox = Hive.box('cinelib_cache');
+    final cachedRow = _readCachedRow(cacheBox, 'book_${userId}_$docId');
+    if (cachedRow != null) {
+      cachedRow['ai_analysis'] = analysis;
+      cachedRow['timestamp'] = timestamp;
+      await _cacheService.upsertBook(
+        userId: userId,
+        bookId: docId,
+        row: cachedRow,
+      );
+    }
+
+    try {
+      await _supabase
+          .from(_userTableName)
+          .update({
+            'ai_analysis': analysis,
+            'timestamp': timestamp,
+          })
+          .eq('user_id', userId)
+          .eq('book_id', docId);
+    } catch (_) {}
   }
 
   @override

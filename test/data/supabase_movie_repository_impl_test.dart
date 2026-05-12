@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:hive/hive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_ai/data/supabase_movie_repository_impl.dart';
 import 'package:library_ai/domain/entities/movie.dart';
@@ -13,6 +15,16 @@ class MockSupabaseClient extends Mock implements SupabaseClient {}
 void main() {
   late MockTmdbService tmdb;
   late SupabaseMovieRepositoryImpl repository;
+
+  setUpAll(() async {
+    final tempPath = Directory.systemTemp.createTempSync('hive_test_').path;
+    Hive.init(tempPath);
+    await Hive.openBox('cinelib_cache');
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+  });
 
   setUp(() {
     tmdb = MockTmdbService();

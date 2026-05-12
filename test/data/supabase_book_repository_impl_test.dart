@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:hive/hive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_ai/data/supabase_book_repository_impl.dart';
 import 'package:library_ai/domain/entities/book.dart';
@@ -26,6 +28,16 @@ void main() {
     rating: 3.0,
     ratingsCount: 12,
   );
+
+  setUpAll(() async {
+    final tempPath = Directory.systemTemp.createTempSync('hive_test_').path;
+    Hive.init(tempPath);
+    await Hive.openBox('cinelib_cache');
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+  });
 
   setUp(() {
     google = MockGoogleBooksService();

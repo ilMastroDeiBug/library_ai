@@ -109,24 +109,32 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
     } on PostgrestException catch (_) {
       row.remove('author');
       row.remove('avatar_url');
-      await _supabase.from('reviews').insert(row);
+      try {
+        await _supabase.from('reviews').insert(row);
+      } catch (_) {}
+    } catch (_) {
+      // Ignora errori di connessione
     }
   }
 
   @override
   Future<void> voteReview(String reviewId, String userId, int vote) async {
-    if (vote == 0) {
-      await _supabase
-          .from('review_votes')
-          .delete()
-          .eq('review_id', reviewId)
-          .eq('user_id', userId);
-    } else {
-      await _supabase.from('review_votes').upsert({
-        'review_id': reviewId,
-        'user_id': userId,
-        'vote': vote,
-      }, onConflict: 'review_id,user_id');
+    try {
+      if (vote == 0) {
+        await _supabase
+            .from('review_votes')
+            .delete()
+            .eq('review_id', reviewId)
+            .eq('user_id', userId);
+      } else {
+        await _supabase.from('review_votes').upsert({
+          'review_id': reviewId,
+          'user_id': userId,
+          'vote': vote,
+        }, onConflict: 'review_id,user_id');
+      }
+    } catch (_) {
+      // Ignora errori di rete offline
     }
   }
 
@@ -148,12 +156,14 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
     } catch (_) {
       // Se il DB ha ON DELETE CASCADE, la delete della review pulira i voti.
     }
-    await _supabase
-        .from('reviews')
-        .delete()
-        .eq('id', reviewId)
-        .eq('user_id', userId);
-    await _removeReviewFromHiveCache(reviewId);
+    try {
+      await _supabase
+          .from('reviews')
+          .delete()
+          .eq('id', reviewId)
+          .eq('user_id', userId);
+      await _removeReviewFromHiveCache(reviewId);
+    } catch (_) {}
   }
 
   Future<List<Review>> _fetchCustomReviews({

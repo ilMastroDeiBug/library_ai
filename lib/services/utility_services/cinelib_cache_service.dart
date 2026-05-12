@@ -1,4 +1,4 @@
-import 'package:hive/hive.dart';
+﻿import 'package:hive/hive.dart';
 
 typedef _CacheRowPredicate = bool Function(Map<String, dynamic> row);
 typedef _CacheRowTransform =
@@ -174,7 +174,7 @@ class CinelibCacheService {
       }
     }
 
-    if (destinationIsCached && movedRow != null) {
+    if (movedRow != null) {
       final destinationRows = _readRows(_box.get(destinationKey)) ?? [];
       final deduplicatedRows = destinationRows
           .where((row) => !matches(row))
@@ -237,3 +237,5 @@ class CinelibCacheService {
 
   String _safeBookId(String bookId) => bookId.replaceAll('/', '_');
 }
+
+
