@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../models/app_mode.dart';
 
 // Page Imports
@@ -6,6 +6,7 @@ import 'Pages/home_page.dart';
 import 'Pages/library_page.dart';
 import 'Pages/explore_page.dart';
 import 'Pages/side_menu.dart';
+import 'Pages/studio_ai_page.dart';
 
 // Widget Imports
 import '../models/navigation_hub_widgets/media_bottom_bar.dart';
@@ -66,9 +67,8 @@ class _NavigationHubState extends State<NavigationHub> {
         mode: _currentMode,
         onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      const Center(
-        child: Text("Studio AI", style: TextStyle(color: Colors.white)),
-      ),
+      const StudioAIPage(),
+
     ];
   }
 

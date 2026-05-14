@@ -352,7 +352,15 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                         fontSize: 14,
                       ),
                     ),
-                    if (!review.isCustom)
+                    if (review.createdAt != null)
+                      Text(
+                        _formatDate(review.createdAt),
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.3),
+                          fontSize: 11,
+                        ),
+                      )
+                    else if (!review.isCustom)
                       Text(
                         AppLocalizations.of(context)!.reviewsFromTMDB,
                         style: TextStyle(
@@ -441,6 +449,13 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 
   Widget _buildVoteButton(

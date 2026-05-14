@@ -6,6 +6,7 @@ class CascadingBackground extends StatelessWidget {
   final int speed2;
   final int speed3;
   final int speed4;
+  final int indexOffset; // Start covers from a different index to look distinct
 
   const CascadingBackground({
     super.key,
@@ -13,6 +14,7 @@ class CascadingBackground extends StatelessWidget {
     this.speed2 = 70,
     this.speed3 = 90,
     this.speed4 = 75,
+    this.indexOffset = 0,
   });
 
   @override
@@ -26,17 +28,17 @@ class CascadingBackground extends StatelessWidget {
               angle: -0.25,
               child: Row(
                 children: [
-                  Expanded(
-                    child: _AutoScrollColumn(speed: speed1, isReverse: false),
+                            Expanded(
+                    child: _AutoScrollColumn(speed: speed1, isReverse: false, indexOffset: indexOffset),
                   ),
                   Expanded(
-                    child: _AutoScrollColumn(speed: speed2, isReverse: true),
+                    child: _AutoScrollColumn(speed: speed2, isReverse: true, indexOffset: indexOffset + 7),
                   ),
                   Expanded(
-                    child: _AutoScrollColumn(speed: speed3, isReverse: false),
+                    child: _AutoScrollColumn(speed: speed3, isReverse: false, indexOffset: indexOffset + 14),
                   ),
                   Expanded(
-                    child: _AutoScrollColumn(speed: speed4, isReverse: true),
+                    child: _AutoScrollColumn(speed: speed4, isReverse: true, indexOffset: indexOffset + 21),
                   ),
                 ],
               ),
@@ -71,8 +73,13 @@ class CascadingBackground extends StatelessWidget {
 class _AutoScrollColumn extends StatefulWidget {
   final int speed;
   final bool isReverse;
+  final int indexOffset;
 
-  const _AutoScrollColumn({required this.speed, required this.isReverse});
+  const _AutoScrollColumn({
+    required this.speed,
+    required this.isReverse,
+    this.indexOffset = 0,
+  });
 
   @override
   State<_AutoScrollColumn> createState() => _AutoScrollColumnState();
@@ -133,7 +140,8 @@ class _AutoScrollColumnState extends State<_AutoScrollColumn> {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: 1000,
       itemBuilder: (context, index) {
-        final imgIndex = (index % 30) + 1;
+        final imgIndex = ((index + widget.indexOffset) % 30) + 1;
+
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),

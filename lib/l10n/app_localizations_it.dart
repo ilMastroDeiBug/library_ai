@@ -854,4 +854,146 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get homeTitleRealityTalk => 'Reality & Talk';
+
+  @override
+  String get sideMenuDataPortability => 'PORTABILITÀ DATI';
+
+  @override
+  String get sideMenuImportLetterboxd => 'Importa da Letterboxd';
+
+  @override
+  String get importLetterboxdLoginRequired =>
+      'Devi essere loggato per importare i dati';
+
+  @override
+  String get importLetterboxdSuccess =>
+      'Importazione completata con successo! 🎉';
+
+  @override
+  String importLetterboxdError(String error) {
+    return 'Errore durante l\'importazione: $error';
+  }
+
+  @override
+  String get importLetterboxdTitle => 'Importa da Letterboxd';
+
+  @override
+  String get importLetterboxdHeadline => 'Passa a CineShare in 30 secondi.';
+
+  @override
+  String get importLetterboxdSubtitle =>
+      'I tuoi dati ti appartengono. Importa la tua storia cinematografica da Letterboxd senza sforzo.';
+
+  @override
+  String get importLetterboxdStep1 =>
+      'Vai su Letterboxd.com > Settings > Export Data.';
+
+  @override
+  String get importLetterboxdStep2 =>
+      'Estrai il file ZIP che ti hanno mandato.';
+
+  @override
+  String get importLetterboxdStep3 =>
+      'Carica il file watched.csv, ratings.csv o reviews.csv qui.';
+
+  @override
+  String importLetterboxdProgress(int processed, int total) {
+    return 'Importazione in corso... $processed / $total';
+  }
+
+  @override
+  String get importLetterboxdButton => 'Carica il file CSV';
+
+  @override
+  String get sideMenuExportData => 'Esporta i tuoi dati';
+
+  @override
+  String get exportDataSuccess => 'Esportazione pronta! Condividi il file.';
+
+  @override
+  String exportDataError(String error) {
+    return 'Errore durante l\'esportazione: $error';
+  }
+
+  @override
+  String get aiStudioTitle => 'Studio AI';
+
+  @override
+  String get aiStudioSubtitle =>
+      'Intelligenza cinematografica al tuo servizio.';
+
+  @override
+  String aiStudioTokensRemaining(int count) {
+    return '$count token rimanenti';
+  }
+
+  @override
+  String aiStudioInsufficientTokens(int cost) {
+    return 'Token insufficienti. Te ne servono $cost.';
+  }
+
+  @override
+  String aiStudioOpening(String name) {
+    return 'Apertura $name…';
+  }
+
+  @override
+  String get aiFeatureVaultSyncTitle => 'Vault Sync';
+
+  @override
+  String get aiFeatureVaultSyncDesc =>
+      'Incrocia i Vault di due utenti per trovare il titolo perfetto per la serata. Esclude automaticamente ciò che hai già visto.';
+
+  @override
+  String get aiFeatureVaultSyncBadge => 'Max 3 sincronizzazioni/settimana';
+
+  @override
+  String get aiFeatureWatchNowTitle => 'What to Watch NOW';
+
+  @override
+  String get aiFeatureWatchNowDesc =>
+      'Vuoi uno sci-fi su Netflix stasera? L\'IA incrocia i tuoi abbonamenti con i tuoi gusti e risolve la serata in secondi.';
+
+  @override
+  String get aiFeatureWatchNowBadge => 'Filtro streaming live';
+
+  @override
+  String get aiFeatureMoodTitle => 'Mood Mapper';
+
+  @override
+  String get aiFeatureMoodDesc =>
+      'Mappa le emozioni post-visione con cursori. Analisi del mood mensile con suggerimenti calibrati su di te.';
+
+  @override
+  String get aiFeatureMoodBadge => 'Analisi ultimo mese';
+
+  @override
+  String get aiFeatureShieldTitle => 'Scudo Spoiler';
+
+  @override
+  String get aiFeatureShieldDesc =>
+      'Protezione attiva in tempo reale. L\'IA blurra i post della community oltre il tuo punto di progresso.';
+
+  @override
+  String get aiFeatureShieldBadge => 'Protezione dinamica';
+
+  @override
+  String get aiFeatureMemoryTitle => 'Memory Forge';
+
+  @override
+  String get aiFeatureMemoryDesc =>
+      'Recap personalizzato della trama fino al punto esatto salvato nel Vault. Riprendi le saghe dimenticate senza spoiler.';
+
+  @override
+  String get aiFeatureMemoryBadge => 'Anti-amnesia';
+
+  @override
+  String get aiFeatureSceneTitle => 'Scene Correlation';
+
+  @override
+  String get aiFeatureSceneDesc =>
+      'Carica un frame o uno spezzone video: l\'IA identifica l\'opera e suggerisce titoli correlati per stile, regia e trama.';
+
+  @override
+  String get aiFeatureSceneBadge => 'Analisi visiva avanzata';
 }

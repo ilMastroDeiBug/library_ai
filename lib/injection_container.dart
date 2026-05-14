@@ -13,6 +13,9 @@ import 'package:library_ai/data/explore_repository_impl.dart';
 import 'package:library_ai/data/supabase_movie_repository_impl.dart';
 import 'package:library_ai/data/supabase_favorites_repository_impl.dart';
 import 'package:library_ai/data/supabase_review_repository_impl.dart';
+import 'package:library_ai/domain/repositories/ai_repository.dart';
+import 'package:library_ai/data/supabase_ai_repository_impl.dart';
+import 'package:library_ai/domain/use_cases/ai_use_cases.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
 import 'package:library_ai/domain/use_cases/explore_use_cases.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
@@ -21,6 +24,8 @@ import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
 import 'package:library_ai/domain/use_cases/review_use_cases.dart';
+import 'package:library_ai/domain/use_cases/import_letterboxd_use_case.dart';
+import 'package:library_ai/domain/use_cases/export_user_data_use_case.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 import 'package:library_ai/services/utility_services/network_status_service.dart';
 import 'package:library_ai/domain/repositories/actor_repository.dart';
@@ -116,6 +121,10 @@ Future<void> init() async {
   // USE CASES
   // =========================================================================
 
+  sl.registerLazySingleton<AiRepository>(
+    () => SupabaseAiRepositoryImpl(Supabase.instance.client),
+  );
+
   // Auth & User...
   sl.registerLazySingleton(() => LoginWithEmailUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
@@ -157,6 +166,17 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetMovieTrailerUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieWatchProvidersUseCase(sl()));
   sl.registerLazySingleton(() => GetSingleMovieUseCase(sl()));
+  sl.registerLazySingleton(() => ImportLetterboxdUseCase(
+        tmdbService: sl(),
+        saveMovieUseCase: sl(),
+        submitReviewUseCase: sl(),
+        toggleFavoriteUseCase: sl(),
+      ));
+  sl.registerLazySingleton(() => ExportUserDataUseCase(Supabase.instance.client));
+
+  // AI Use Cases...
+  sl.registerLazySingleton(() => GetAiTokensUseCase(sl()));
+  sl.registerLazySingleton(() => CallAiFunctionUseCase(sl()));
 
   // TV Series...
   sl.registerLazySingleton(() => GetTvSeriesByCategoryUseCase(sl()));

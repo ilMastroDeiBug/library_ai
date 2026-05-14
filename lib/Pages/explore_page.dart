@@ -6,6 +6,7 @@ import '../models/category_card.dart';
 import '../models/home_widgets/home_cinema_switcher.dart';
 import 'search_page.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
+import 'package:library_ai/models/login_widgets/cascading_background.dart';
 
 class ExplorePage extends StatefulWidget {
   final AppMode mode;
@@ -31,8 +32,11 @@ class _ExplorePageState extends State<ExplorePage> {
   bool get isTvSeries => _selectedCinemaType == CinemaType.tvSeries;
 
   String _getTitle(BuildContext context) {
-    if (widget.mode == AppMode.books) return AppLocalizations.of(context)!.exploreBooks;
-    return isTvSeries ? AppLocalizations.of(context)!.exploreTv : AppLocalizations.of(context)!.exploreCinema;
+    if (widget.mode == AppMode.books)
+      return AppLocalizations.of(context)!.exploreBooks;
+    return isTvSeries
+        ? AppLocalizations.of(context)!.exploreTv
+        : AppLocalizations.of(context)!.exploreCinema;
   }
 
   @override
@@ -51,20 +55,30 @@ class _ExplorePageState extends State<ExplorePage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Sfondo Logo (solo cinema/tv)
+          // Slow cover collage background (different order from login)
+          if (widget.mode != AppMode.books)
+            const Positioned.fill(
+              child: CascadingBackground(
+                speed1: 240,
+                speed2: 220,
+                speed3: 270,
+                speed4: 200,
+                indexOffset: 10, // Shifts cover order by 10 so it differs from login page
+              ),
+            ),
+          // Extra dark overlay to keep the grid subtle and non-distracting
           if (widget.mode != AppMode.books)
             Positioned.fill(
-              child: Opacity(
-                opacity: 0.2,
-                child: Align(
-                  alignment: const Alignment(
-                    0,
-                    -0.65,
-                  ), // Più in alto per stare "dietro" il titolo
-                  child: Image.asset(
-                    'assets/images/logoCine.png',
-                    width: MediaQuery.of(context).size.width * 0.8,
-                    fit: BoxFit.contain,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.70),
+                      Colors.black.withOpacity(0.50),
+                      Colors.black.withOpacity(0.72),
+                    ],
                   ),
                 ),
               ),
@@ -153,8 +167,12 @@ class _ExplorePageState extends State<ExplorePage> {
                               const SizedBox(width: 12),
                               Text(
                                 widget.mode == AppMode.books
-                                    ? AppLocalizations.of(context)!.searchBooksPaused
-                                    : AppLocalizations.of(context)!.searchPlaceholder,
+                                    ? AppLocalizations.of(
+                                        context,
+                                      )!.searchBooksPaused
+                                    : AppLocalizations.of(
+                                        context,
+                                      )!.searchPlaceholder,
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.3),
                                   fontSize: 15,

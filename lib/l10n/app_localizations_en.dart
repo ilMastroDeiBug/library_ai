@@ -851,4 +851,143 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeTitleRealityTalk => 'Reality & Talk';
+
+  @override
+  String get sideMenuDataPortability => 'DATA PORTABILITY';
+
+  @override
+  String get sideMenuImportLetterboxd => 'Import from Letterboxd';
+
+  @override
+  String get importLetterboxdLoginRequired =>
+      'You must be logged in to import data';
+
+  @override
+  String get importLetterboxdSuccess => 'Import completed successfully! 🎉';
+
+  @override
+  String importLetterboxdError(String error) {
+    return 'Error during import: $error';
+  }
+
+  @override
+  String get importLetterboxdTitle => 'Import from Letterboxd';
+
+  @override
+  String get importLetterboxdHeadline => 'Switch to CineShare in 30 seconds.';
+
+  @override
+  String get importLetterboxdSubtitle =>
+      'Your data belongs to you. Effortlessly import your cinematic history from Letterboxd.';
+
+  @override
+  String get importLetterboxdStep1 =>
+      'Go to Letterboxd.com > Settings > Export Data.';
+
+  @override
+  String get importLetterboxdStep2 => 'Extract the ZIP file they sent you.';
+
+  @override
+  String get importLetterboxdStep3 =>
+      'Upload the watched.csv, ratings.csv, or reviews.csv file here.';
+
+  @override
+  String importLetterboxdProgress(int processed, int total) {
+    return 'Importing... $processed / $total';
+  }
+
+  @override
+  String get importLetterboxdButton => 'Upload CSV file';
+
+  @override
+  String get sideMenuExportData => 'Export your data';
+
+  @override
+  String get exportDataSuccess => 'Export ready! Share the file.';
+
+  @override
+  String exportDataError(String error) {
+    return 'Error exporting data: $error';
+  }
+
+  @override
+  String get aiStudioTitle => 'AI Studio';
+
+  @override
+  String get aiStudioSubtitle => 'Cinematic intelligence at your service.';
+
+  @override
+  String aiStudioTokensRemaining(int count) {
+    return '$count tokens remaining';
+  }
+
+  @override
+  String aiStudioInsufficientTokens(int cost) {
+    return 'Not enough tokens. You need $cost.';
+  }
+
+  @override
+  String aiStudioOpening(String name) {
+    return 'Opening $name…';
+  }
+
+  @override
+  String get aiFeatureVaultSyncTitle => 'Vault Sync';
+
+  @override
+  String get aiFeatureVaultSyncDesc =>
+      'Cross two users\' Vaults to find the perfect title for the evening. Automatically excludes what you\'ve already seen.';
+
+  @override
+  String get aiFeatureVaultSyncBadge => 'Max 3 syncs/week';
+
+  @override
+  String get aiFeatureWatchNowTitle => 'What to Watch NOW';
+
+  @override
+  String get aiFeatureWatchNowDesc =>
+      'Want a sci-fi on Netflix tonight? The AI crosses your subscriptions with your taste and solves the evening in seconds.';
+
+  @override
+  String get aiFeatureWatchNowBadge => 'Live streaming filter';
+
+  @override
+  String get aiFeatureMoodTitle => 'Mood Mapper';
+
+  @override
+  String get aiFeatureMoodDesc =>
+      'Map post-viewing emotions with sliders. Monthly mood analysis with recommendations calibrated to you.';
+
+  @override
+  String get aiFeatureMoodBadge => 'Last month analysis';
+
+  @override
+  String get aiFeatureShieldTitle => 'Spoiler Shield';
+
+  @override
+  String get aiFeatureShieldDesc =>
+      'Active real-time protection. The AI blurs community posts beyond your current progress point.';
+
+  @override
+  String get aiFeatureShieldBadge => 'Dynamic protection';
+
+  @override
+  String get aiFeatureMemoryTitle => 'Memory Forge';
+
+  @override
+  String get aiFeatureMemoryDesc =>
+      'Personalized recap of the plot up to the exact point saved in your Vault. Resume forgotten sagas spoiler-free.';
+
+  @override
+  String get aiFeatureMemoryBadge => 'Anti-amnesia';
+
+  @override
+  String get aiFeatureSceneTitle => 'Scene Correlation';
+
+  @override
+  String get aiFeatureSceneDesc =>
+      'Upload a frame or video clip: the AI identifies the work and suggests related titles by style, direction and plot.';
+
+  @override
+  String get aiFeatureSceneBadge => 'Advanced visual analysis';
 }

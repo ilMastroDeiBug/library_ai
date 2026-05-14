@@ -8,208 +8,57 @@ import '../models/app_mode.dart';
 import '../models/movie_widget/cast_model.dart';
 import '../injection_container.dart';
 import '../services/utility_services/language_service.dart';
-
-// Use Cases
 import '../domain/use_cases/movie_use_cases.dart';
 import '../domain/use_cases/tv_series_use_cases.dart';
 import '../domain/use_cases/actor_use_cases.dart';
-
-// Pages
 import 'book_detail_page.dart';
 import 'movie_detail_page.dart';
 import 'actor_detail_page.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
-class SearchResultTile extends StatelessWidget {
-  final dynamic item;
-  final AppMode mode;
+// ─── ACCENT & PALETTE ────────────────────────────────────────────────────────
+const _kAccent = Color(0xFFFF9500); // amber-orange, <80% sat
+const _kBg = Color(0xFF0C0C0E);
+const _kSurface = Color(0xFF151518);
+const _kBorder = Color(0xFF242428);
+const _kText = Color(0xFFEFEFF0);
+const _kMuted = Color(0xFF6B6B72);
 
-  const SearchResultTile({super.key, required this.item, required this.mode});
-
-  @override
-  Widget build(BuildContext context) {
-    String title = "";
-    String subtitle = "";
-    String imageUrl = "";
-    IconData defaultIcon = Icons.movie;
-    VoidCallback onTap = () {};
-
-    // Estrazione Dati
-    if (item is Book) {
-      title = item.title;
-      subtitle = item.author;
-      imageUrl = item.thumbnailUrl;
-      defaultIcon = Icons.book;
-      onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => BookDetailPage(book: item)),
-      );
-    } else if (item is Movie) {
-      title = item.title;
-      subtitle = item.releaseDate.isNotEmpty
-          ? "${AppLocalizations.of(context)!.movies} • ${item.releaseDate.split('-')[0]}"
-          : AppLocalizations.of(context)!.movies;
-      imageUrl = item.fullPosterUrl;
-      defaultIcon = Icons.movie_creation_rounded;
-      onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
-      );
-    } else if (item is TvSeries) {
-      title = item.name;
-      subtitle = item.firstAirDate.isNotEmpty
-          ? "${AppLocalizations.of(context)!.tvSeries} • ${item.firstAirDate.split('-')[0]}"
-          : AppLocalizations.of(context)!.tvSeries;
-      imageUrl = item.fullPosterUrl;
-      defaultIcon = Icons.live_tv_rounded;
-      onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
-      );
-    } else if (item is CastMember) {
-      // GESTIONE ATTORI
-      title = item.name;
-      subtitle = item.character;
-      imageUrl = item.fullProfileUrl;
-      defaultIcon = Icons.person;
-      onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => ActorDetailPage(actorId: item.id)),
-      );
-    }
-
-    return InkWell(
-      onTap: onTap,
-      splashColor: Colors.white.withOpacity(0.1),
-      highlightColor: Colors.transparent,
-      child: Container(
-        color: Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          children: [
-            // LOCANDINA / FOTO PROFILO
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: imageUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      width: 70,
-                      height: 105,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        width: 70,
-                        height: 105,
-                        color: Colors.white.withOpacity(0.05),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.orangeAccent,
-                          ),
-                        ),
-                      ),
-                      errorWidget: (_, __, ___) =>
-                          _buildPlaceholder(defaultIcon),
-                    )
-                  : _buildPlaceholder(defaultIcon),
-            ),
-            const SizedBox(width: 16),
-
-            // TESTI
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      letterSpacing: 0.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-
-            // ICONA FRECCIA / PLAY
-            Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: Icon(
-                item is CastMember
-                    ? Icons.arrow_forward_ios_rounded
-                    : (mode == AppMode.books
-                          ? Icons.menu_book_rounded
-                          : Icons.play_circle_outline_rounded),
-                size: item is CastMember ? 18 : 32,
-                color: Colors.white54,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholder(IconData icon) {
-    return Container(
-      width: 70,
-      height: 105,
-      color: Colors.white.withOpacity(0.05),
-      child: Center(child: Icon(icon, color: Colors.white24, size: 30)),
-    );
-  }
-}
-
+// ─── SEARCH DELEGATE ─────────────────────────────────────────────────────────
 class UniversalSearchDelegate extends SearchDelegate {
   final AppMode mode;
-
   UniversalSearchDelegate({required this.mode});
 
   @override
   ThemeData appBarTheme(BuildContext context) {
-    final theme = Theme.of(context);
-    const activeColor = Colors.orangeAccent;
-
-    return theme.copyWith(
-      scaffoldBackgroundColor: Colors.black,
+    return Theme.of(context).copyWith(
+      scaffoldBackgroundColor: _kBg,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.black,
+        backgroundColor: _kBg,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: _kText),
       ),
       inputDecorationTheme: InputDecorationTheme(
         hintStyle: TextStyle(
-          color: Colors.white.withOpacity(0.4),
-          fontSize: 18,
+          color: _kMuted,
+          fontSize: 17,
+          fontWeight: FontWeight.w400,
+          letterSpacing: -0.2,
         ),
         border: InputBorder.none,
       ),
       textTheme: const TextTheme(
         titleLarge: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+          color: _kText,
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+          letterSpacing: -0.3,
         ),
       ),
-      textSelectionTheme: TextSelectionThemeData(
-        cursorColor: activeColor,
-        selectionColor: activeColor.withOpacity(0.3),
-        selectionHandleColor: activeColor,
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: _kAccent,
+        selectionColor: Color(0x55FF9500),
+        selectionHandleColor: _kAccent,
       ),
     );
   }
@@ -218,82 +67,61 @@ class UniversalSearchDelegate extends SearchDelegate {
   List<Widget>? buildActions(BuildContext context) {
     return [
       if (query.isNotEmpty)
-        IconButton(
-          icon: const Icon(Icons.clear_rounded, color: Colors.white54),
-          onPressed: () {
-            query = '';
-            showSuggestions(context);
-          },
+        _FadeIn(
+          child: GestureDetector(
+            onTap: () {
+              query = '';
+              showSuggestions(context);
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: _kSurface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _kBorder),
+              ),
+              child: const Icon(Icons.close_rounded, size: 16, color: _kMuted),
+            ),
+          ),
         ),
     ];
   }
 
   @override
   Widget? buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-      onPressed: () => close(context, null),
-    );
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    if (mode == AppMode.books) {
-      return _buildMessage(
-        Icons.auto_stories_rounded,
-        AppLocalizations.of(context)!.searchBooksDisabled,
-      );
-    }
-
-    return _DebouncedSearchList(
-      query: query,
-      mode: mode,
-      closeDelegate: (result) => close(context, result),
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    if (mode == AppMode.books) {
-      return _buildMessage(
-        Icons.auto_stories_rounded,
-        AppLocalizations.of(context)!.searchBooksDisabled,
-      );
-    }
-
-    return _DebouncedSearchList(
-      query: query,
-      mode: mode,
-      closeDelegate: (result) => close(context, result),
-    );
-  }
-
-  Widget _buildMessage(IconData icon, String text) {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 60, color: Colors.white.withOpacity(0.1)),
-            const SizedBox(height: 15),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 16,
-                height: 1.4,
-              ),
-            ),
-          ],
-        ),
+    return GestureDetector(
+      onTap: () => close(context, null),
+      child: const Padding(
+        padding: EdgeInsets.only(left: 16),
+        child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _kText),
       ),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) => _buildBody(context);
+
+  @override
+  Widget buildResults(BuildContext context) => _buildBody(context);
+
+  Widget _buildBody(BuildContext context) {
+    if (mode == AppMode.books) {
+      return _SearchEmptyState(
+        icon: Icons.auto_stories_rounded,
+        headline: 'Vault dei Libri',
+        sub: AppLocalizations.of(context)!.searchBooksDisabled,
+      );
+    }
+    return _DebouncedSearchList(
+      query: query,
+      mode: mode,
+      closeDelegate: (r) => close(context, r),
     );
   }
 }
 
-// --- GESTORE DEBOUNCE E LISTA ---
+// ─── DEBOUNCED SEARCH LIST ────────────────────────────────────────────────────
 class _DebouncedSearchList extends StatefulWidget {
   final String query;
   final AppMode mode;
@@ -309,22 +137,29 @@ class _DebouncedSearchList extends StatefulWidget {
   State<_DebouncedSearchList> createState() => _DebouncedSearchListState();
 }
 
-class _DebouncedSearchListState extends State<_DebouncedSearchList> {
+class _DebouncedSearchListState extends State<_DebouncedSearchList>
+    with TickerProviderStateMixin {
   Timer? _debounce;
   List<dynamic> _results = [];
   bool _isLoading = false;
-  String _lastSearchedQuery = "";
-  int _searchType = 0; // 0 = Media (Film/Serie), 1 = Attori
+  String _lastSearchedQuery = '';
+  int _searchType = 0;
 
-  StreamSubscription<List<Movie>>? _movieSearchSubscription;
-  StreamSubscription<List<TvSeries>>? _tvSearchSubscription;
-  StreamSubscription<List<CastMember>>? _actorSearchSubscription;
+  StreamSubscription<List<Movie>>? _movieSub;
+  StreamSubscription<List<TvSeries>>? _tvSub;
+  StreamSubscription<List<CastMember>>? _actorSub;
 
   final LanguageService _languageService = sl<LanguageService>();
+
+  late final AnimationController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
     _languageService.addListener(_handleLanguageChanged);
     _queueSearch();
   }
@@ -332,133 +167,124 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
   @override
   void didUpdateWidget(covariant _DebouncedSearchList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.query != widget.query) {
-      _queueSearch();
-    }
+    if (oldWidget.query != widget.query) _queueSearch();
+  }
+
+  @override
+  void dispose() {
+    _languageService.removeListener(_handleLanguageChanged);
+    _tabController.dispose();
+    _debounce?.cancel();
+    _movieSub?.cancel();
+    _tvSub?.cancel();
+    _actorSub?.cancel();
+    super.dispose();
+  }
+
+  void _handleLanguageChanged() {
+    _lastSearchedQuery = '';
+    _queueSearch();
   }
 
   void _queueSearch() {
-    final currentQuery = widget.query.trim();
-    if (currentQuery.length < 3) {
-      if (mounted) {
+    final q = widget.query.trim();
+    if (q.length < 3) {
+      if (mounted)
         setState(() {
           _results = [];
           _isLoading = false;
-          _lastSearchedQuery = "";
+          _lastSearchedQuery = '';
         });
-      }
       return;
     }
-
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-
-    _movieSearchSubscription?.cancel();
-    _tvSearchSubscription?.cancel();
-    _actorSearchSubscription?.cancel();
-
+    _movieSub?.cancel();
+    _tvSub?.cancel();
+    _actorSub?.cancel();
     setState(() => _isLoading = true);
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      _performSearch(currentQuery);
-    });
+    _debounce = Timer(
+      const Duration(milliseconds: 450),
+      () => _performSearch(q),
+    );
   }
 
-  void _performSearch(String queryStr) {
-    final requestKey =
-        '$queryStr::${_languageService.currentLanguage}::$_searchType';
-
-    if (requestKey == _lastSearchedQuery) {
+  void _performSearch(String q) {
+    final key = '$q::${_languageService.currentLanguage}::$_searchType';
+    if (key == _lastSearchedQuery) {
       setState(() => _isLoading = false);
       return;
     }
-
-    _lastSearchedQuery = requestKey;
-
+    _lastSearchedQuery = key;
     if (_searchType == 0) {
-      _listenToMediaSearch(queryStr);
+      _listenMedia(q);
     } else {
-      _listenToActorSearch(queryStr);
+      _listenActors(q);
     }
   }
 
-  void _listenToMediaSearch(String queryStr) {
-    List<Movie> latestMovies = [];
-    List<TvSeries> latestTv = [];
-    var hasMovieEmission = false;
-    var hasTvEmission = false;
+  void _listenMedia(String q) {
+    List<Movie> movies = [];
+    List<TvSeries> tv = [];
+    bool hasMov = false, hasTv = false;
 
-    // Funzione interna per combinare e ordinare i risultati dei due Stream
-    void publishCombinedResults() {
-      final combinedResults = <dynamic>[...latestMovies, ...latestTv];
-
-      combinedResults.sort((a, b) {
-        // Estrazione sicura della popolarità per evitare crash a runtime
-        double popA = 0.0;
-        double popB = 0.0;
-
-        if (a is Movie || a is TvSeries) {
-          popA = (a.popularity as num?)?.toDouble() ?? 0.0;
-        }
-        if (b is Movie || b is TvSeries) {
-          popB = (b.popularity as num?)?.toDouble() ?? 0.0;
-        }
-
-        return popB.compareTo(popA);
+    void publish() {
+      final combined = <dynamic>[...movies, ...tv];
+      combined.sort((a, b) {
+        final pA = (a is Movie || a is TvSeries)
+            ? ((a.popularity as num?)?.toDouble() ?? 0.0)
+            : 0.0;
+        final pB = (b is Movie || b is TvSeries)
+            ? ((b.popularity as num?)?.toDouble() ?? 0.0)
+            : 0.0;
+        return pB.compareTo(pA);
       });
-
-      if (mounted) {
+      if (mounted)
         setState(() {
-          _results = combinedResults;
+          _results = combined;
           _isLoading = false;
         });
-      }
     }
 
-    void handleDone() {
+    void done() {
       if (!mounted) return;
-      if (!hasMovieEmission && !hasTvEmission) {
+      if (!hasMov && !hasTv)
         setState(() {
           _results = [];
           _isLoading = false;
         });
-      }
     }
 
-    // Ci iscriviamo allo Stream dei film
-    _movieSearchSubscription = sl<SearchMoviesUseCase>()
-        .call(queryStr)
+    _movieSub = sl<SearchMoviesUseCase>()
+        .call(q)
         .listen(
-          (movies) {
-            hasMovieEmission = true;
-            latestMovies = movies;
-            publishCombinedResults();
+          (m) {
+            hasMov = true;
+            movies = m;
+            publish();
           },
-          onError: (_) => handleDone(),
-          onDone: handleDone,
+          onError: (_) => done(),
+          onDone: done,
         );
-
-    // Ci iscriviamo allo Stream delle Serie TV simultaneamente
-    _tvSearchSubscription = sl<SearchTvSeriesUseCase>()
-        .call(queryStr)
+    _tvSub = sl<SearchTvSeriesUseCase>()
+        .call(q)
         .listen(
-          (series) {
-            hasTvEmission = true;
-            latestTv = series;
-            publishCombinedResults();
+          (s) {
+            hasTv = true;
+            tv = s;
+            publish();
           },
-          onError: (_) => handleDone(),
-          onDone: handleDone,
+          onError: (_) => done(),
+          onDone: done,
         );
   }
 
-  void _listenToActorSearch(String queryStr) {
-    var hasEmission = false;
-
-    // Ci iscriviamo allo Stream degli Attori
-    _actorSearchSubscription = sl<SearchActorsUseCase>()
-        .call(queryStr)
+  void _listenActors(String q) {
+    bool hasEmit = false;
+    _actorSub = sl<SearchActorsUseCase>()
+        .call(q)
         .listen(
           (actors) {
-            hasEmission = true;
+            hasEmit = true;
             if (!mounted) return;
             setState(() {
               _results = actors;
@@ -466,11 +292,10 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
             });
           },
           onError: (_) {
-            if (!mounted) return;
-            setState(() => _isLoading = false);
+            if (mounted) setState(() => _isLoading = false);
           },
           onDone: () {
-            if (!mounted || hasEmission) return;
+            if (!mounted || hasEmit) return;
             setState(() {
               _results = [];
               _isLoading = false;
@@ -479,133 +304,581 @@ class _DebouncedSearchListState extends State<_DebouncedSearchList> {
         );
   }
 
-  @override
-  void dispose() {
-    _languageService.removeListener(_handleLanguageChanged);
-    _debounce?.cancel();
-    _movieSearchSubscription?.cancel();
-    _tvSearchSubscription?.cancel();
-    _actorSearchSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _handleLanguageChanged() {
-    _lastSearchedQuery = "";
+  void _switchTab(int index) {
+    if (_searchType == index) return;
+    setState(() {
+      _searchType = index;
+      _lastSearchedQuery = '';
+    });
     _queueSearch();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black,
+      color: _kBg,
       child: Column(
         children: [
-          _buildToggleButtons(),
-          Expanded(child: _buildBody()),
+          _SearchTabBar(selectedIndex: _searchType, onSelect: _switchTab),
+          Expanded(child: _buildContent()),
         ],
       ),
     );
   }
 
-  Widget _buildToggleButtons() {
+  Widget _buildContent() {
+    final q = widget.query.trim();
+
+    if (q.length < 3) {
+      return _SearchEmptyState(
+        icon: _searchType == 0
+            ? Icons.movie_filter_rounded
+            : Icons.person_search_rounded,
+        headline: _searchType == 0
+            ? AppLocalizations.of(context)!.searchMoviesTv
+            : AppLocalizations.of(context)!.searchActors,
+        sub: 'Digita almeno 3 caratteri per iniziare',
+      );
+    }
+
+    if (_isLoading) return const _SkeletonList();
+
+    if (_results.isEmpty) {
+      return _SearchEmptyState(
+        icon: Icons.search_off_rounded,
+        headline: AppLocalizations.of(context)!.noResultsFound,
+        sub: 'Prova con un titolo diverso o controlla l\'ortografia',
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 8, bottom: 100),
+      physics: const BouncingScrollPhysics(),
+      itemCount: _results.length,
+      itemBuilder: (context, index) {
+        return _StaggeredItem(
+          index: index,
+          child: _SearchResultTile(item: _results[index], mode: widget.mode),
+        );
+      },
+    );
+  }
+}
+
+// ─── TAB BAR ─────────────────────────────────────────────────────────────────
+class _SearchTabBar extends StatelessWidget {
+  final int selectedIndex;
+  final void Function(int) onSelect;
+
+  const _SearchTabBar({required this.selectedIndex, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(4),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      height: 40,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _kBorder),
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton(0, AppLocalizations.of(context)!.moviesAndTv)),
-          Expanded(child: _buildTabButton(1, AppLocalizations.of(context)!.actors)),
+          _TabChip(
+            label: l10n.moviesAndTv,
+            isSelected: selectedIndex == 0,
+            onTap: () => onSelect(0),
+          ),
+          _TabChip(
+            label: l10n.actors,
+            isSelected: selectedIndex == 1,
+            onTap: () => onSelect(1),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildTabButton(int index, String title) {
-    final isSelected = _searchType == index;
-    return GestureDetector(
-      onTap: () {
-        if (_searchType != index) {
-          setState(() {
-            _searchType = index;
-            _lastSearchedQuery = ""; // Forza nuova ricerca
-          });
-          _queueSearch();
-        }
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.orangeAccent : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? Colors.black : Colors.white70,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 13,
+class _TabChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TabChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: isSelected ? _kAccent : Colors.transparent,
+            borderRadius: BorderRadius.circular(7),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.black : _kMuted,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              fontSize: 13,
+              letterSpacing: -0.1,
+            ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildBody() {
-    if (widget.query.trim().length < 3) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+// ─── RESULT TILE ─────────────────────────────────────────────────────────────
+class _SearchResultTile extends StatefulWidget {
+  final dynamic item;
+  final AppMode mode;
+
+  const _SearchResultTile({required this.item, required this.mode});
+
+  @override
+  State<_SearchResultTile> createState() => _SearchResultTileState();
+}
+
+class _SearchResultTileState extends State<_SearchResultTile> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    String title = '', subtitle = '', imageUrl = '';
+    IconData defaultIcon = Icons.movie_rounded;
+    VoidCallback onTap = () {};
+    bool isActor = false;
+    String? year;
+    String typeLabel = '';
+
+    if (item is Book) {
+      title = item.title;
+      subtitle = item.author;
+      imageUrl = item.thumbnailUrl;
+      defaultIcon = Icons.auto_stories_rounded;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => BookDetailPage(book: item)),
+      );
+    } else if (item is Movie) {
+      title = item.title;
+      year = item.releaseDate.isNotEmpty
+          ? item.releaseDate.split('-')[0]
+          : null;
+      typeLabel = AppLocalizations.of(context)!.movies;
+      subtitle = year != null ? '$typeLabel · $year' : typeLabel;
+      imageUrl = item.fullPosterUrl;
+      defaultIcon = Icons.movie_creation_rounded;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
+      );
+    } else if (item is TvSeries) {
+      title = item.name;
+      year = item.firstAirDate.isNotEmpty
+          ? item.firstAirDate.split('-')[0]
+          : null;
+      typeLabel = AppLocalizations.of(context)!.tvSeries;
+      subtitle = year != null ? '$typeLabel · $year' : typeLabel;
+      imageUrl = item.fullPosterUrl;
+      defaultIcon = Icons.live_tv_rounded;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MovieDetailPage(media: item)),
+      );
+    } else if (item is CastMember) {
+      title = item.name;
+      subtitle = item.character.isNotEmpty ? item.character : 'Attore';
+      imageUrl = item.fullProfileUrl;
+      defaultIcon = Icons.person_rounded;
+      isActor = true;
+      onTap = () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ActorDetailPage(actorId: item.id)),
+      );
+    }
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.975 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _pressed ? _kSurface : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _pressed ? _kBorder : Colors.transparent),
+          ),
+          child: Row(
+            children: [
+              // ── Poster / Avatar
+              _PosterThumbnail(
+                imageUrl: imageUrl,
+                icon: defaultIcon,
+                isActor: isActor,
+              ),
+              const SizedBox(width: 14),
+
+              // ── Text block
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: _kText,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        letterSpacing: -0.2,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: _kMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Trailing chevron
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: _kBorder,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── POSTER THUMBNAIL ─────────────────────────────────────────────────────────
+class _PosterThumbnail extends StatelessWidget {
+  final String imageUrl;
+  final IconData icon;
+  final bool isActor;
+
+  const _PosterThumbnail({
+    required this.imageUrl,
+    required this.icon,
+    required this.isActor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double w = isActor ? 52 : 50;
+    final double h = isActor ? 52 : 74;
+    final radius = isActor
+        ? BorderRadius.circular(26)
+        : BorderRadius.circular(8);
+
+    Widget placeholder = Container(
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: radius,
+        border: Border.all(color: _kBorder),
+      ),
+      child: Icon(icon, color: _kMuted, size: 20),
+    );
+
+    if (imageUrl.isEmpty) return placeholder;
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: CachedNetworkImage(
+        imageUrl: imageUrl,
+        width: w,
+        height: h,
+        fit: BoxFit.cover,
+        placeholder: (context, url) =>
+            _ShimmerBox(width: w, height: h, radius: radius),
+        errorWidget: (context, url, error) => placeholder,
+      ),
+    );
+  }
+}
+
+// ─── SKELETON LOADER ──────────────────────────────────────────────────────────
+class _SkeletonList extends StatelessWidget {
+  const _SkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 8),
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 7,
+      itemBuilder: (_, i) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        child: Row(
           children: [
-            Icon(
-              Icons.search_rounded,
-              size: 80,
-              color: Colors.white.withOpacity(0.05),
+            _ShimmerBox(
+              width: 50,
+              height: 74,
+              radius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 16),
-            Text(
-              _searchType == 0 ? AppLocalizations.of(context)!.searchMoviesTv : AppLocalizations.of(context)!.searchActors,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.3),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ShimmerBox(
+                    width: double.infinity,
+                    height: 14,
+                    radius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: 8),
+                  _ShimmerBox(
+                    width: 100,
+                    height: 11,
+                    radius: BorderRadius.circular(4),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      );
-    }
-
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: Colors.orangeAccent,
-        ),
-      );
-    }
-
-    if (_results.isEmpty) {
-      return Center(
-        child: Text(
-          AppLocalizations.of(context)!.noResultsFound,
-          style: TextStyle(color: Colors.white.withOpacity(0.5)),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      physics: const BouncingScrollPhysics(),
-      itemCount: _results.length,
-      itemBuilder: (context, index) {
-        return SearchResultTile(item: _results[index], mode: widget.mode);
-      },
+      ),
     );
+  }
+}
+
+class _ShimmerBox extends StatefulWidget {
+  final double width;
+  final double height;
+  final BorderRadius radius;
+
+  const _ShimmerBox({
+    required this.width,
+    required this.height,
+    required this.radius,
+  });
+
+  @override
+  State<_ShimmerBox> createState() => _ShimmerBoxState();
+}
+
+class _ShimmerBoxState extends State<_ShimmerBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, child) => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          borderRadius: widget.radius,
+          color: Color.lerp(
+            const Color(0xFF1A1A1E),
+            const Color(0xFF2C2C32),
+            _anim.value,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── EMPTY STATE ─────────────────────────────────────────────────────────────
+class _SearchEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String headline;
+  final String sub;
+
+  const _SearchEmptyState({
+    required this.icon,
+    required this.headline,
+    required this.sub,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _kBg,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: _kSurface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _kBorder),
+                ),
+                child: Icon(icon, size: 32, color: _kMuted),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                headline,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _kText,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.3,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                sub,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _kMuted,
+                  fontSize: 13,
+                  height: 1.5,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── STAGGERED REVEAL ────────────────────────────────────────────────────────
+class _StaggeredItem extends StatefulWidget {
+  final int index;
+  final Widget child;
+
+  const _StaggeredItem({required this.index, required this.child});
+
+  @override
+  State<_StaggeredItem> createState() => _StaggeredItemState();
+}
+
+class _StaggeredItemState extends State<_StaggeredItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+
+    Future.delayed(Duration(milliseconds: 30 * widget.index.clamp(0, 12)), () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: SlideTransition(position: _slide, child: widget.child),
+    );
+  }
+}
+
+// ─── FADE IN ─────────────────────────────────────────────────────────────────
+class _FadeIn extends StatefulWidget {
+  final Widget child;
+  const _FadeIn({required this.child});
+
+  @override
+  State<_FadeIn> createState() => _FadeInState();
+}
+
+class _FadeInState extends State<_FadeIn> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(opacity: _ctrl, child: widget.child);
   }
 }

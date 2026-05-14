@@ -1735,6 +1735,240 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Reality & Talk'**
   String get homeTitleRealityTalk;
+
+  /// No description provided for @sideMenuDataPortability.
+  ///
+  /// In it, this message translates to:
+  /// **'PORTABILITÀ DATI'**
+  String get sideMenuDataPortability;
+
+  /// No description provided for @sideMenuImportLetterboxd.
+  ///
+  /// In it, this message translates to:
+  /// **'Importa da Letterboxd'**
+  String get sideMenuImportLetterboxd;
+
+  /// No description provided for @importLetterboxdLoginRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Devi essere loggato per importare i dati'**
+  String get importLetterboxdLoginRequired;
+
+  /// No description provided for @importLetterboxdSuccess.
+  ///
+  /// In it, this message translates to:
+  /// **'Importazione completata con successo! 🎉'**
+  String get importLetterboxdSuccess;
+
+  /// No description provided for @importLetterboxdError.
+  ///
+  /// In it, this message translates to:
+  /// **'Errore durante l\'importazione: {error}'**
+  String importLetterboxdError(String error);
+
+  /// No description provided for @importLetterboxdTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Importa da Letterboxd'**
+  String get importLetterboxdTitle;
+
+  /// No description provided for @importLetterboxdHeadline.
+  ///
+  /// In it, this message translates to:
+  /// **'Passa a CineShare in 30 secondi.'**
+  String get importLetterboxdHeadline;
+
+  /// No description provided for @importLetterboxdSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'I tuoi dati ti appartengono. Importa la tua storia cinematografica da Letterboxd senza sforzo.'**
+  String get importLetterboxdSubtitle;
+
+  /// No description provided for @importLetterboxdStep1.
+  ///
+  /// In it, this message translates to:
+  /// **'Vai su Letterboxd.com > Settings > Export Data.'**
+  String get importLetterboxdStep1;
+
+  /// No description provided for @importLetterboxdStep2.
+  ///
+  /// In it, this message translates to:
+  /// **'Estrai il file ZIP che ti hanno mandato.'**
+  String get importLetterboxdStep2;
+
+  /// No description provided for @importLetterboxdStep3.
+  ///
+  /// In it, this message translates to:
+  /// **'Carica il file watched.csv, ratings.csv o reviews.csv qui.'**
+  String get importLetterboxdStep3;
+
+  /// No description provided for @importLetterboxdProgress.
+  ///
+  /// In it, this message translates to:
+  /// **'Importazione in corso... {processed} / {total}'**
+  String importLetterboxdProgress(int processed, int total);
+
+  /// No description provided for @importLetterboxdButton.
+  ///
+  /// In it, this message translates to:
+  /// **'Carica il file CSV'**
+  String get importLetterboxdButton;
+
+  /// No description provided for @sideMenuExportData.
+  ///
+  /// In it, this message translates to:
+  /// **'Esporta i tuoi dati'**
+  String get sideMenuExportData;
+
+  /// No description provided for @exportDataSuccess.
+  ///
+  /// In it, this message translates to:
+  /// **'Esportazione pronta! Condividi il file.'**
+  String get exportDataSuccess;
+
+  /// No description provided for @exportDataError.
+  ///
+  /// In it, this message translates to:
+  /// **'Errore durante l\'esportazione: {error}'**
+  String exportDataError(String error);
+
+  /// No description provided for @aiStudioTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Studio AI'**
+  String get aiStudioTitle;
+
+  /// No description provided for @aiStudioSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Intelligenza cinematografica al tuo servizio.'**
+  String get aiStudioSubtitle;
+
+  /// No description provided for @aiStudioTokensRemaining.
+  ///
+  /// In it, this message translates to:
+  /// **'{count} token rimanenti'**
+  String aiStudioTokensRemaining(int count);
+
+  /// No description provided for @aiStudioInsufficientTokens.
+  ///
+  /// In it, this message translates to:
+  /// **'Token insufficienti. Te ne servono {cost}.'**
+  String aiStudioInsufficientTokens(int cost);
+
+  /// No description provided for @aiStudioOpening.
+  ///
+  /// In it, this message translates to:
+  /// **'Apertura {name}…'**
+  String aiStudioOpening(String name);
+
+  /// No description provided for @aiFeatureVaultSyncTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Vault Sync'**
+  String get aiFeatureVaultSyncTitle;
+
+  /// No description provided for @aiFeatureVaultSyncDesc.
+  ///
+  /// In it, this message translates to:
+  /// **'Incrocia i Vault di due utenti per trovare il titolo perfetto per la serata. Esclude automaticamente ciò che hai già visto.'**
+  String get aiFeatureVaultSyncDesc;
+
+  /// No description provided for @aiFeatureVaultSyncBadge.
+  ///
+  /// In it, this message translates to:
+  /// **'Max 3 sincronizzazioni/settimana'**
+  String get aiFeatureVaultSyncBadge;
+
+  /// No description provided for @aiFeatureWatchNowTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'What to Watch NOW'**
+  String get aiFeatureWatchNowTitle;
+
+  /// No description provided for @aiFeatureWatchNowDesc.
+  ///
+  /// In it, this message translates to:
+  /// **'Vuoi uno sci-fi su Netflix stasera? L\'IA incrocia i tuoi abbonamenti con i tuoi gusti e risolve la serata in secondi.'**
+  String get aiFeatureWatchNowDesc;
+
+  /// No description provided for @aiFeatureWatchNowBadge.
+  ///
+  /// In it, this message translates to:
+  /// **'Filtro streaming live'**
+  String get aiFeatureWatchNowBadge;
+
+  /// No description provided for @aiFeatureMoodTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Mood Mapper'**
+  String get aiFeatureMoodTitle;
+
+  /// No description provided for @aiFeatureMoodDesc.
+  ///
+  /// In it, this message translates to:
+  /// **'Mappa le emozioni post-visione con cursori. Analisi del mood mensile con suggerimenti calibrati su di te.'**
+  String get aiFeatureMoodDesc;
+
+  /// No description provided for @aiFeatureMoodBadge.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi ultimo mese'**
+  String get aiFeatureMoodBadge;
+
+  /// No description provided for @aiFeatureShieldTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Scudo Spoiler'**
+  String get aiFeatureShieldTitle;
+
+  /// No description provided for @aiFeatureShieldDesc.
+  ///
+  /// In it, this message translates to:
+  /// **'Protezione attiva in tempo reale. L\'IA blurra i post della community oltre il tuo punto di progresso.'**
+  String get aiFeatureShieldDesc;
+
+  /// No description provided for @aiFeatureShieldBadge.
+  ///
+  /// In it, this message translates to:
+  /// **'Protezione dinamica'**
+  String get aiFeatureShieldBadge;
+
+  /// No description provided for @aiFeatureMemoryTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Memory Forge'**
+  String get aiFeatureMemoryTitle;
+
+  /// No description provided for @aiFeatureMemoryDesc.
+  ///
+  /// In it, this message translates to:
+  /// **'Recap personalizzato della trama fino al punto esatto salvato nel Vault. Riprendi le saghe dimenticate senza spoiler.'**
+  String get aiFeatureMemoryDesc;
+
+  /// No description provided for @aiFeatureMemoryBadge.
+  ///
+  /// In it, this message translates to:
+  /// **'Anti-amnesia'**
+  String get aiFeatureMemoryBadge;
+
+  /// No description provided for @aiFeatureSceneTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Scene Correlation'**
+  String get aiFeatureSceneTitle;
+
+  /// No description provided for @aiFeatureSceneDesc.
+  ///
+  /// In it, this message translates to:
+  /// **'Carica un frame o uno spezzone video: l\'IA identifica l\'opera e suggerisce titoli correlati per stile, regia e trama.'**
+  String get aiFeatureSceneDesc;
+
+  /// No description provided for @aiFeatureSceneBadge.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi visiva avanzata'**
+  String get aiFeatureSceneBadge;
 }
 
 class _AppLocalizationsDelegate

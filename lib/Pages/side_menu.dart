@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
-import 'package:library_ai/Pages/about_page.dart'; // Aggiusta il path se necessario
+import 'package:library_ai/Pages/about_page.dart';
+import 'package:library_ai/Pages/import_letterboxd_page.dart';
+import 'package:library_ai/domain/use_cases/export_user_data_use_case.dart';
 import '../../models/app_mode.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
@@ -123,6 +125,66 @@ class SideMenu extends StatelessWidget {
                                         builder: (context) => const AboutPage(),
                                       ),
                                     );
+                                  },
+                                ),
+                                const SizedBox(height: 30),
+                                _buildSectionLabel(AppLocalizations.of(context)!.sideMenuDataPortability),
+                                const SizedBox(height: 10),
+                                SideMenuItem(
+                                  icon: Icons.file_download_outlined,
+                                  text: AppLocalizations.of(context)!.sideMenuImportLetterboxd,
+                                  isSelected: false,
+                                  activeColor: _brandColor,
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const ImportLetterboxdPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                SideMenuItem(
+                                  icon: Icons.upload_file_outlined,
+                                  text: AppLocalizations.of(context)!.sideMenuExportData,
+                                  isSelected: false,
+                                  activeColor: _brandColor,
+                                  onTap: () async {
+                                    final currentUser = sl<AuthRepository>().currentUser;
+                                    if (currentUser == null) return;
+                                    
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (context) => const Center(
+                                        child: CircularProgressIndicator(color: Colors.orangeAccent),
+                                      ),
+                                    );
+                                    
+                                    try {
+                                      await sl<ExportUserDataUseCase>().call(currentUser.id);
+                                      if (context.mounted) {
+                                        Navigator.pop(context); // chiudi caricamento
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(AppLocalizations.of(context)!.exportDataSuccess),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        Navigator.pop(context); // chiudi caricamento
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(AppLocalizations.of(context)!.exportDataError(e.toString())),
+                                            backgroundColor: Colors.redAccent,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                 ),
                               ],

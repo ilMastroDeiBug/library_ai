@@ -72,6 +72,25 @@ class TmdbService {
     );
   }
 
+  Future<Movie?> searchMovieByTitleAndYear(String title, [String? year]) async {
+    String urlStr = '$_baseUrl/search/movie?query=${Uri.encodeQueryComponent(title)}&language=$_language&page=1';
+    if (year != null && year.isNotEmpty) {
+      urlStr += '&primary_release_year=$year';
+    }
+    
+    try {
+      final response = await _client.get(Uri.parse(urlStr), headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final results = data['results'] as List?;
+        if (results != null && results.isNotEmpty) {
+          return Movie.fromTmdb(Map<String, dynamic>.from(results.first));
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   // --- SERIE TV ---
   Stream<List<TvSeries>> fetchTvSeriesByCategory(
     String endpoint, {
