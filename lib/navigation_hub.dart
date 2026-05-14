@@ -28,11 +28,22 @@ class _NavigationHubState extends State<NavigationHub> {
   // IL NOTIFIER: Segnala alle pagine un "doppio tap" sulla barra
   final ValueNotifier<int> _reselectNotifier = ValueNotifier<int>(0);
 
+  // ── Lazy-build tracking ─────────────────────────────────────────────────────
+  // Pages are only built when visited for the first time.
+  // After that they stay alive (Offstage) and their tickers are paused when
+  // hidden (TickerMode disabled) to save CPU / GPU on non-visible pages.
+  final Set<int> _builtMediaPages = {0}; // Home is always built at start
+  final Set<int> _builtSocialPages = {};
+
   void _changeMode(AppMode newMode) {
     setState(() {
       _currentMode = newMode;
       _isSocialActive = false;
       _selectedIndex = 0;
+      // Reset lazy tracking so pages rebuild with the new mode
+      _builtMediaPages
+        ..clear()
+        ..add(0);
     });
   }
 
@@ -40,71 +51,111 @@ class _NavigationHubState extends State<NavigationHub> {
     setState(() {
       _isSocialActive = true;
       _selectedIndex = 0;
+      _builtSocialPages.add(0);
     });
   }
 
   void _onBottomNavTap(int index) {
     if (_selectedIndex == index) {
-      // Magia: Utente ha tappato sull'icona dove si trova già. Lanciamo l'evento!
       _reselectNotifier.value = DateTime.now().millisecondsSinceEpoch;
     } else {
-      setState(() => _selectedIndex = index);
+      setState(() {
+        _selectedIndex = index;
+        // Mark this page as built so it won't be skipped next time
+        if (_isSocialActive) {
+          _builtSocialPages.add(index);
+        } else {
+          _builtMediaPages.add(index);
+        }
+      });
     }
   }
 
-  List<Widget> _buildMediaPages() {
-    return [
-      HomePage(
-        mode: _currentMode,
-        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-        reselectNotifier: _reselectNotifier, // Passato in modo invisibile!
-      ),
-      LibraryPage(
-        mode: _currentMode,
-        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-      ),
-      ExplorePage(
-        mode: _currentMode,
-        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-      ),
-      const StudioAIPage(),
-
-    ];
+  // ── Page factories (called fresh; lazy wrapper handles caching) ─────────────
+  Widget _mediaPageAt(int index) {
+    switch (index) {
+      case 0:
+        return HomePage(
+          mode: _currentMode,
+          onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+          reselectNotifier: _reselectNotifier,
+        );
+      case 1:
+        return LibraryPage(
+          mode: _currentMode,
+          onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+        );
+      case 2:
+        return ExplorePage(
+          mode: _currentMode,
+          onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+        );
+      case 3:
+        return const StudioAIPage();
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
-  List<Widget> _buildSocialPages() {
-    return const [
-      Center(
-        child: Text("Feed Social", style: TextStyle(color: Colors.white)),
+  Widget _socialPageAt(int index) {
+    const labels = ['Feed Social', 'Amici', 'Messaggi', 'Profilo Social'];
+    return Center(
+      child: Text(
+        labels[index],
+        style: const TextStyle(color: Colors.white),
       ),
-      Center(
-        child: Text("Amici", style: TextStyle(color: Colors.white)),
-      ),
-      Center(
-        child: Text("Messaggi", style: TextStyle(color: Colors.white)),
-      ),
-      Center(
-        child: Text("Profilo Social", style: TextStyle(color: Colors.white)),
-      ),
-    ];
+    );
+  }
+
+  /// Builds a lazy stack: pages that have never been visited are skipped
+  /// (SizedBox.shrink). Pages visited at least once are kept alive with
+  /// Offstage. TickerMode pauses all animation controllers on hidden tabs.
+  Widget _buildLazyStack({
+    required int count,
+    required int selected,
+    required Set<int> built,
+    required Widget Function(int) pageBuilder,
+  }) {
+    return Stack(
+      children: List.generate(count, (i) {
+        final isActive = i == selected;
+
+        // Never-visited pages: render nothing (zero cost)
+        if (!built.contains(i)) return const SizedBox.shrink();
+
+        return Offstage(
+          offstage: !isActive,
+          child: TickerMode(
+            // Disables ALL AnimationControllers on non-visible pages
+            enabled: isActive,
+            child: pageBuilder(i),
+          ),
+        );
+      }),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isMedia = !_isSocialActive;
+    final pageCount = isMedia ? 4 : 4;
+    final built = isMedia ? _builtMediaPages : _builtSocialPages;
+
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.black, // Sfondo base nero
-      extendBody:
-          true, // Permette alla lista di scorrere sotto la barra fluttuante
+      backgroundColor: Colors.black,
+      extendBody: true,
       drawer: SideMenu(
         currentMode: _currentMode,
         isSocialActive: _isSocialActive,
         onModeChanged: _changeMode,
         onSocialTap: _toggleSocial,
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _isSocialActive ? _buildSocialPages() : _buildMediaPages(),
+      body: _buildLazyStack(
+        count: pageCount,
+        selected: _selectedIndex,
+        built: built,
+        pageBuilder: isMedia ? _mediaPageAt : _socialPageAt,
       ),
       bottomNavigationBar: _isSocialActive
           ? SocialBottomBar(

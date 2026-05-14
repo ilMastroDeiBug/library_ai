@@ -122,8 +122,8 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 2.0,
-                  fontSize: 16,
+                  letterSpacing: -0.5,
+                  fontSize: 18,
                 ),
               ),
               const SizedBox(height: 20),
@@ -149,38 +149,41 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                         duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Colors.orangeAccent.withOpacity(0.2)
-                              : Colors.white.withOpacity(0.05),
-                          shape: BoxShape.circle,
+                              ? Colors.orangeAccent.withOpacity(0.1)
+                              : Colors.white.withOpacity(0.02),
+                          borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: isSelected
                                 ? Colors.orangeAccent
-                                : Colors.transparent,
-                            width: 3,
+                                : Colors.white.withOpacity(0.05),
+                            width: isSelected ? 2 : 1,
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: Colors.orangeAccent.withOpacity(0.4),
-                                    blurRadius: 15,
+                                    color: Colors.orangeAccent.withOpacity(0.2),
+                                    blurRadius: 20,
+                                    spreadRadius: -5,
                                   ),
                                 ]
                               : [],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: CachedNetworkImage(
-                            imageUrl: url,
-                            // Gestione errori per non far crashare l'app se manca la rete
-                            errorWidget: (context, url, error) =>
-                                const Icon(
-                                  Icons.wifi_off_rounded,
-                                  color: Colors.white38,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10.0),
+                            child: CachedNetworkImage(
+                              imageUrl: url,
+                              errorWidget: (context, url, error) =>
+                                  const Icon(
+                                    Icons.wifi_off_rounded,
+                                    color: Colors.white38,
+                                  ),
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.orangeAccent,
                                 ),
-                            placeholder: (context, url) => const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.orangeAccent,
                               ),
                             ),
                           ),
@@ -191,23 +194,30 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                 ),
               ),
 
-              // TASTO SALVA
+              // TASTO SALVA (Pill shape, Liquid Glass feel)
               Padding(
                 padding: const EdgeInsets.all(24.0),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orangeAccent,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 10,
-                      shadowColor: Colors.orangeAccent.withOpacity(0.5),
+                child: GestureDetector(
+                  onTap: _isSaving ? null : _saveAvatar,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: double.infinity,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      color: _isSaving 
+                          ? Colors.orangeAccent.withOpacity(0.5)
+                          : Colors.orangeAccent,
+                      borderRadius: BorderRadius.circular(100),
+                      boxShadow: [
+                        if (!_isSaving)
+                          BoxShadow(
+                            color: Colors.orangeAccent.withOpacity(0.25),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                      ],
                     ),
-                    onPressed: _isSaving ? null : _saveAvatar,
+                    alignment: Alignment.center,
                     child: _isSaving
                         ? const SizedBox(
                             height: 20,
@@ -220,9 +230,10 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                         : Text(
                             AppLocalizations.of(context)!.settingsSaveAvatar,
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1.5,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              letterSpacing: 0.5,
                             ),
                           ),
                   ),

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import 'package:library_ai/domain/use_cases/auth_use_cases.dart';
-import 'package:library_ai/domain/use_cases/user_cases.dart'; // Contiene UpdateNameUseCase
+import 'package:library_ai/domain/use_cases/user_cases.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/services/utility_services/language_service.dart';
 
@@ -12,7 +12,6 @@ import '../models/settings_widgets/settings_header.dart';
 import '../models/settings_widgets/settings_tile.dart';
 import '../models/settings_widgets/edit_profile_dialogs.dart';
 import '../models/settings_widgets/delete_account_dialog.dart';
-// IMPORT DEL NUOVO POPUP DEGLI AVATAR
 import '../models/settings_widgets/avatar_selection_sheet.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
@@ -27,12 +26,10 @@ class _SettingsPageState extends State<SettingsPage> {
   AppUser? _currentUser;
   bool _isLoading = true;
 
-  // PALETTE UFFICIALE CINELIB
+  // PREMIUM PALETTE
   static const Color _brandColor = Colors.orangeAccent;
-  static const Color _bgColor = Colors.black; // Nero Puro OLED
-  static const Color _surfaceColor = Color(
-    0xFF1A1A1A,
-  ); // Card leggermente staccate dal fondo
+  static const Color _bgColor = Color(0xFF09090B); // Zinc-950 instead of pure black
+  static const Color _surfaceColor = Colors.transparent;
 
   @override
   void initState() {
@@ -122,8 +119,9 @@ class _SettingsPageState extends State<SettingsPage> {
       isScrollControlled: true,
       builder: (context) => Container(
         decoration: BoxDecoration(
-          color: _surfaceColor.withOpacity(0.95),
+          color: const Color(0xFF161618).withOpacity(0.95),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.8),
@@ -155,8 +153,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                      fontSize: 16,
+                      letterSpacing: -0.5,
+                      fontSize: 18,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -204,12 +202,12 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isSelected
-                  ? _brandColor.withOpacity(0.15)
-                  : Colors.white.withOpacity(0.03),
+                  ? _brandColor.withOpacity(0.12)
+                  : Colors.white.withOpacity(0.02),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected
-                    ? _brandColor.withOpacity(0.5)
+                    ? _brandColor.withOpacity(0.3)
                     : Colors.white.withOpacity(0.05),
               ),
             ),
@@ -223,9 +221,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(
                       color: isSelected ? Colors.white : Colors.white70,
                       fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w600,
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       fontSize: 16,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ),
@@ -251,23 +250,25 @@ class _SettingsPageState extends State<SettingsPage> {
       );
     }
 
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: _bgColor,
       body: Stack(
         children: [
-          // Effetto Glowing Orb
+          // Subtle Glowing Orb - Less saturated, more blurred (Liquid Glass aesthetic)
           Positioned(
-            top: -100,
-            right: -100,
+            top: -150,
+            left: -100, // Asymmetric placement
             child: Container(
-              width: 300,
-              height: 300,
+              width: 400,
+              height: 400,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _brandColor.withOpacity(0.1),
+                color: _brandColor.withOpacity(0.06),
               ),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                filter: ImageFilter.blur(sigmaX: 120, sigmaY: 120),
                 child: Container(color: Colors.transparent),
               ),
             ),
@@ -276,40 +277,42 @@ class _SettingsPageState extends State<SettingsPage> {
           CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              SliverAppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                pinned: true,
-                centerTitle: true,
-                expandedHeight: 80,
-                flexibleSpace: FlexibleSpaceBar(
-                  titlePadding: const EdgeInsets.only(bottom: 16),
-                  centerTitle: true,
-                  title: Text(
-                    AppLocalizations.of(context)!.settingsProfileTitle,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      letterSpacing: 2,
-                    ),
+              // No App Bar. Using SliverToBoxAdapter for a more editorial look
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, topPadding + 20, 20, 20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.03),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Text(
+                        AppLocalizations.of(context)!.settingsProfileTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1.0,
+                          height: 1.0,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                leading: IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                  onPressed: () => Navigator.pop(context),
                 ),
               ),
 
@@ -326,7 +329,6 @@ class _SettingsPageState extends State<SettingsPage> {
                             AppLocalizations.of(context)!.settingsNoBio,
                         onPhotoTap: () {
                           if (_currentUser == null) return;
-                          // Lancia il popup di selezione avatar integrato
                           showModalBottomSheet(
                             context: context,
                             backgroundColor: Colors.transparent,
@@ -335,7 +337,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               userId: _currentUser!.id,
                               currentAvatarUrl: _currentUser?.photoUrl,
                               onAvatarUpdated: () {
-                                _loadData(); // Ricarica la UI quando l'avatar viene salvato
+                                _loadData();
                               },
                             ),
                           );
@@ -344,26 +346,22 @@ class _SettingsPageState extends State<SettingsPage> {
 
                       const SizedBox(height: 40),
 
-                      _buildSectionTitle(AppLocalizations.of(context)!.settingsExperience, Icons.tune_rounded),
+                      _buildSectionTitle(AppLocalizations.of(context)!.settingsExperience),
                       _buildSettingsGroup([
                         SettingsTile(
-                          icon: Icons.translate_rounded,
+                          icon: Icons.language_rounded,
                           title: AppLocalizations.of(context)!.settingsContentLanguage,
                           subtitle:
                               "${AppLocalizations.of(context)!.settingsCurrently} ${_getLanguageName(sl<LanguageService>().currentLanguage)}",
                           onTap: _showLanguagePicker,
-                          isTop: true,
                           isBottom: true,
                           iconColor: Colors.blueAccent,
                         ),
                       ]),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 40),
 
-                      _buildSectionTitle(
-                        AppLocalizations.of(context)!.settingsAccountManagement,
-                        Icons.manage_accounts_rounded,
-                      ),
+                      _buildSectionTitle(AppLocalizations.of(context)!.settingsAccountManagement),
                       _buildSettingsGroup([
                         SettingsTile(
                           icon: Icons.badge_rounded,
@@ -371,15 +369,13 @@ class _SettingsPageState extends State<SettingsPage> {
                           subtitle:
                               _currentUser?.displayName ??
                               AppLocalizations.of(context)!.settingsTapToSet,
-                          isTop: true,
-                          iconColor: Colors.orange,
+                          iconColor: Colors.orangeAccent,
                           onTap: () {
                             if (_currentUser == null) return;
                             EditProfileDialogs.showNameDialog(
                               context,
                               _currentUser?.displayName,
                               (name) => sl<UpdateNameUseCase>()
-                                  // Passiamo correttamente l'ID e il nome!
                                   .call(_currentUser!.id, name)
                                   .then((_) => _loadData()),
                             );
@@ -419,25 +415,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
                       const SizedBox(height: 50),
 
+                      // Magnetic Logout Button
                       Center(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 40,
-                              vertical: 18,
-                            ),
-                            side: BorderSide(
-                              color: Colors.redAccent.withOpacity(0.5),
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            backgroundColor: Colors.redAccent.withOpacity(0.05),
-                            foregroundColor: Colors.redAccent,
-                            elevation: 0,
-                          ),
-                          onPressed: () async {
+                        child: _MagneticButton(
+                          onTap: () async {
                             await sl<LogoutUseCase>().call();
                             if (context.mounted) {
                               Navigator.pushAndRemoveUntil(
@@ -449,37 +430,28 @@ class _SettingsPageState extends State<SettingsPage> {
                               );
                             }
                           },
-                          icon: const Icon(
-                            Icons.power_settings_new_rounded,
-                            size: 22,
-                          ),
-                          label: Text(
-                            AppLocalizations.of(context)!.settingsLogout,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                              fontSize: 14,
-                            ),
-                          ),
+                          label: AppLocalizations.of(context)!.settingsLogout,
                         ),
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 40),
 
                       Center(
                         child: Column(
                           children: [
                             Image.asset(
                               'assets/images/logoCine.png',
-                              width: 40,
+                              width: 30,
+                              color: Colors.white.withOpacity(0.2),
                             ),
                             const SizedBox(height: 10),
                             Text(
                               "CineShare v1.0",
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.2),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'monospace',
                                 letterSpacing: 1.0,
                               ),
                             ),
@@ -498,42 +470,105 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) {
+  // Purely typographic logic grouping, NO boxes
+  Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white.withOpacity(0.4), size: 16),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.4),
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2.0,
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.only(left: 4, bottom: 16),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.4),
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 2.0,
+        ),
       ),
     );
   }
 
+  // Dashboard hardening: Data metrics breathe without being boxed
   Widget _buildSettingsGroup(List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _surfaceColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+    return Column(children: children);
+  }
+}
+
+// ─── Magnetic Tactile Button ─────────────────────────────────────────────────
+class _MagneticButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final String label;
+
+  const _MagneticButton({required this.onTap, required this.label});
+
+  @override
+  State<_MagneticButton> createState() => _MagneticButtonState();
+}
+
+class _MagneticButtonState extends State<_MagneticButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.redAccent.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(
+              color: Colors.redAccent.withOpacity(0.2),
+              width: 1,
+            ),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.power_settings_new_rounded,
+                color: Colors.redAccent,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Column(children: children),
     );
   }
 }

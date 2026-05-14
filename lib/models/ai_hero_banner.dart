@@ -30,7 +30,10 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
   void initState() {
     super.initState();
     _generateDailyRotation();
-    _pageController = PageController(initialPage: _infiniteStart);
+    _pageController = PageController(
+      initialPage: _infiniteStart,
+      viewportFraction: 0.78, // Leggermente ridotto per vedere più copertine laterali
+    );
     _currentPageValue = _pageController.initialPage.toDouble();
 
     _pageController.addListener(() {
@@ -47,7 +50,9 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
   @override
   void didUpdateWidget(covariant AiHeroBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.items != oldWidget.items) {
+    // Solo se la lunghezza è diversa consideriamo il feed "cambiato".
+    // Previene il reset del carosello e i salti improvvisi ai re-render dello stream.
+    if (widget.items.length != oldWidget.items.length) {
       _stopAutoScroll();
       _generateDailyRotation();
       if (_pageController.hasClients) {
@@ -179,22 +184,29 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                 double clampedDelta = delta.clamp(-1.0, 1.0);
                 double absDelta = clampedDelta.abs();
 
-                // 1. Nessuna scala per evitare spazi neri
-                double scale = 1.0;
+                // 1. Scala ridotta ai lati
+                double scale = 1.0 - (absDelta * 0.15);
 
-                // 2. Nessun raggio per mantenere l'immagine a schermo intero
-                double cornerRadius = 0.0;
+                // 2. Raggio per far sembrare vere carte come su Disney+
+                double cornerRadius = 14.0;
 
-                // 3. Nessuna variazione di opacità per evitare effetti di fade nero
-                double cardOpacity = 1.0;
+                // 3. Calcolo dello shift orizzontale per farle adiacenti
+                // ViewportFraction è 0.82. Scalando si creerebbe uno spazio.
+                // Lo azzeriamo traslando le carte verso il centro.
+                double cardWidth = MediaQuery.of(context).size.width * 0.78;
+                double emptySpace = cardWidth * (1.0 - scale) / 2.0;
+                double horizontalShift = -clampedDelta * emptySpace; 
 
-                // 4. Fade ultra-rapido per il testo (sparisce prima dell'immagine)
+                // 4. Oscuramento carte laterali (effetto profondità)
+                double overlayOpacity = (absDelta * 0.5).clamp(0.0, 1.0);
+
+                // 5. Fade ultra-rapido per il testo (sparisce prima dell'immagine)
                 double textOpacity = (1.0 - (absDelta * 2.5)).clamp(0.0, 1.0);
 
-                return GestureDetector(
+                return _TactileCard(
                   onTap: () => widget.onItemTap(item),
-                  child: Opacity(
-                    opacity: cardOpacity,
+                  child: Transform.translate(
+                    offset: Offset(horizontalShift, 0),
                     child: Transform.scale(
                       scale: scale,
                       alignment: Alignment.center,
@@ -227,6 +239,15 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                             ),
                           ),
 
+                          // Scuriamo le carte che non sono al centro
+                          if (overlayOpacity > 0)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(cornerRadius),
+                              child: Container(
+                                color: Colors.black.withOpacity(overlayOpacity),
+                              ),
+                            ),
+
                           // Il Gradiente (deve avere lo stesso raggio per non sbordare)
                           ClipRRect(
                             borderRadius: BorderRadius.circular(cornerRadius),
@@ -258,23 +279,23 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // Badge Glassmorphism
+                                  // Badge Liquid Glass
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
+                                      horizontal: 14,
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(20),
+                                      color: Colors.white.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(100),
                                       border: Border.all(
-                                        color: Colors.white.withOpacity(0.2),
-                                        width: 1,
+                                        color: Colors.white.withOpacity(0.12),
                                       ),
                                       boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
+                                        const BoxShadow(
+                                          color: Colors.black26,
                                           blurRadius: 10,
+                                          spreadRadius: -2,
                                         ),
                                       ],
                                     ),
@@ -284,7 +305,7 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                                         const Icon(
                                           Icons.local_fire_department_rounded,
                                           color: Colors.orangeAccent,
-                                          size: 16,
+                                          size: 14,
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
@@ -292,8 +313,8 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 1.5,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 1.2,
                                           ),
                                         ),
                                       ],
@@ -309,46 +330,56 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 36,
+                                      fontSize: 38,
                                       fontWeight: FontWeight.w900,
-                                      height: 1.1,
-                                      letterSpacing: -0.5,
+                                      height: 1.05,
+                                      letterSpacing: -1.0,
                                       shadows: [
                                         Shadow(
-                                          color: Colors.black,
+                                          color: Colors.black54,
                                           offset: Offset(0, 4),
-                                          blurRadius: 10,
+                                          blurRadius: 15,
                                         ),
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(height: 15),
+                                  const SizedBox(height: 20),
 
-                                  // Tasto "Maggiori Info" (Finto)
+                                  // Tasto "Maggiori Info" (Pillola Premium)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 10,
+                                      horizontal: 24,
+                                      vertical: 12,
                                     ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(100),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.15),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Icon(
-                                          Icons.info_outline_rounded,
+                                          Icons.play_arrow_rounded,
                                           color: Colors.black,
                                           size: 20,
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          AppLocalizations.of(context)!.heroBannerMoreInfo,
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.heroBannerMoreInfo,
                                           style: const TextStyle(
                                             color: Colors.black,
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.w700,
                                             fontSize: 14,
+                                            letterSpacing: -0.2,
                                           ),
                                         ),
                                       ],
@@ -396,3 +427,56 @@ class _AiHeroBannerState extends State<AiHeroBanner> {
     );
   }
 }
+
+// ─── _TactileCard ────────────────────────────────────────────────────────────
+// Aggiunge un feedback tattile (scala al tocco) per rendere la UI più fisica e premium.
+class _TactileCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _TactileCard({required this.child, required this.onTap});
+
+  @override
+  State<_TactileCard> createState() => _TactileCardState();
+}
+
+class _TactileCardState extends State<_TactileCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: widget.child,
+      ),
+    );
+  }
+}
+

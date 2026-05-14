@@ -64,55 +64,55 @@ class _AiFeature {
 }
 
 List<_AiFeature> _buildFeatures(AppLocalizations l) => [
-      _AiFeature(
-        id: 'vault_sync',
-        title: l.aiFeatureVaultSyncTitle,
-        description: l.aiFeatureVaultSyncDesc,
-        badge: l.aiFeatureVaultSyncBadge,
-        icon: Icons.sync_alt_rounded,
-        tokenCost: 1,
-      ),
-      _AiFeature(
-        id: 'what_to_watch',
-        title: l.aiFeatureWatchNowTitle,
-        description: l.aiFeatureWatchNowDesc,
-        badge: l.aiFeatureWatchNowBadge,
-        icon: Icons.play_circle_outline_rounded,
-        tokenCost: 1,
-      ),
-      _AiFeature(
-        id: 'mood_mapper',
-        title: l.aiFeatureMoodTitle,
-        description: l.aiFeatureMoodDesc,
-        badge: l.aiFeatureMoodBadge,
-        icon: Icons.waves_rounded,
-        tokenCost: 1,
-      ),
-      _AiFeature(
-        id: 'scudo_spoiler',
-        title: l.aiFeatureShieldTitle,
-        description: l.aiFeatureShieldDesc,
-        badge: l.aiFeatureShieldBadge,
-        icon: Icons.security_rounded,
-        tokenCost: 1,
-      ),
-      _AiFeature(
-        id: 'memory_forge',
-        title: l.aiFeatureMemoryTitle,
-        description: l.aiFeatureMemoryDesc,
-        badge: l.aiFeatureMemoryBadge,
-        icon: Icons.auto_stories_rounded,
-        tokenCost: 1,
-      ),
-      _AiFeature(
-        id: 'scene_correlation',
-        title: l.aiFeatureSceneTitle,
-        description: l.aiFeatureSceneDesc,
-        badge: l.aiFeatureSceneBadge,
-        icon: Icons.image_search_rounded,
-        tokenCost: 3,
-      ),
-    ];
+  _AiFeature(
+    id: 'vault_sync',
+    title: l.aiFeatureVaultSyncTitle,
+    description: l.aiFeatureVaultSyncDesc,
+    badge: l.aiFeatureVaultSyncBadge,
+    icon: Icons.sync_alt_rounded,
+    tokenCost: 1,
+  ),
+  _AiFeature(
+    id: 'what_to_watch',
+    title: l.aiFeatureWatchNowTitle,
+    description: l.aiFeatureWatchNowDesc,
+    badge: l.aiFeatureWatchNowBadge,
+    icon: Icons.play_circle_outline_rounded,
+    tokenCost: 1,
+  ),
+  _AiFeature(
+    id: 'mood_mapper',
+    title: l.aiFeatureMoodTitle,
+    description: l.aiFeatureMoodDesc,
+    badge: l.aiFeatureMoodBadge,
+    icon: Icons.waves_rounded,
+    tokenCost: 1,
+  ),
+  _AiFeature(
+    id: 'scudo_spoiler',
+    title: l.aiFeatureShieldTitle,
+    description: l.aiFeatureShieldDesc,
+    badge: l.aiFeatureShieldBadge,
+    icon: Icons.security_rounded,
+    tokenCost: 1,
+  ),
+  _AiFeature(
+    id: 'memory_forge',
+    title: l.aiFeatureMemoryTitle,
+    description: l.aiFeatureMemoryDesc,
+    badge: l.aiFeatureMemoryBadge,
+    icon: Icons.auto_stories_rounded,
+    tokenCost: 1,
+  ),
+  _AiFeature(
+    id: 'scene_correlation',
+    title: l.aiFeatureSceneTitle,
+    description: l.aiFeatureSceneDesc,
+    badge: l.aiFeatureSceneBadge,
+    icon: Icons.image_search_rounded,
+    tokenCost: 3,
+  ),
+];
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 class StudioAIPage extends StatefulWidget {
@@ -161,8 +161,9 @@ class _StudioAIPageState extends State<StudioAIPage>
           content: Text(l.aiStudioInsufficientTokens(feature.tokenCost)),
           backgroundColor: Colors.redAccent.shade700,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -172,8 +173,7 @@ class _StudioAIPageState extends State<StudioAIPage>
         content: Text(l.aiStudioOpening(feature.title)),
         backgroundColor: _kBrand.withOpacity(0.9),
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -221,8 +221,7 @@ class _StudioAIPageState extends State<StudioAIPage>
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding:
-                      EdgeInsets.fromLTRB(24, topPadding + 28, 24, 0),
+                  padding: EdgeInsets.fromLTRB(24, topPadding + 28, 24, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -286,57 +285,57 @@ class _CoverCollage extends StatelessWidget {
     const tileWidth = 100.0;
     const tileHeight = 150.0;
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final rows = (constraints.maxHeight / tileHeight).ceil() + 3;
-      final totalWidth = columns * tileWidth;
-      final totalHeight = rows * tileHeight;
-      final driftOffset = driftValue * 60.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final rows = (constraints.maxHeight / tileHeight).ceil() + 3;
+        final totalWidth = columns * tileWidth;
+        final totalHeight = rows * tileHeight;
+        final driftOffset = driftValue * 60.0;
 
-      return OverflowBox(
-        maxWidth: totalWidth.toDouble(),
-        maxHeight: (totalHeight + 60).toDouble(),
-        alignment: Alignment.topLeft,
-        child: Transform.translate(
-          offset: Offset(0, -driftOffset),
-          child: SizedBox(
-            width: totalWidth.toDouble(),
-            height: totalHeight.toDouble(),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(columns, (col) {
-                final vertOffset = col.isOdd ? tileHeight / 2 : 0.0;
-                final extraRow = col.isOdd ? 1 : 0;
-                final colRows = rows + extraRow;
+        return OverflowBox(
+          maxWidth: totalWidth.toDouble(),
+          maxHeight: (totalHeight + 60).toDouble(),
+          alignment: Alignment.topLeft,
+          child: Transform.translate(
+            offset: Offset(0, -driftOffset),
+            child: SizedBox(
+              width: totalWidth.toDouble(),
+              height: totalHeight.toDouble(),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: List.generate(columns, (col) {
+                  final vertOffset = col.isOdd ? tileHeight / 2 : 0.0;
+                  final extraRow = col.isOdd ? 1 : 0;
+                  final colRows = rows + extraRow;
 
-                return SizedBox(
-                  width: tileWidth,
-                  child: Transform.translate(
-                    offset: Offset(0, vertOffset),
-                    child: Column(
-                      children: List.generate(colRows, (row) {
-                        final idx =
-                            (col * rows + row) % _coverPaths.length;
-                        return SizedBox(
-                          width: tileWidth,
-                          height: tileHeight,
-                          child: Image.asset(
-                            _coverPaths[idx],
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: const Color(0xFF1C1C1E),
+                  return SizedBox(
+                    width: tileWidth,
+                    child: Transform.translate(
+                      offset: Offset(0, vertOffset),
+                      child: Column(
+                        children: List.generate(colRows, (row) {
+                          final idx = (col * rows + row) % _coverPaths.length;
+                          return SizedBox(
+                            width: tileWidth,
+                            height: tileHeight,
+                            child: Image.asset(
+                              _coverPaths[idx],
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  Container(color: const Color(0xFF1C1C1E)),
                             ),
-                          ),
-                        );
-                      }),
+                          );
+                        }),
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }
 
@@ -359,8 +358,7 @@ class _TokenPill extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
             color: _color.withOpacity(0.12),
             borderRadius: BorderRadius.circular(100),
@@ -410,9 +408,10 @@ class _FeatureCardState extends State<_FeatureCard>
       vsync: this,
       duration: const Duration(milliseconds: 120),
     );
-    _scale = Tween(begin: 1.0, end: 0.975).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
+    _scale = Tween(
+      begin: 1.0,
+      end: 0.975,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
   }
 
   @override
@@ -509,12 +508,15 @@ class _FeatureCardState extends State<_FeatureCard>
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                                color: Colors.white.withOpacity(0.09)),
+                              color: Colors.white.withOpacity(0.09),
+                            ),
                           ),
                           child: Text(
                             widget.feature.badge,
