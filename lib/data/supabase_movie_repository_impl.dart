@@ -37,8 +37,28 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
        _tmdbService = tmdbService ?? TmdbService(),
        _cacheService = cacheService ?? CinelibCacheService();
 
+  final Map<String, Stream<List<dynamic>>> _activeWatchlistStreams = {};
+  final Map<String, Stream<dynamic>> _activeMediaStreams = {};
+
   @override
   Stream<List<dynamic>> getWatchlistStream(String userId, String status) {
+    final key = _watchlistKey(userId, status);
+    if (_activeWatchlistStreams.containsKey(key)) {
+      return _activeWatchlistStreams[key]!;
+    }
+
+    final controller = _createWatchlistStreamController(userId, status);
+    final stream = controller.stream.asBroadcastStream(
+      onCancel: (sub) {
+        _activeWatchlistStreams.remove(key);
+        controller.close();
+      },
+    );
+    _activeWatchlistStreams[key] = stream;
+    return stream;
+  }
+
+  StreamController<List<dynamic>> _createWatchlistStreamController(String userId, String status) {
     late StreamController<List<dynamic>> controller;
     StreamSubscription<List<Map<String, dynamic>>>? localSubscription;
     StreamSubscription<List<Map<String, dynamic>>>? realtimeSubscription;
@@ -103,11 +123,28 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       },
     );
 
-    return controller.stream;
+    return controller;
   }
 
   @override
   Stream<dynamic> getSingleMediaStream(String userId, int id) {
+    final key = _mediaKey(userId, id);
+    if (_activeMediaStreams.containsKey(key)) {
+      return _activeMediaStreams[key]!;
+    }
+
+    final controller = _createSingleMediaStreamController(userId, id);
+    final stream = controller.stream.asBroadcastStream(
+      onCancel: (sub) {
+        _activeMediaStreams.remove(key);
+        controller.close();
+      },
+    );
+    _activeMediaStreams[key] = stream;
+    return stream;
+  }
+
+  StreamController<dynamic> _createSingleMediaStreamController(String userId, int id) {
     late StreamController<dynamic> controller;
     StreamSubscription<Map<String, dynamic>?>? localSubscription;
     StreamSubscription<List<Map<String, dynamic>>>? realtimeSubscription;
@@ -176,7 +213,7 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
       },
     );
 
-    return controller.stream;
+    return controller;
   }
 
   List<Map<String, dynamic>>? _readCachedRows(Box cacheBox, String cacheKey) {

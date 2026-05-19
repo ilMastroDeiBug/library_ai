@@ -314,6 +314,7 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  SizedBox(height: MediaQuery.of(context).padding.top + 60),
                   HomeContentBuilder.buildHeroBanner(
                     widget.mode,
                     cinemaType: type,

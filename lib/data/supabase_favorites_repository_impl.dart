@@ -64,8 +64,27 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
     return isAdded;
   }
 
+  final Map<String, Stream<List<FavoriteItem>>> _activeStreams = {};
+
   @override
   Stream<List<FavoriteItem>> getFavoritesStream(
+    String userId, {
+    String? type,
+  }) {
+    final streamKey = type == null ? 'favorites_$userId' : 'favorites_${userId}_$type';
+    
+    if (_activeStreams.containsKey(streamKey)) {
+      return _activeStreams[streamKey]!;
+    }
+
+    final stream = _createFavoritesStream(userId, type: type).asBroadcastStream(
+      onCancel: (sub) => _activeStreams.remove(streamKey),
+    );
+    _activeStreams[streamKey] = stream;
+    return stream;
+  }
+
+  Stream<List<FavoriteItem>> _createFavoritesStream(
     String userId, {
     String? type,
   }) async* {

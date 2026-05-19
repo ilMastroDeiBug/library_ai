@@ -256,10 +256,7 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     try {
       await _supabase
           .from(_userTableName)
-          .update({
-            'ai_analysis': analysis,
-            'timestamp': timestamp,
-          })
+          .update({'ai_analysis': analysis, 'timestamp': timestamp})
           .eq('user_id', userId)
           .eq('book_id', docId);
     } catch (_) {}
