@@ -39,6 +39,11 @@ import 'package:library_ai/data/supabase_tv_progress_repository_impl.dart';
 // IMPORTA IL FILE DOVE HAI MESSO GLI USE CASE DEL PROGRESSO!
 import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart'; // Sostituisci col nome reale del file se diverso
 
+// Social
+import 'package:library_ai/domain/repositories/social_repository.dart';
+import 'package:library_ai/data/supabase_social_repository_impl.dart';
+import 'package:library_ai/domain/use_cases/social_use_cases.dart';
+
 // Rating
 import 'package:library_ai/domain/repositories/rating_repository.dart';
 import 'package:library_ai/data/repositories/supabase_rating_repository_impl.dart';
@@ -217,4 +222,18 @@ Future<void> init() async {
 
   // Ratings...
   sl.registerLazySingleton(() => SaveRatingUseCase(sl()));
+
+  // Social...
+  sl.registerLazySingleton<SocialRepository>(
+    () => SupabaseSocialRepositoryImpl(),
+  );
+  sl.registerLazySingleton(() => GetSocialStatsUseCase(sl()));
+  sl.registerLazySingleton(() => GetPinnedItemsUseCase(sl()));
+  sl.registerLazySingleton(() => PinItemUseCase(sl()));
+  sl.registerLazySingleton(() => UnpinItemUseCase(sl()));
+  sl.registerLazySingleton(() => GetRecentVaultUseCase(sl()));
+  sl.registerLazySingleton(() => ToggleFollowUseCase(sl()));
+  sl.registerLazySingleton(() => IsFollowingUseCase(sl()));
+  sl.registerLazySingleton(() => GetFollowingUseCase(sl()));
+  sl.registerLazySingleton(() => GetFollowersUseCase(sl()));
 }

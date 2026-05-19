@@ -77,7 +77,7 @@ class MyApp extends StatelessWidget {
       listenable: di.sl<LanguageService>(),
       builder: (context, _) {
         return MaterialApp(
-          title: 'CineShare',
+          title: 'MatchCut',
           debugShowCheckedModeBanner: false,
           locale: Locale(di.sl<LanguageService>().shortCode),
           localizationsDelegates: AppLocalizations.localizationsDelegates,

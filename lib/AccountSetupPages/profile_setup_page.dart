@@ -79,7 +79,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "Benvenuto a bordo di CineShare.",
+              "Benvenuto su MatchCut.",
               style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,

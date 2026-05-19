@@ -312,20 +312,24 @@ class _CoverCollage extends StatelessWidget {
                     width: tileWidth,
                     child: Transform.translate(
                       offset: Offset(0, vertOffset),
-                      child: Column(
-                        children: List.generate(colRows, (row) {
-                          final idx = (col * rows + row) % _coverPaths.length;
-                          return SizedBox(
-                            width: tileWidth,
-                            height: tileHeight,
-                            child: Image.asset(
-                              _coverPaths[idx],
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  Container(color: const Color(0xFF1C1C1E)),
-                            ),
-                          );
-                        }),
+                      child: SizedBox(
+                        height: colRows * tileHeight,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(colRows, (row) {
+                            final idx = (col * rows + row) % _coverPaths.length;
+                            return SizedBox(
+                              width: tileWidth,
+                              height: tileHeight,
+                              child: Image.asset(
+                                _coverPaths[idx],
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    Container(color: const Color(0xFF1C1C1E)),
+                              ),
+                            );
+                          }),
+                        ),
                       ),
                     ),
                   );

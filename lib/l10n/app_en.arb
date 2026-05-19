@@ -14,7 +14,7 @@
   "sideMenuExplore": "EXPLORE",
   "sideMenuCinemaTv": "Movies & TV Series",
   "sideMenuCommunity": "COMMUNITY",
-  "sideMenuSocial": "CineShare Social",
+  "sideMenuSocial": "Social",
   "sideMenuProject": "THE PROJECT",
   "sideMenuInfoSupport": "Info & Support",
   "exploreBooks": "Explore\nBooks",
@@ -126,7 +126,13 @@
   "allReviewsLoginToWrite": "Log in to write a review.",
   "allReviewsWrite": "Write",
   "allReviewsCount": "{count} Reviews",
-  "@allReviewsCount": { "placeholders": { "count": { "type": "int" } } },
+  "@allReviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "allReviewsLoading": "Loading...",
   "allReviewsSortRelevant": "Relevant",
   "allReviewsSortRecent": "Recent",
@@ -142,12 +148,12 @@
   "aboutAdMsg": "Loading sponsor... (AdMob integration coming soon)",
   "aboutBehindTheScenes": "Behind the scenes",
   "aboutVersion": "Version 1.0.0 (Beta)",
-  "aboutStoryPart1": "Hi! I'm the developer of CineShare and I'm ",
+  "aboutStoryPart1": "Hi! I'm the developer of MatchCut and I'm ",
   "aboutStoryAge": "16 years old",
   "aboutStoryPart2": ".\n\nI built this platform on my own, combining media management and Artificial Intelligence.\n\n",
   "aboutNextGoal": "The Next Goal",
   "aboutIosGoalTitle": "Landing on iOS & Books",
-  "aboutIosGoalDesc": "The Apple developer account costs $99/year. With your support I'll bring CineShare to iPhone and unlock the entire Books section, powered by the ISBN service!",
+  "aboutIosGoalDesc": "The Apple developer account costs $99/year. With your support I'll bring MatchCut to iPhone and unlock the entire Books section, powered by the ISBN service!",
   "aboutHowToHelp": "How can you help?",
   "aboutDonateCoffeeTitle": "Buy me a Coffee (Server)",
   "aboutDonateCoffeeSubtitle": "Support this project",
@@ -183,7 +189,13 @@
   "libFilterActors": "Actors",
   "deleteBookTitle": "Delete?",
   "deleteBookContent": "Removing \"{title}\" from the library is an irreversible action.",
-  "@deleteBookContent": { "placeholders": { "title": { "type": "String" } } },
+  "@deleteBookContent": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "libHeaderVault": "Your\nVault",
   "libHeaderWatchlist": "Your\nWatchlist",
   "heroBannerMovieOfDay": "MOVIE OF THE DAY",
@@ -204,20 +216,53 @@
   "bookStatsLength": "LENGTH",
   "bookStatsRating": "RATING",
   "bookStatsReviews": "{count} reviews",
-  "@bookStatsReviews": { "placeholders": { "count": { "type": "int" } } },
+  "@bookStatsReviews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "trailerTitle": "OFFICIAL TRAILER",
   "trackerSeasonLabel": "Season {n}",
-  "@trackerSeasonLabel": { "placeholders": { "n": { "type": "int" } } },
+  "@trackerSeasonLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "trackerSeasonEpisode": "SEASON {season} • EPISODE {episode}",
-  "@trackerSeasonEpisode": { "placeholders": { "season": { "type": "int" }, "episode": { "type": "int" } } },
+  "@trackerSeasonEpisode": {
+    "placeholders": {
+      "season": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
   "trackerRemoveFromHere": "Remove from here onwards?",
   "trackerMarkUpToHere": "Mark up to here?",
   "trackerCancel": "CANCEL",
   "trackerConfirm": "CONFIRM",
   "searchMoviePrefix": "Movie • {year}",
-  "@searchMoviePrefix": { "placeholders": { "year": { "type": "String" } } },
+  "@searchMoviePrefix": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "searchTvPrefix": "TV Series • {year}",
-  "@searchTvPrefix": { "placeholders": { "year": { "type": "String" } } },
+  "@searchTvPrefix": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "searchMovieOnly": "Movie",
   "searchTvOnly": "TV Series",
   "offlineTitle": "YOU ARE OFFLINE",
@@ -285,28 +330,67 @@
   "importLetterboxdLoginRequired": "You must be logged in to import data",
   "importLetterboxdSuccess": "Import completed successfully! 🎉",
   "importLetterboxdError": "Error during import: {error}",
-  "@importLetterboxdError": { "placeholders": { "error": { "type": "String" } } },
+  "@importLetterboxdError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "importLetterboxdTitle": "Import from Letterboxd",
-  "importLetterboxdHeadline": "Switch to CineShare in 30 seconds.",
+  "importLetterboxdHeadline": "Switch to MatchCut in 30 seconds.",
   "importLetterboxdSubtitle": "Your data belongs to you. Effortlessly import your cinematic history from Letterboxd.",
   "importLetterboxdStep1": "Go to Letterboxd.com > Settings > Export Data.",
   "importLetterboxdStep2": "Extract the ZIP file they sent you.",
   "importLetterboxdStep3": "Upload the watched.csv, ratings.csv, or reviews.csv file here.",
   "importLetterboxdProgress": "Importing... {processed} / {total}",
-  "@importLetterboxdProgress": { "placeholders": { "processed": { "type": "int" }, "total": { "type": "int" } } },
+  "@importLetterboxdProgress": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "importLetterboxdButton": "Upload CSV file",
   "sideMenuExportData": "Export your data",
   "exportDataSuccess": "Export ready! Share the file.",
   "exportDataError": "Error exporting data: {error}",
-  "@exportDataError": { "placeholders": { "error": { "type": "String" } } },
+  "@exportDataError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "aiStudioTitle": "AI Studio",
   "aiStudioSubtitle": "Cinematic intelligence at your service.",
   "aiStudioTokensRemaining": "{count} tokens remaining",
-  "@aiStudioTokensRemaining": { "placeholders": { "count": { "type": "int" } } },
+  "@aiStudioTokensRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "aiStudioInsufficientTokens": "Not enough tokens. You need {cost}.",
-  "@aiStudioInsufficientTokens": { "placeholders": { "cost": { "type": "int" } } },
+  "@aiStudioInsufficientTokens": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "aiStudioOpening": "Opening {name}…",
-  "@aiStudioOpening": { "placeholders": { "name": { "type": "String" } } },
+  "@aiStudioOpening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "aiFeatureVaultSyncTitle": "Vault Sync",
   "aiFeatureVaultSyncDesc": "Cross two users' Vaults to find the perfect title for the evening. Automatically excludes what you've already seen.",
   "aiFeatureVaultSyncBadge": "Max 3 syncs/week",

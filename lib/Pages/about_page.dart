@@ -66,7 +66,7 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 24),
             const Center(
               child: Text(
-                "CineShare",
+                "MatchCut",
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,

@@ -41,9 +41,8 @@ class ExportUserDataUseCase {
     await file.writeAsString(jsonString);
 
     // 5. Apriamo il popup di sistema per far condividere o salvare il file all'utente!
-    await Share.shareXFiles(
-      [XFile(file.path)], 
-      text: 'Ecco il backup dei miei dati su CineShare!',
-    );
+    await Share.shareXFiles([
+      XFile(file.path),
+    ], text: 'Ecco il backup dei miei dati su MatchCut!');
   }
 }

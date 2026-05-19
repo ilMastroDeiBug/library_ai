@@ -51,7 +51,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get sideMenuCommunity => 'COMMUNITY';
 
   @override
-  String get sideMenuSocial => 'CineShare Social';
+  String get sideMenuSocial => 'Social';
 
   @override
   String get sideMenuProject => 'IL PROGETTO';
@@ -443,7 +443,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get aboutVersion => 'Versione 1.0.0 (Beta)';
 
   @override
-  String get aboutStoryPart1 => 'Ciao! Sono lo sviluppatore di CineShare e ho ';
+  String get aboutStoryPart1 => 'Ciao! Sono lo sviluppatore di MatchCut e ho ';
 
   @override
   String get aboutStoryAge => '16 anni';
@@ -878,7 +878,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get importLetterboxdTitle => 'Importa da Letterboxd';
 
   @override
-  String get importLetterboxdHeadline => 'Passa a CineShare in 30 secondi.';
+  String get importLetterboxdHeadline => 'Passa a MatchCut in 30 secondi.';
 
   @override
   String get importLetterboxdSubtitle =>

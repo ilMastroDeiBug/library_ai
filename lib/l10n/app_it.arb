@@ -14,7 +14,7 @@
   "sideMenuExplore": "ESPLORA",
   "sideMenuCinemaTv": "Cinema & Serie TV",
   "sideMenuCommunity": "COMMUNITY",
-  "sideMenuSocial": "CineShare Social",
+  "sideMenuSocial": "Social",
   "sideMenuProject": "IL PROGETTO",
   "sideMenuInfoSupport": "Info & Supporto",
   "exploreBooks": "Esplora\nLibri",
@@ -126,7 +126,13 @@
   "allReviewsLoginToWrite": "Accedi per scrivere una recensione.",
   "allReviewsWrite": "Scrivi",
   "allReviewsCount": "{count} Recensioni",
-  "@allReviewsCount": { "placeholders": { "count": { "type": "int" } } },
+  "@allReviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "allReviewsLoading": "Caricamento...",
   "allReviewsSortRelevant": "Rilevanti",
   "allReviewsSortRecent": "Recenti",
@@ -183,7 +189,13 @@
   "libFilterActors": "Attori",
   "deleteBookTitle": "Eliminare?",
   "deleteBookContent": "Rimuovere \"{title}\" dalla libreria \u00e8 un'azione irreversibile.",
-  "@deleteBookContent": { "placeholders": { "title": { "type": "String" } } },
+  "@deleteBookContent": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "libHeaderVault": "Il tuo\nVault",
   "libHeaderWatchlist": "La tua\nWatchlist",
   "heroBannerMovieOfDay": "FILM DEL GIORNO",
@@ -204,20 +216,53 @@
   "bookStatsLength": "LUNGHEZZA",
   "bookStatsRating": "VALUTAZIONE",
   "bookStatsReviews": "{count} recensioni",
-  "@bookStatsReviews": { "placeholders": { "count": { "type": "int" } } },
+  "@bookStatsReviews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "trailerTitle": "TRAILER UFFICIALE",
   "trackerSeasonLabel": "Stagione {n}",
-  "@trackerSeasonLabel": { "placeholders": { "n": { "type": "int" } } },
+  "@trackerSeasonLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "trackerSeasonEpisode": "STAGIONE {season} • EPISODIO {episode}",
-  "@trackerSeasonEpisode": { "placeholders": { "season": { "type": "int" }, "episode": { "type": "int" } } },
+  "@trackerSeasonEpisode": {
+    "placeholders": {
+      "season": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
   "trackerRemoveFromHere": "Rimuovere da qui in poi?",
   "trackerMarkUpToHere": "Contrassegnare fino a qui?",
   "trackerCancel": "ANNULLA",
   "trackerConfirm": "CONFERMA",
   "searchMoviePrefix": "Film • {year}",
-  "@searchMoviePrefix": { "placeholders": { "year": { "type": "String" } } },
+  "@searchMoviePrefix": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "searchTvPrefix": "Serie TV • {year}",
-  "@searchTvPrefix": { "placeholders": { "year": { "type": "String" } } },
+  "@searchTvPrefix": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "searchMovieOnly": "Film",
   "searchTvOnly": "Serie TV",
   "offlineTitle": "SEI OFFLINE",
@@ -285,28 +330,67 @@
   "importLetterboxdLoginRequired": "Devi essere loggato per importare i dati",
   "importLetterboxdSuccess": "Importazione completata con successo! 🎉",
   "importLetterboxdError": "Errore durante l'importazione: {error}",
-  "@importLetterboxdError": { "placeholders": { "error": { "type": "String" } } },
+  "@importLetterboxdError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "importLetterboxdTitle": "Importa da Letterboxd",
-  "importLetterboxdHeadline": "Passa a CineShare in 30 secondi.",
+  "importLetterboxdHeadline": "Passa a MatchCut in 30 secondi.",
   "importLetterboxdSubtitle": "I tuoi dati ti appartengono. Importa la tua storia cinematografica da Letterboxd senza sforzo.",
   "importLetterboxdStep1": "Vai su Letterboxd.com > Settings > Export Data.",
   "importLetterboxdStep2": "Estrai il file ZIP che ti hanno mandato.",
   "importLetterboxdStep3": "Carica il file watched.csv, ratings.csv o reviews.csv qui.",
   "importLetterboxdProgress": "Importazione in corso... {processed} / {total}",
-  "@importLetterboxdProgress": { "placeholders": { "processed": { "type": "int" }, "total": { "type": "int" } } },
+  "@importLetterboxdProgress": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "importLetterboxdButton": "Carica il file CSV",
   "sideMenuExportData": "Esporta i tuoi dati",
   "exportDataSuccess": "Esportazione pronta! Condividi il file.",
   "exportDataError": "Errore durante l'esportazione: {error}",
-  "@exportDataError": { "placeholders": { "error": { "type": "String" } } },
+  "@exportDataError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "aiStudioTitle": "Studio AI",
   "aiStudioSubtitle": "Intelligenza cinematografica al tuo servizio.",
   "aiStudioTokensRemaining": "{count} token rimanenti",
-  "@aiStudioTokensRemaining": { "placeholders": { "count": { "type": "int" } } },
+  "@aiStudioTokensRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "aiStudioInsufficientTokens": "Token insufficienti. Te ne servono {cost}.",
-  "@aiStudioInsufficientTokens": { "placeholders": { "cost": { "type": "int" } } },
+  "@aiStudioInsufficientTokens": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "aiStudioOpening": "Apertura {name}\u2026",
-  "@aiStudioOpening": { "placeholders": { "name": { "type": "String" } } },
+  "@aiStudioOpening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "aiFeatureVaultSyncTitle": "Vault Sync",
   "aiFeatureVaultSyncDesc": "Incrocia i Vault di due utenti per trovare il titolo perfetto per la serata. Esclude automaticamente ci\u00f2 che hai gi\u00e0 visto.",
   "aiFeatureVaultSyncBadge": "Max 3 sincronizzazioni/settimana",

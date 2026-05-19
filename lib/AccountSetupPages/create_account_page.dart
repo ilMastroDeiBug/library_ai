@@ -139,7 +139,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     ),
                     const SizedBox(height: 15),
                     Text(
-                      "Unisciti a CineShare.",
+                      "Unisciti a MatchCut.",
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.6),
                         fontSize: 16,

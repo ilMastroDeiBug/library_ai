@@ -22,7 +22,7 @@ class SocialBottomBar extends StatelessWidget {
         type: BottomNavigationBarType.fixed,
         currentIndex: currentIndex,
         elevation: 0,
-        selectedItemColor: Colors.purpleAccent,
+        selectedItemColor: Colors.orangeAccent,
         unselectedItemColor: Colors.grey,
         onTap: onTap,
         items: [

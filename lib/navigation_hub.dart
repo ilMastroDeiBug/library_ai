@@ -7,6 +7,8 @@ import 'Pages/library_page.dart';
 import 'Pages/explore_page.dart';
 import 'Pages/side_menu.dart';
 import 'Pages/studio_ai_page.dart';
+import 'pages/social_profile_page.dart';
+
 
 // Widget Imports
 import '../models/navigation_hub_widgets/media_bottom_bar.dart';
@@ -98,13 +100,18 @@ class _NavigationHubState extends State<NavigationHub> {
   }
 
   Widget _socialPageAt(int index) {
-    const labels = ['Feed Social', 'Amici', 'Messaggi', 'Profilo Social'];
-    return Center(
-      child: Text(
-        labels[index],
-        style: const TextStyle(color: Colors.white),
-      ),
-    );
+    switch (index) {
+      case 3:
+        return const SocialProfilePage();
+      default:
+        final labels = ['Feed Social', 'Amici', 'Messaggi', 'Profilo'];
+        return Center(
+          child: Text(
+            labels[index],
+            style: const TextStyle(color: Colors.white54, fontSize: 16),
+          ),
+        );
+    }
   }
 
   /// Builds a lazy stack: pages that have never been visited are skipped

@@ -209,7 +209,7 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
 
         final userVotes = <String, int>{};
         for (final voteData in votesResponse) {
-           userVotes[voteData['review_id'].toString()] = voteData['vote'] as int;
+          userVotes[voteData['review_id'].toString()] = voteData['vote'] as int;
         }
 
         for (var i = 0; i < customReviews.length; i++) {
@@ -230,7 +230,7 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
     return Review(
       id: data['id'].toString(),
       userId: data['user_id']?.toString(),
-      author: _readString(data['author']) ?? 'Utente CineShare',
+      author: _readString(data['author']) ?? 'Utente MatchCut',
       content: data['content'] ?? '',
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
       createdAt: data['created_at'] != null
@@ -273,7 +273,7 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
         _readString(metadata['display_name']) ??
         _readString(metadata['name']) ??
         _readString(currentUser?.email) ??
-        'Utente CineShare';
+        'Utente MatchCut';
 
     return _ReviewAuthor(
       name: name,

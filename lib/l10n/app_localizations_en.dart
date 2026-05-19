@@ -51,7 +51,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideMenuCommunity => 'COMMUNITY';
 
   @override
-  String get sideMenuSocial => 'CineShare Social';
+  String get sideMenuSocial => 'Social';
 
   @override
   String get sideMenuProject => 'THE PROJECT';
