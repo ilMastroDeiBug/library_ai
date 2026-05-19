@@ -162,7 +162,9 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
           .delete()
           .eq('id', reviewId)
           .eq('user_id', userId);
-      await _removeReviewFromHiveCache(reviewId);
+      // Il collo di bottiglia di Hive (O(N) full table scan) è stato rimosso
+      // in quanto le recensioni Custom non vengono memorizzate e rilette
+      // in 'tmdb_cache' o 'cinelib_cache' come intere istanze.
     } catch (_) {}
   }
 
@@ -175,13 +177,11 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
     final fields = includeAuthorFields
         ? '''
             id, content, rating, created_at,
-            user_id, author, avatar_url,
-            review_votes (vote, user_id)
+            user_id, author, avatar_url, likes_count, dislikes_count
           '''
         : '''
             id, content, rating, created_at,
-            user_id,
-            review_votes (vote, user_id)
+            user_id, likes_count, dislikes_count
           ''';
 
     final response = await _supabase
@@ -190,29 +190,43 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
         .eq('media_id', mediaId)
         .eq('media_type', mediaType);
 
-    return response
+    final customReviews = response
         .map(
           (data) =>
               _mapCustomReview(Map<String, dynamic>.from(data), currentUserId),
         )
         .toList();
-  }
 
-  Review _mapCustomReview(Map<String, dynamic> data, String currentUserId) {
-    var likes = 0;
-    var dislikes = 0;
-    var userVote = 0;
+    // Fix Data Overfetching (N+1): Scarichiamo solo il voto dell'utente corrente!
+    if (customReviews.isNotEmpty) {
+      try {
+        final reviewIds = customReviews.map((r) => r.id).toList();
+        final votesResponse = await _supabase
+            .from('review_votes')
+            .select('review_id, vote')
+            .eq('user_id', currentUserId)
+            .filter('review_id', 'in', '(${reviewIds.join(",")})');
 
-    final votes = data['review_votes'] as List<dynamic>? ?? [];
-    for (final voteData in votes) {
-      final vote = voteData is Map ? voteData['vote'] : null;
-      if (vote == 1) likes++;
-      if (vote == -1) dislikes++;
-      if (voteData is Map && voteData['user_id'] == currentUserId) {
-        userVote = vote is int ? vote : 0;
+        final userVotes = <String, int>{};
+        for (final voteData in votesResponse) {
+           userVotes[voteData['review_id'].toString()] = voteData['vote'] as int;
+        }
+
+        for (var i = 0; i < customReviews.length; i++) {
+          final rev = customReviews[i];
+          if (userVotes.containsKey(rev.id)) {
+            customReviews[i] = rev.copyWith(userVote: userVotes[rev.id]);
+          }
+        }
+      } catch (e) {
+        print("Errore nel recupero voti utente: $e");
       }
     }
 
+    return customReviews;
+  }
+
+  Review _mapCustomReview(Map<String, dynamic> data, String currentUserId) {
     return Review(
       id: data['id'].toString(),
       userId: data['user_id']?.toString(),
@@ -224,9 +238,9 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
           : null,
       avatarUrl: _readString(data['avatar_url']),
       isCustom: true,
-      likes: likes,
-      dislikes: dislikes,
-      userVote: userVote,
+      likes: data['likes_count'] as int? ?? 0,
+      dislikes: data['dislikes_count'] as int? ?? 0,
+      userVote: 0, // Verrà popolato dalla seconda query ottimizzata
     );
   }
 
@@ -273,77 +287,6 @@ class SupabaseReviewRepositoryImpl implements ReviewRepository {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty) return null;
     return text;
-  }
-
-  Future<void> _removeReviewFromHiveCache(String reviewId) async {
-    for (final boxName in const ['cinelib_cache', 'tmdb_cache']) {
-      if (!Hive.isBoxOpen(boxName)) continue;
-
-      final box = Hive.box(boxName);
-      for (final key in box.keys.toList(growable: false)) {
-        final mutation = _removeReviewFromCachedValue(box.get(key), reviewId);
-        if (!mutation.changed) continue;
-
-        if (mutation.value == null) {
-          await box.delete(key);
-        } else {
-          await box.put(key, mutation.value);
-        }
-      }
-    }
-  }
-
-  _CacheMutation _removeReviewFromCachedValue(Object? value, String reviewId) {
-    if (value is List) {
-      var changed = false;
-      final nextList = <dynamic>[];
-
-      for (final item in value) {
-        final mutation = _removeReviewFromCachedValue(item, reviewId);
-        if (mutation.changed) {
-          changed = true;
-        }
-        if (mutation.value != null) {
-          nextList.add(mutation.value);
-        }
-      }
-
-      return _CacheMutation(
-        value: changed ? nextList : value,
-        changed: changed,
-      );
-    }
-
-    if (value is Map) {
-      if (_isCachedReview(value, reviewId)) {
-        return const _CacheMutation(value: null, changed: true);
-      }
-
-      var changed = false;
-      final nextMap = Map<dynamic, dynamic>.from(value);
-      for (final entry in nextMap.entries.toList(growable: false)) {
-        final mutation = _removeReviewFromCachedValue(entry.value, reviewId);
-        if (!mutation.changed) continue;
-
-        changed = true;
-        if (mutation.value == null) {
-          nextMap.remove(entry.key);
-        } else {
-          nextMap[entry.key] = mutation.value;
-        }
-      }
-
-      return _CacheMutation(value: changed ? nextMap : value, changed: changed);
-    }
-
-    return _CacheMutation(value: value, changed: false);
-  }
-
-  bool _isCachedReview(Map<dynamic, dynamic> value, String reviewId) {
-    final id = value['id']?.toString();
-    return id == reviewId &&
-        value.containsKey('content') &&
-        value.containsKey('rating');
   }
 }
 
