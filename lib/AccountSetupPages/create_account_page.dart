@@ -44,9 +44,32 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       if (mounted) Navigator.pop(context); // Chiudi loading
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const ProfileSetupPage()),
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: const Text(
+              "Verifica Email",
+              style: TextStyle(color: Colors.white),
+            ),
+            content: const Text(
+              "Registrazione completata! Verifica la tua email per entrare. Riesegui l'accesso una volta verificato il tuo account.",
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Chiudi dialog
+                  Navigator.pop(context); // Torna alla pagina precedente
+                },
+                child: const Text(
+                  "OK",
+                  style: TextStyle(color: Colors.orangeAccent),
+                ),
+              ),
+            ],
+          ),
         );
       }
     } catch (e) {
