@@ -443,7 +443,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get aboutVersion => 'Versione 1.0.0 (Beta)';
 
   @override
-  String get aboutStoryPart1 => 'Ciao! Sono lo sviluppatore di MatchCut e ho ';
+  String get aboutStoryPart1 => 'Ciao! Sono lo sviluppatore di CineShare e ho ';
 
   @override
   String get aboutStoryAge => '16 anni';

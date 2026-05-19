@@ -185,7 +185,7 @@ abstract class AppLocalizations {
   /// No description provided for @sideMenuSocial.
   ///
   /// In it, this message translates to:
-  /// **'CineShare Social'**
+  /// **'Social'**
   String get sideMenuSocial;
 
   /// No description provided for @sideMenuProject.
@@ -1775,7 +1775,7 @@ abstract class AppLocalizations {
   /// No description provided for @importLetterboxdHeadline.
   ///
   /// In it, this message translates to:
-  /// **'Passa a CineShare in 30 secondi.'**
+  /// **'Passa a MatchCut in 30 secondi.'**
   String get importLetterboxdHeadline;
 
   /// No description provided for @importLetterboxdSubtitle.

@@ -440,7 +440,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutVersion => 'Version 1.0.0 (Beta)';
 
   @override
-  String get aboutStoryPart1 => 'Hi! I\'m the developer of CineShare and I\'m ';
+  String get aboutStoryPart1 => 'Hi! I\'m the developer of MatchCut and I\'m ';
 
   @override
   String get aboutStoryAge => '16 years old';
@@ -457,7 +457,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutIosGoalDesc =>
-      'The Apple developer account costs \$99/year. With your support I\'ll bring CineShare to iPhone and unlock the entire Books section, powered by the ISBN service!';
+      'The Apple developer account costs \$99/year. With your support I\'ll bring MatchCut to iPhone and unlock the entire Books section, powered by the ISBN service!';
 
   @override
   String get aboutHowToHelp => 'How can you help?';
@@ -874,7 +874,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importLetterboxdTitle => 'Import from Letterboxd';
 
   @override
-  String get importLetterboxdHeadline => 'Switch to CineShare in 30 seconds.';
+  String get importLetterboxdHeadline => 'Switch to MatchCut in 30 seconds.';
 
   @override
   String get importLetterboxdSubtitle =>
