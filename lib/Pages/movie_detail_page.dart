@@ -20,6 +20,7 @@ import '../models/movie_widget/watch_provider_widgets.dart';
 import 'package:library_ai/models/movie_widget/tv_series_tracker_section.dart';
 import '../models/movie_widget/emoji_rating_widget.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
+import 'package:library_ai/services/utility_services/offline_action_guard.dart';
 
 class MovieDetailPage extends StatefulWidget {
   final dynamic media;
@@ -79,6 +80,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   }
 
   void _showRatingBottomSheet(BuildContext context, dynamic media) {
+    // Guard offline: non aprire il sheet se non c'è connessione
+    if (!OfflineActionGuard.checkAndShow(context)) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -92,6 +95,9 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   void _handleFavoriteToggle(dynamic liveMedia) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return;
+
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return;
 
     setState(() {
       _isTogglingHeart = true;
@@ -118,6 +124,9 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   ) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return;
+
+    // Guard offline: blocca qualsiasi cambio di status senza rete
+    if (!OfflineActionGuard.checkAndShow(context)) return;
 
     final isRemoving = streamStatus == action;
     final targetStatus = isRemoving ? 'none' : action;
@@ -198,7 +207,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         final String title = _isTv ? liveMedia.name : liveMedia.title;
         final String overview = liveMedia.overview;
         final String poster = liveMedia.fullPosterUrl;
-        final String backdrop = liveMedia.fullBackdropUrl;
 
         final displayMovieForStats = _isTv
             ? Movie(
@@ -220,63 +228,52 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildSliverAppBar(backdrop, poster),
+              _buildSliverAppBar(poster, title),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                height: 1.1,
+                      // Cuore Preferiti allineato a destra
+                      if (user != null)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: () => _handleFavoriteToggle(liveMedia),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: _isFavorite
+                                    ? Colors.redAccent.withOpacity(0.12)
+                                    : Colors.white.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _isFavorite
+                                      ? Colors.redAccent.withOpacity(0.3)
+                                      : Colors.white.withOpacity(0.08),
+                                ),
+                              ),
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                transitionBuilder: (child, anim) =>
+                                    ScaleTransition(scale: anim, child: child),
+                                child: Icon(
+                                  _isFavorite
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  key: ValueKey(_isFavorite),
+                                  color: _isFavorite
+                                      ? Colors.redAccent
+                                      : Colors.white54,
+                                  size: 24,
+                                ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          if (user != null)
-                            GestureDetector(
-                              onTap: () => _handleFavoriteToggle(liveMedia),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: _isFavorite
-                                      ? Colors.redAccent.withOpacity(0.1)
-                                      : Colors.white.withOpacity(0.05),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  transitionBuilder: (child, anim) =>
-                                      ScaleTransition(
-                                        scale: anim,
-                                        child: child,
-                                      ),
-                                  child: Icon(
-                                    _isFavorite
-                                        ? Icons.favorite_rounded
-                                        : Icons.favorite_border_rounded,
-                                    key: ValueKey(_isFavorite),
-                                    color: _isFavorite
-                                        ? Colors.redAccent
-                                        : Colors.white,
-                                    size: 26,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
+                        ),
+                      const SizedBox(height: 12),
                       MovieStatsBar(movie: displayMovieForStats),
                       const SizedBox(height: 30),
 
@@ -401,47 +398,101 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
-  Widget _buildSliverAppBar(String backdrop, String poster) {
+  Widget _buildSliverAppBar(String poster, String title) {
+    // Usa poster w780 per qualità massima (non il backdrop panoramico sgranato)
+    final posterHD = poster.isNotEmpty
+        ? poster.replaceFirst('w342', 'w780').replaceFirst('original', 'w780')
+        : poster;
+
     return SliverAppBar(
-      expandedHeight: 450,
+      expandedHeight: 520,
       pinned: true,
+      stretch: true,
       backgroundColor: _backgroundColor,
-      leading: IconButton(
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: Colors.black54,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new,
-            size: 20,
-            color: Colors.white,
+      leading: Padding(
+        padding: const EdgeInsets.all(8),
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.55),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 18,
+              color: Colors.white,
+            ),
           ),
         ),
-        onPressed: () => Navigator.pop(context),
       ),
       flexibleSpace: FlexibleSpaceBar(
+        stretchModes: const [StretchMode.zoomBackground],
         background: Stack(
           fit: StackFit.expand,
           children: [
+            // Poster HD centrato
             CachedNetworkImage(
-              imageUrl: backdrop.isNotEmpty ? backdrop : poster,
+              imageUrl: posterHD.isNotEmpty ? posterHD : poster,
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: _backgroundColor),
+              alignment: Alignment.topCenter,
+              placeholder: (_, __) => Container(
+                color: const Color(0xFF0D0D0D),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: Colors.orangeAccent,
+                  ),
+                ),
+              ),
               errorWidget: (_, __, ___) => Container(color: _backgroundColor),
             ),
+
+            // Gradiente: trasparente in alto, nero denso in basso
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    _backgroundColor.withOpacity(0.8),
-                    _backgroundColor,
+                    Colors.transparent,
+                    Color(0xCC000000),
+                    Colors.black,
                   ],
-                  stops: const [0.5, 0.8, 1.0],
+                  stops: [0.0, 0.45, 0.75, 1.0],
+                ),
+              ),
+            ),
+
+            // Titolo centrato in basso con font premium
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.0,
+                  height: 1.1,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black,
+                      blurRadius: 20,
+                      offset: Offset(0, 2),
+                    ),
+                    Shadow(
+                      color: Colors.black87,
+                      blurRadius: 40,
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -4,6 +4,7 @@ import 'package:library_ai/domain/entities/book.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import '../../services/utility_services/ai_service.dart';
+import '../../services/utility_services/offline_action_guard.dart';
 
 class BookDetailLogic {
   final AIService _aiService;
@@ -23,6 +24,9 @@ class BookDetailLogic {
       if (context.mounted) _showMinimalSnackBar(context, "Devi essere loggato");
       return;
     }
+
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return;
 
     // RIMOZIONE
     if (currentStatus == targetStatus) {
@@ -84,6 +88,9 @@ class BookDetailLogic {
       }
       return null;
     }
+
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return null;
 
     try {
       final analysis = await _aiService.analyzeMedia(

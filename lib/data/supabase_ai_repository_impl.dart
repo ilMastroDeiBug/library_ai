@@ -7,15 +7,22 @@ class SupabaseAiRepositoryImpl implements AiRepository {
   SupabaseAiRepositoryImpl(this._supabase);
 
   @override
-  Stream<int> getUserTokensStream(String userId) {
-    return _supabase
-        .from('user_ai_tokens')
-        .stream(primaryKey: ['user_id'])
-        .eq('user_id', userId)
-        .map((snapshot) {
-          if (snapshot.isEmpty) return 0; // Fallback se non ci sono token
-          return snapshot.first['available_tokens'] as int;
-        });
+  Stream<int> getUserTokensStream(String userId) async* {
+    try {
+      final snapshot = await _supabase
+          .from('user_ai_tokens')
+          .select('available_tokens')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (snapshot == null) {
+        yield 0;
+      } else {
+        yield snapshot['available_tokens'] as int;
+      }
+    } catch (_) {
+      yield 0;
+    }
   }
 
   @override

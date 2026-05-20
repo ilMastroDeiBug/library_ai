@@ -26,6 +26,7 @@ import 'package:library_ai/Pages/movie_detail_page.dart';
 import 'package:library_ai/Pages/actor_detail_page.dart';
 import 'package:library_ai/models/movie_widget/streak_widget.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
+import 'package:library_ai/services/utility_services/offline_action_guard.dart';
 
 class LibraryGrid extends StatefulWidget {
   final AppMode mode;
@@ -95,6 +96,9 @@ class _LibraryGridState extends State<LibraryGrid> {
   void _performBulkAction(String action) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return;
+
+    // Guard offline: blocca azioni bulk senza connessione
+    if (!OfflineActionGuard.checkAndShow(context)) return;
 
     setState(() => _isBulkActionLoading = true);
 

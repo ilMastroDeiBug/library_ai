@@ -10,6 +10,7 @@ import 'package:library_ai/services/utility_services/tmdb_service.dart';
 import 'package:library_ai/domain/use_cases/tv_series_progress_use_cases.dart';
 import 'package:library_ai/services/utility_services/watchlist_realtime_notifier.dart';
 import '../../services/utility_services/ai_service.dart';
+import '../../services/utility_services/offline_action_guard.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
 class MovieDetailLogic {
@@ -41,11 +42,23 @@ class MovieDetailLogic {
 
     dynamic mediaToSave = media;
 
-    if (media is TvSeries && media.seasons.isEmpty && newStatus != 'none') {
+    if (media is TvSeries && newStatus != 'none') {
       try {
         final fullTvData = await sl<TmdbService>().getTvSeriesDetails(media.id);
         mediaToSave = media.copyWith(
           seasons: fullTvData.seasons,
+          runtime: fullTvData.runtime,
+          numberOfEpisodes: fullTvData.numberOfEpisodes,
+          status: newStatus,
+        );
+      } catch (e) {
+        mediaToSave = media.copyWith(status: newStatus);
+      }
+    } else if (media is Movie && newStatus != 'none') {
+      try {
+        final fullMovieData = await sl<TmdbService>().getMovieDetails(media.id);
+        mediaToSave = media.copyWith(
+          runtime: fullMovieData.runtime,
           status: newStatus,
         );
       } catch (e) {
@@ -140,6 +153,9 @@ class MovieDetailLogic {
   Future<String?> handleAnalysis(BuildContext context, dynamic media) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return null;
+
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return null;
 
     try {
       final type = (media is TvSeries) ? 'tv' : 'movie';

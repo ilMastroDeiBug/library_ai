@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hive/hive.dart';
 import 'package:library_ai/domain/repositories/social_repository.dart';
 import 'package:library_ai/domain/entities/pinned_item.dart';
 import 'package:library_ai/domain/entities/vault_entry.dart';
@@ -16,77 +17,157 @@ class SupabaseSocialRepositoryImpl implements SocialRepository {
   final SupabaseClient _supabase;
 
   SupabaseSocialRepositoryImpl({SupabaseClient? supabaseClient})
-      : _supabase = supabaseClient ?? Supabase.instance.client;
+    : _supabase = supabaseClient ?? Supabase.instance.client;
 
   // ── Statistiche ────────────────────────────────────────────────────────────
 
   @override
   Future<SocialStats> getSocialStats(String userId) async {
+    // 1. Prova RPC Supabase (calcolo server-side, zero egress)
     try {
-      final followersRes = await _supabase
-          .from('follows')
-          .select()
-          .eq('following_id', userId)
-          .count(CountOption.exact);
-
-      final followingRes = await _supabase
-          .from('follows')
-          .select()
-          .eq('follower_id', userId)
-          .count(CountOption.exact);
-
-      final moviesRes = await _supabase
-          .from('user_watchlist')
-          .select()
-          .eq('user_id', userId)
-          .eq('type', 'movie')
-          .count(CountOption.exact);
-
-      final tvRes = await _supabase
-          .from('user_watchlist')
-          .select()
-          .eq('user_id', userId)
-          .eq('type', 'tv')
-          .count(CountOption.exact);
-
-      final booksRes = await _supabase
-          .from('user_books')
-          .select()
-          .eq('user_id', userId)
-          .count(CountOption.exact);
-
-      return SocialStats(
-        followersCount: followersRes.count ?? 0,
-        followingCount: followingRes.count ?? 0,
-        moviesCount: moviesRes.count ?? 0,
-        tvCount: tvRes.count ?? 0,
-        booksCount: booksRes.count ?? 0,
+      final response = await _supabase.rpc(
+        'get_user_watch_stats',
+        params: {'user_uuid': userId},
       );
+      if (response != null) {
+        return SocialStats.fromMap(Map<String, dynamic>.from(response));
+      }
     } catch (_) {
-      return const SocialStats();
-
+      // RPC non disponibile → calcola localmente da Hive
     }
+
+    // 2. Fallback: calcolo locale leggendo raw_data dalla cache Hive
+    return _computeStatsFromHive(userId);
+  }
+
+  /// Calcola le statistiche direttamente dalla cache Hive locale.
+  /// Nessuna chiamata di rete. Usato come fallback se la RPC non è disponibile.
+  SocialStats _computeStatsFromHive(String userId) {
+    if (!Hive.isBoxOpen('cinelib_cache')) return const SocialStats();
+    final box = Hive.box('cinelib_cache');
+
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final startOfYear = DateTime(now.year, 1, 1);
+
+    int moviesCount = 0;
+    int tvCount = 0;
+    int watchlistCount = 0;
+    int totalMinutes = 0;
+    int weekMinutes = 0;
+    int monthMinutes = 0;
+    int yearMinutes = 0;
+
+    // Legge le liste dalla cache (chiavi: watchlist_{userId}_{status})
+    for (final status in ['watched', 'watching', 'towatch', 'favorites']) {
+      final cached = box.get('watchlist_${userId}_$status');
+      if (cached is! List) continue;
+
+      for (final raw in cached) {
+        if (raw is! Map) continue;
+        final row = Map<String, dynamic>.from(raw);
+        final type = row['type']?.toString() ?? 'movie';
+        final rowStatus = row['status']?.toString() ?? status;
+
+        final rawData = row['raw_data'] is Map
+            ? Map<String, dynamic>.from(row['raw_data'] as Map)
+            : <String, dynamic>{};
+
+        // Contatori
+        if (rowStatus == 'watched') {
+          if (type == 'movie') moviesCount++;
+          if (type == 'tv') tvCount++;
+        }
+        if (rowStatus == 'watching' || rowStatus == 'towatch') {
+          watchlistCount++;
+        }
+
+        // Minutaggio (solo watched + watching)
+        if (rowStatus != 'watched' && rowStatus != 'watching') continue;
+
+        int mins = 0;
+        if (type == 'movie' && rowStatus == 'watched') {
+          final rt = _parseInt(rawData['runtime']);
+          mins = rt > 0 ? rt : 120;
+        } else if (type == 'tv') {
+          final epRt = _parseInt(rawData['runtime']);
+          final epRuntime = epRt > 0 ? epRt : 45;
+          if (rowStatus == 'watched') {
+            final nEp = _parseInt(rawData['number_of_episodes']);
+            mins = epRuntime * (nEp > 0 ? nEp : 10);
+          }
+          // 'watching': non contiamo qui senza tv_progress locale
+        }
+
+        if (mins == 0) continue;
+
+        DateTime? ts;
+        try {
+          final tsStr = row['timestamp']?.toString();
+          if (tsStr != null) ts = DateTime.tryParse(tsStr);
+        } catch (_) {}
+
+        totalMinutes += mins;
+        if (ts != null) {
+          if (ts.isAfter(startOfYear)) yearMinutes += mins;
+          if (ts.isAfter(startOfMonth)) monthMinutes += mins;
+          if (ts.isAfter(startOfWeek)) weekMinutes += mins;
+        }
+      }
+    }
+
+    // Contatori follow (se disponibili)
+    int followersCount = 0;
+    int followingCount = 0;
+    try {
+      followersCount = (box.get('followers_count_$userId') as int?) ?? 0;
+      followingCount = (box.get('following_count_$userId') as int?) ?? 0;
+    } catch (_) {}
+
+    return SocialStats(
+      followersCount: followersCount,
+      followingCount: followingCount,
+      moviesCount: moviesCount,
+      tvCount: tvCount,
+      vaultCount: moviesCount + tvCount,
+      totalMinutes: totalMinutes,
+      weekMinutes: weekMinutes,
+      monthMinutes: monthMinutes,
+      yearMinutes: yearMinutes,
+      watchlistCount: watchlistCount,
+    );
+  }
+
+  int _parseInt(dynamic val) {
+    if (val == null) return 0;
+    if (val is int) return val;
+    if (val is double) return val.toInt();
+    return int.tryParse(val.toString()) ?? 0;
   }
 
   // ── Vetrina (Pinned Items) ─────────────────────────────────────────────────
 
   @override
-  Stream<List<PinnedItem>> getPinnedItemsStream(String userId) {
-    return _supabase
-        .from('pinned_items')
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .order('position', ascending: true)
-        .map((rows) => rows.map(PinnedItem.fromMap).toList());
+  Stream<List<PinnedItem>> getPinnedItemsStream(String userId) async* {
+    try {
+      final snapshot = await _supabase
+          .from('pinned_items')
+          .select()
+          .eq('user_id', userId)
+          .order('position', ascending: true);
+      yield snapshot.map(PinnedItem.fromMap).toList();
+    } catch (_) {
+      yield [];
+    }
   }
 
   @override
   Future<void> pinItem(PinnedItem item) async {
     // Upsert basato su (user_id, position) per permettere la sostituzione
-    await _supabase.from('pinned_items').upsert(
-      item.toMap(),
-      onConflict: 'user_id, position',
-    );
+    await _supabase
+        .from('pinned_items')
+        .upsert(item.toMap(), onConflict: 'user_id, position');
   }
 
   @override
@@ -100,25 +181,24 @@ class SupabaseSocialRepositoryImpl implements SocialRepository {
   Stream<List<VaultEntry>> getRecentVaultStream(
     String userId, {
     int limit = 20,
-  }) {
-    // Usiamo la vista `vault_recent` che aggrega film e serie in ordine cronologico.
-    // La vista deve essere creata su Supabase (vedi istruzioni SQL allegate).
-    return _supabase
-        .from('vault_recent')
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .order('added_at', ascending: false)
-        .limit(limit)
-        .map((rows) => rows.map(VaultEntry.fromMap).toList());
+  }) async* {
+    try {
+      final snapshot = await _supabase
+          .from('vault_recent')
+          .select()
+          .eq('user_id', userId)
+          .order('added_at', ascending: false)
+          .limit(limit);
+      yield snapshot.map(VaultEntry.fromMap).toList();
+    } catch (_) {
+      yield [];
+    }
   }
 
   // ── Follow System ─────────────────────────────────────────────────────────
 
   @override
-  Future<bool> toggleFollow(
-    String currentUserId,
-    String targetUserId,
-  ) async {
+  Future<bool> toggleFollow(String currentUserId, String targetUserId) async {
     final existing = await _supabase
         .from('follows')
         .select('id')
@@ -127,10 +207,7 @@ class SupabaseSocialRepositoryImpl implements SocialRepository {
         .maybeSingle();
 
     if (existing != null) {
-      await _supabase
-          .from('follows')
-          .delete()
-          .eq('id', existing['id']);
+      await _supabase.from('follows').delete().eq('id', existing['id']);
       return false; // ora non segue più
     } else {
       await _supabase.from('follows').insert({
@@ -157,13 +234,17 @@ class SupabaseSocialRepositoryImpl implements SocialRepository {
     try {
       final rows = await _supabase
           .from('follows')
-          .select('profiles!following_id(*)')
+          .select(
+            'profiles!following_id(id, email, display_name, photo_url, bio, is_public)',
+          )
           .eq('follower_id', userId);
 
       return rows
-          .map<AppUser>((row) => _mapProfileToUser(
-                Map<String, dynamic>.from(row['profiles'] ?? {}),
-              ))
+          .map<AppUser>(
+            (row) => _mapProfileToUser(
+              Map<String, dynamic>.from(row['profiles'] ?? {}),
+            ),
+          )
           .toList();
     } catch (_) {
       return [];
@@ -175,13 +256,17 @@ class SupabaseSocialRepositoryImpl implements SocialRepository {
     try {
       final rows = await _supabase
           .from('follows')
-          .select('profiles!follower_id(*)')
+          .select(
+            'profiles!follower_id(id, email, display_name, photo_url, bio, is_public)',
+          )
           .eq('following_id', userId);
 
       return rows
-          .map<AppUser>((row) => _mapProfileToUser(
-                Map<String, dynamic>.from(row['profiles'] ?? {}),
-              ))
+          .map<AppUser>(
+            (row) => _mapProfileToUser(
+              Map<String, dynamic>.from(row['profiles'] ?? {}),
+            ),
+          )
           .toList();
     } catch (_) {
       return [];

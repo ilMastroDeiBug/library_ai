@@ -61,7 +61,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
   StreamController<List<dynamic>> _createWatchlistStreamController(String userId, String status) {
     late StreamController<List<dynamic>> controller;
     StreamSubscription<List<Map<String, dynamic>>>? localSubscription;
-    StreamSubscription<List<Map<String, dynamic>>>? realtimeSubscription;
 
     controller = StreamController<List<dynamic>>(
       onListen: () {
@@ -88,38 +87,35 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
 
           if (!sl<NetworkStatusService>().isOnline) return;
 
-          realtimeSubscription = _supabase
-              .from(_tableName)
-              .stream(primaryKey: ['id'])
-              .eq('user_id', userId)
-              .order('timestamp', ascending: false)
-              .listen(
-                (snapshot) async {
-                  final rows = snapshot
-                      .map((row) => Map<String, dynamic>.from(row))
-                      .toList();
-                  final filteredRows = rows
-                      .where((row) => row['status'] == status)
-                      .toList();
-                  final finalRows = _deduplicateRowsByMediaId(filteredRows);
+          try {
+            final snapshot = await _supabase
+                .from(_tableName)
+                .select()
+                .eq('user_id', userId)
+                .order('timestamp', ascending: false);
 
-                  await cacheBox.put(cacheKey, finalRows);
-                  for (final row in finalRows) {
-                    final mediaId = row['media_id'];
-                    if (mediaId != null) {
-                      await cacheBox.put('media_${userId}_$mediaId', row);
-                    }
-                  }
+            final rows = snapshot
+                .map((row) => Map<String, dynamic>.from(row))
+                .toList();
+            final filteredRows = rows
+                .where((row) => row['status'] == status)
+                .toList();
+            final finalRows = _deduplicateRowsByMediaId(filteredRows);
 
-                  _emitWatchlistRows(userId, status, finalRows);
-                },
-                onError: (_) {},
-              );
+            await cacheBox.put(cacheKey, finalRows);
+            for (final row in finalRows) {
+              final mediaId = row['media_id'];
+              if (mediaId != null) {
+                await cacheBox.put('media_${userId}_$mediaId', row);
+              }
+            }
+
+            _emitWatchlistRows(userId, status, finalRows);
+          } catch (_) {}
         }();
       },
       onCancel: () async {
         await localSubscription?.cancel();
-        await realtimeSubscription?.cancel();
       },
     );
 
@@ -147,7 +143,6 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
   StreamController<dynamic> _createSingleMediaStreamController(String userId, int id) {
     late StreamController<dynamic> controller;
     StreamSubscription<Map<String, dynamic>?>? localSubscription;
-    StreamSubscription<List<Map<String, dynamic>>>? realtimeSubscription;
 
     controller = StreamController<dynamic>(
       onListen: () {
@@ -166,50 +161,46 @@ class SupabaseMovieRepositoryImpl implements MovieRepository {
 
         if (!sl<NetworkStatusService>().isOnline) return;
 
-        realtimeSubscription = _supabase
-            .from(_tableName)
-            .stream(primaryKey: ['id'])
-            .eq('user_id', userId)
-            .listen(
-              (snapshot) async {
-                final filteredSnapshot = snapshot
-                    .where((row) => row['media_id'] == id)
-                    .toList();
+        () async {
+          try {
+            final snapshot = await _supabase
+                .from(_tableName)
+                .select()
+                .eq('user_id', userId)
+                .eq('media_id', id);
 
-                if (filteredSnapshot.isEmpty) {
-                  final fallbackRow = _readCachedRow(cacheBox, cacheKey);
-                  await _cacheService.deleteMediaItem(
-                    userId: userId,
-                    mediaId: id,
-                  );
+            if (snapshot.isEmpty) {
+              final fallbackRow = _readCachedRow(cacheBox, cacheKey);
+              await _cacheService.deleteMediaItem(
+                userId: userId,
+                mediaId: id,
+              );
 
-                  if (fallbackRow != null) {
-                    final removedRow = Map<String, dynamic>.from(fallbackRow);
-                    removedRow['status'] = 'none';
-                    _emitMediaRow(userId, id, removedRow);
-                  } else {
-                    _emitMediaRow(userId, id, null);
-                  }
-                  await _emitWatchlistCache(userId);
-                  return;
-                }
+              if (fallbackRow != null) {
+                final removedRow = Map<String, dynamic>.from(fallbackRow);
+                removedRow['status'] = 'none';
+                _emitMediaRow(userId, id, removedRow);
+              } else {
+                _emitMediaRow(userId, id, null);
+              }
+              await _emitWatchlistCache(userId);
+              return;
+            }
 
-                final row = Map<String, dynamic>.from(filteredSnapshot.first);
-                await _cacheService.upsertMediaItem(
-                  userId: userId,
-                  mediaId: id,
-                  row: row,
-                );
-
-                _emitMediaRow(userId, id, row);
-                await _emitWatchlistCache(userId);
-              },
-              onError: (_) {},
+            final row = Map<String, dynamic>.from(snapshot.first);
+            await _cacheService.upsertMediaItem(
+              userId: userId,
+              mediaId: id,
+              row: row,
             );
+
+            _emitMediaRow(userId, id, row);
+            await _emitWatchlistCache(userId);
+          } catch (_) {}
+        }();
       },
       onCancel: () async {
         await localSubscription?.cancel();
-        await realtimeSubscription?.cancel();
       },
     );
 

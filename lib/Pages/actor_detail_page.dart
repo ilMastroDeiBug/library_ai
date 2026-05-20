@@ -7,6 +7,7 @@ import '../domain/repositories/auth_repository.dart';
 import '../domain/use_cases/favorite_use_cases.dart';
 import '../injection_container.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
+import 'package:library_ai/services/utility_services/offline_action_guard.dart';
 
 class ActorDetailPage extends StatefulWidget {
   final int actorId;
@@ -65,6 +66,10 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     }
 
     final targetValue = !(_optimisticIsFavorite ?? currentStreamValue);
+
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return;
+
     setState(() {
       _isTogglingHeart = true;
       _optimisticIsFavorite = targetValue;

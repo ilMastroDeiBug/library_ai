@@ -66,32 +66,29 @@ class SupabaseTvProgressRepositoryImpl implements TvProgressRepository {
           final initialProgress = await getProgress(userId, seriesId);
           if (!controller.isClosed) controller.add(initialProgress);
 
-          realtimeSubscription = _supabase
-              .from(_tableName)
-              .stream(primaryKey: ['id'])
-              .eq('user_id', userId)
-              .listen(
-                (events) {
-                  final filteredEvents = events
-                      .where((row) => row['series_id'] == seriesId)
-                      .toList();
+          try {
+            final events = await _supabase
+                .from(_tableName)
+                .select()
+                .eq('user_id', userId);
 
-                  if (filteredEvents.isEmpty) {
-                    _emitProgressRemoval(userId, seriesId);
-                    return;
-                  }
+            final filteredEvents = events
+                .where((row) => row['series_id'] == seriesId)
+                .toList();
 
-                  _emitProgress(
-                    TvSeriesProgress.fromMap(filteredEvents.first),
-                  );
-                },
-                onError: (_) {},
-              );
+            if (filteredEvents.isEmpty) {
+              _emitProgressRemoval(userId, seriesId);
+              return;
+            }
+
+            _emitProgress(
+              TvSeriesProgress.fromMap(filteredEvents.first),
+            );
+          } catch (_) {}
         }();
       },
       onCancel: () async {
         await localSubscription?.cancel();
-        await realtimeSubscription?.cancel();
       },
     );
 
@@ -122,30 +119,27 @@ class SupabaseTvProgressRepositoryImpl implements TvProgressRepository {
           _replaceUserProgressCache(userId, initialProgress);
           if (!controller.isClosed) controller.add(initialProgress);
 
-          realtimeSubscription = _supabase
-              .from(_tableName)
-              .stream(primaryKey: ['id'])
-              .eq('user_id', userId)
-              .listen(
-                (events) {
-                  final uniqueMap = <int, TvSeriesProgress>{};
+          try {
+            final events = await _supabase
+                .from(_tableName)
+                .select()
+                .eq('user_id', userId);
 
-                  for (var event in events) {
-                    final progress = TvSeriesProgress.fromMap(event);
-                    uniqueMap[progress.seriesId] = progress;
-                  }
+            final uniqueMap = <int, TvSeriesProgress>{};
 
-                  final progressList = _sortProgress(uniqueMap.values);
-                  _replaceUserProgressCache(userId, progressList);
-                  _emitAllUserProgress(userId);
-                },
-                onError: (_) {},
-              );
+            for (var event in events) {
+              final progress = TvSeriesProgress.fromMap(event);
+              uniqueMap[progress.seriesId] = progress;
+            }
+
+            final progressList = _sortProgress(uniqueMap.values);
+            _replaceUserProgressCache(userId, progressList);
+            _emitAllUserProgress(userId);
+          } catch (_) {}
         }();
       },
       onCancel: () async {
         await localSubscription?.cancel();
-        await realtimeSubscription?.cancel();
       },
     );
 

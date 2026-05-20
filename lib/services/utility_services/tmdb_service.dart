@@ -133,6 +133,21 @@ class TmdbService {
     );
   }
 
+  Future<Movie> getMovieDetails(int movieId) async {
+    final languageCode = sl<LanguageService>().currentLanguage;
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/movie/$movieId?language=$languageCode'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return Movie.fromTmdb(data);
+    } else {
+      throw Exception('Errore fetch dettagli movie: ${response.statusCode}');
+    }
+  }
+
   // --- FIX: RECUPERO DETTAGLI CON LE STAGIONI ---
   Future<TvSeries> getTvSeriesDetails(int seriesId) async {
     final languageCode = sl<LanguageService>().currentLanguage;

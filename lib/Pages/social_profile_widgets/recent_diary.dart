@@ -46,19 +46,13 @@ class RecentDiaryEntry extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      if (entry.rating != null) _StarRating(rating: entry.rating!),
-                      if (entry.rating != null) const SizedBox(width: 10),
-                      Text(
-                        _formatDate(entry.addedAt),
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.35),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    _formatDate(entry.addedAt),
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.35),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   if (entry.reviewSnippet != null &&
                       entry.reviewSnippet!.isNotEmpty) ...[
@@ -164,7 +158,12 @@ class RecentDiaryEntry extends StatelessWidget {
 
     if (box != null) {
       // Cerca in tutti gli status
-      for (final status in ['reading', 'completed', 'want_to_read', 'dropped']) {
+      for (final status in [
+        'reading',
+        'completed',
+        'want_to_read',
+        'dropped',
+      ]) {
         final cached = box.get('books_${entry.userId}_$status');
         if (cached is! List) continue;
         for (final raw in cached) {
@@ -223,10 +222,10 @@ class _MiniPoster extends StatelessWidget {
     };
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(7),
+      borderRadius: BorderRadius.circular(10),
       child: SizedBox(
-        width: 46,
-        height: 66,
+        width: 70,
+        height: 100,
         child: posterUrl != null
             ? CachedNetworkImage(
                 imageUrl: posterUrl!,
@@ -313,10 +312,12 @@ class _StatusChip extends StatelessWidget {
 
   (String, Color) _resolveStatus(String status) {
     return switch (status) {
-      'watched' || 'completed' => ('Visto', Colors.greenAccent),
-      'watching' => ('In corso', Colors.orangeAccent),
-      'towatch' || 'want_to_read' => ('Da vedere', Colors.blueAccent),
-      'reading' => ('Leggendo', Colors.teal),
+      'watched' ||
+      'completed' => ('Visto', const Color.fromARGB(255, 214, 111, 42)),
+      'watching' => ('In corso', const Color.fromARGB(255, 214, 111, 42)),
+      'towatch' ||
+      'want_to_read' => ('Da vedere', const Color.fromARGB(255, 214, 111, 42)),
+      'reading' => ('Leggendo', const Color.fromARGB(255, 214, 111, 42)),
       'dropped' => ('Abbandonato', Colors.redAccent),
       _ => (status, Colors.white38),
     };

@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/entities/book.dart';
+import 'package:library_ai/services/utility_services/offline_action_guard.dart';
 
 class AddBookSheet extends StatefulWidget {
   const AddBookSheet({super.key});
@@ -18,6 +19,9 @@ class _AddBookSheetState extends State<AddBookSheet> {
 
   Future<void> _save() async {
     if (_titleController.text.isEmpty) return;
+
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return;
 
     setState(() => _isLoading = true);
     try {

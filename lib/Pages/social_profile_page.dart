@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import 'package:library_ai/domain/entities/social_stats.dart';
-import 'package:library_ai/domain/entities/pinned_item.dart';
 import 'package:library_ai/domain/entities/vault_entry.dart';
 import 'package:library_ai/domain/use_cases/social_use_cases.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
@@ -11,7 +10,7 @@ import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/pages/settings_page.dart';
 import 'social_profile_widgets/profile_header.dart';
-import 'social_profile_widgets/pinned_vault_showcase.dart';
+import 'social_profile_widgets/stats_grid_glass_widget.dart';
 import 'social_profile_widgets/recent_diary.dart';
 
 class SocialProfilePage extends StatefulWidget {
@@ -94,23 +93,28 @@ class _SocialProfilePageState extends State<SocialProfilePage>
             : <String, dynamic>{};
         // Movie.toMap() usa 'posterPath' (camelCase), non 'poster_path'
         final posterPath = rawData['posterPath']?.toString() ?? '';
-        all.add(VaultEntry(
-          id: row['id']?.toString() ?? UniqueKey().toString(),
-          userId: userId,
-          mediaId: (row['media_id'] as num?)?.toInt() ?? 0,
-          mediaType: row['type']?.toString() ?? 'movie',
-          title: rawData['title']?.toString() ??
-              rawData['name']?.toString() ?? '',
-          posterUrl: posterPath.isNotEmpty
-              ? 'https://image.tmdb.org/t/p/w342$posterPath'
-              : null,
-          rating: (rawData['voteAverage'] as num?)?.toDouble(),
-          reviewSnippet: null,
-          status: status,
-          addedAt: row['timestamp'] != null
-              ? DateTime.tryParse(row['timestamp'].toString()) ?? DateTime.now()
-              : DateTime.now(),
-        ));
+        all.add(
+          VaultEntry(
+            id: row['id']?.toString() ?? UniqueKey().toString(),
+            userId: userId,
+            mediaId: (row['media_id'] as num?)?.toInt() ?? 0,
+            mediaType: row['type']?.toString() ?? 'movie',
+            title:
+                rawData['title']?.toString() ??
+                rawData['name']?.toString() ??
+                '',
+            posterUrl: posterPath.isNotEmpty
+                ? 'https://image.tmdb.org/t/p/w342$posterPath'
+                : null,
+            rating: (rawData['voteAverage'] as num?)?.toDouble(),
+            reviewSnippet: null,
+            status: status,
+            addedAt: row['timestamp'] != null
+                ? DateTime.tryParse(row['timestamp'].toString()) ??
+                      DateTime.now()
+                : DateTime.now(),
+          ),
+        );
       }
     }
 
@@ -121,20 +125,23 @@ class _SocialProfilePageState extends State<SocialProfilePage>
       for (final raw in cached) {
         if (raw is! Map) continue;
         final row = Map<String, dynamic>.from(raw as Map);
-        all.add(VaultEntry(
-          id: row['id']?.toString() ?? UniqueKey().toString(),
-          userId: userId,
-          mediaId: row['book_id']?.hashCode.abs() ?? 0,
-          mediaType: 'book',
-          title: row['title']?.toString() ?? '',
-          posterUrl: row['thumbnail_url']?.toString(),
-          rating: (row['rating'] as num?)?.toDouble(),
-          reviewSnippet: null,
-          status: status,
-          addedAt: row['timestamp'] != null
-              ? DateTime.tryParse(row['timestamp'].toString()) ?? DateTime.now()
-              : DateTime.now(),
-        ));
+        all.add(
+          VaultEntry(
+            id: row['id']?.toString() ?? UniqueKey().toString(),
+            userId: userId,
+            mediaId: row['book_id']?.hashCode.abs() ?? 0,
+            mediaType: 'book',
+            title: row['title']?.toString() ?? '',
+            posterUrl: row['thumbnail_url']?.toString(),
+            rating: (row['rating'] as num?)?.toDouble(),
+            reviewSnippet: null,
+            status: status,
+            addedAt: row['timestamp'] != null
+                ? DateTime.tryParse(row['timestamp'].toString()) ??
+                      DateTime.now()
+                : DateTime.now(),
+          ),
+        );
       }
     }
 
@@ -153,7 +160,7 @@ class _SocialProfilePageState extends State<SocialProfilePage>
     final authUser = sl<AuthRepository>().currentUser!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: const Color.fromARGB(255, 0, 0, 0),
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(context),
       body: FadeTransition(
@@ -165,32 +172,26 @@ class _SocialProfilePageState extends State<SocialProfilePage>
           ),
           slivers: [
             // ── Spazio per l'header trasparente
-            const SliverToBoxAdapter(child: SizedBox(height: 56)),
+            const SliverToBoxAdapter(child: SizedBox(height: 90)),
 
             // ── Header del profilo
             SliverToBoxAdapter(
-              child: ProfileHeader(user: user, stats: _stats),
+              child: ProfileHeader(
+                user: user,
+                stats: _stats,
+                onRefresh: _loadProfile,
+              ),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-            // ── Vetrina – Pinned Big 4
-            SliverToBoxAdapter(child: _buildSectionTitle('Vetrina')),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverToBoxAdapter(
-              child: StreamBuilder<List<PinnedItem>>(
-                stream: sl<GetPinnedItemsUseCase>().call(authUser.id),
-                builder: (context, snap) {
-                  final items = snap.data ?? [];
-                  return PinnedVaultShowcase(items: items, userId: authUser.id);
-                },
-              ),
-            ),
+            // ── Statistiche Avanzate (Bento Grid) ──────────────────────────
+            SliverToBoxAdapter(child: StatsGridGlassWidget(stats: _stats)),
 
             const SliverToBoxAdapter(child: SizedBox(height: 36)),
 
             // ── Diario Recente
-            SliverToBoxAdapter(child: _buildSectionTitle('Diario Recente')),
+            SliverToBoxAdapter(child: _buildSectionTitle('Recenti')),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
             SliverToBoxAdapter(
@@ -335,7 +336,7 @@ class _SocialProfilePageState extends State<SocialProfilePage>
 
   Widget _buildSkeleton() {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: const Color.fromARGB(255, 0, 0, 0),
       body: ListView(
         padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 70),
         children: [

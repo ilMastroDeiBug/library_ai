@@ -106,36 +106,34 @@ class SupabaseFavoritesRepositoryImpl implements FavoritesRepository {
     if (!sl<NetworkStatusService>().isOnline) return;
 
     try {
-      final supabaseStream = _supabase
+      final snapshot = await _supabase
           .from(_tableName)
-          .stream(primaryKey: ['id'])
+          .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
-      await for (final snapshot in supabaseStream) {
-        final rows = snapshot
-            .map((row) => Map<String, dynamic>.from(row))
-            .toList();
-        final filteredRows = type == null
-            ? rows
-            : rows.where((row) => row['item_type'] == type).toList();
+      final rows = snapshot
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+      final filteredRows = type == null
+          ? rows
+          : rows.where((row) => row['item_type'] == type).toList();
 
-        await cacheBox.put(cacheKey, filteredRows);
+      await cacheBox.put(cacheKey, filteredRows);
 
-        if (type == null) {
-          final groupedByType = <String, List<Map<String, dynamic>>>{};
-          for (final row in rows) {
-            final rowType = row['item_type']?.toString();
-            if (rowType == null) continue;
-            groupedByType.putIfAbsent(rowType, () => []).add(row);
-          }
-          for (final entry in groupedByType.entries) {
-            await cacheBox.put('favorites_${userId}_${entry.key}', entry.value);
-          }
+      if (type == null) {
+        final groupedByType = <String, List<Map<String, dynamic>>>{};
+        for (final row in rows) {
+          final rowType = row['item_type']?.toString();
+          if (rowType == null) continue;
+          groupedByType.putIfAbsent(rowType, () => []).add(row);
         }
-
-        yield _mapFavoriteRowsToEntities(filteredRows, type: type);
+        for (final entry in groupedByType.entries) {
+          await cacheBox.put('favorites_${userId}_${entry.key}', entry.value);
+        }
       }
+
+      yield _mapFavoriteRowsToEntities(filteredRows, type: type);
     } catch (_) {}
   }
 

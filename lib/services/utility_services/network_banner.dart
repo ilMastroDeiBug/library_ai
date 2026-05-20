@@ -1,96 +1,160 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../injection_container.dart';
 import 'network_status_service.dart';
 
-class GlobalNetworkBanner extends StatelessWidget {
+class GlobalNetworkBanner extends StatefulWidget {
   final Widget child;
 
   const GlobalNetworkBanner({super.key, required this.child});
 
   @override
+  State<GlobalNetworkBanner> createState() => _GlobalNetworkBannerState();
+}
+
+class _GlobalNetworkBannerState extends State<GlobalNetworkBanner>
+    with SingleTickerProviderStateMixin {
+  bool _dismissed = false;
+  late bool _wasOffline;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasOffline = !sl<NetworkStatusService>().isOnline;
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // L'app normale sotto
-        child,
+        widget.child,
 
-        // Il banner che ascolta la rete
         ListenableBuilder(
           listenable: sl<NetworkStatusService>(),
           builder: (context, _) {
-            final isOffline = !sl<NetworkStatusService>().isOnline;
-            final hasResolved =
-                sl<NetworkStatusService>().hasResolvedInitialStatus;
+            final svc = sl<NetworkStatusService>();
+            final isOffline = !svc.isOnline;
+            final hasResolved = svc.hasResolvedInitialStatus;
 
-            // Mostriamo il banner solo se sappiamo per certo di essere offline
-            final showBanner = hasResolved && isOffline;
+            // Se torna online, reset dismissed così se va offline di nuovo ricompare
+            if (_wasOffline && !isOffline) {
+              _dismissed = false;
+            }
+            _wasOffline = isOffline;
+
+            final showBanner = hasResolved && isOffline && !_dismissed;
 
             return AnimatedPositioned(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOutCubic,
-              top: showBanner ? 0 : -100, // Scende giù o sale su
+              duration: const Duration(milliseconds: 450),
+              curve: Curves.easeOutCubic,
+              top: showBanner ? 0 : -120,
               left: 0,
               right: 0,
               child: SafeArea(
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E), // Grigio scuro elegante
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.redAccent.withOpacity(0.5),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.5),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          // Nero pece quasi puro con leggera traslucenza
+                          color: const Color(0xFF080809).withOpacity(0.94),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.07),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.7),
+                              blurRadius: 30,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.wifi_off_rounded,
-                          color: Colors.redAccent,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          child: Row(
                             children: [
-                              const Text(
-                                'Nessuna connessione',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                              // Icona con pulse
+                              AnimatedBuilder(
+                                animation: _pulseAnim,
+                                builder: (context, child) {
+                                  return Opacity(
+                                    opacity: _pulseAnim.value,
+                                    child: child,
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF8C00).withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.wifi_off_rounded,
+                                    color: Color(0xFFFF8C00),
+                                    size: 15,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Stai visualizzando i contenuti offline.',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.6),
-                                  fontSize: 12,
+                              const SizedBox(width: 12),
+                              // Testo
+                              const Expanded(
+                                child: Text(
+                                  'Sei offline',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                              ),
+                              // Pulsante chiudi
+                              GestureDetector(
+                                onTap: () => setState(() => _dismissed = true),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.06),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 14,
+                                    color: Colors.white.withOpacity(0.5),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -7,6 +8,7 @@ import '../domain/use_cases/review_use_cases.dart';
 import '../injection_container.dart';
 import '../models/reviews_widgets/write_review_sheet.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
+import 'package:library_ai/services/utility_services/offline_action_guard.dart';
 
 class AllReviewsPage extends StatefulWidget {
   final int mediaId;
@@ -71,17 +73,15 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
       return;
     }
 
-    // Optimistic UI
-    int newVote = review.userVote == vote
-        ? 0
-        : vote; // Toggle se clicca lo stesso
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return;
+
+    int newVote = review.userVote == vote ? 0 : vote;
     int newLikes = review.likes;
     int newDislikes = review.dislikes;
 
-    // Rimuovi il vecchio voto se presente
     if (review.userVote == 1) newLikes--;
     if (review.userVote == -1) newDislikes--;
-    // Applica il nuovo voto
     if (newVote == 1) newLikes++;
     if (newVote == -1) newDislikes++;
 
@@ -99,7 +99,7 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
     try {
       await sl<VoteReviewUseCase>().call(review.id, user.id, newVote);
     } catch (e) {
-      _fetchReviews(); // Revert in caso di errore di rete
+      _fetchReviews();
     }
   }
 
@@ -110,22 +110,39 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
       return;
     }
 
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: const Color(0xFF0D0D0F),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withOpacity(0.07)),
+        ),
         title: Text(
           AppLocalizations.of(context)!.allReviewsDeleteTitle,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
         ),
         content: Text(
           AppLocalizations.of(context)!.allReviewsDeleteDesc,
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.5),
+            fontSize: 14,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(AppLocalizations.of(context)!.cancel),
+            child: Text(
+              AppLocalizations.of(context)!.cancel,
+              style: TextStyle(color: Colors.white.withOpacity(0.4)),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -141,9 +158,7 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
     if (confirmed != true) return;
 
     final previousReviews = List<Review>.from(_reviews ?? []);
-    setState(() {
-      _reviews?.removeWhere((item) => item.id == review.id);
-    });
+    setState(() => _reviews?.removeWhere((item) => item.id == review.id));
 
     try {
       await sl<DeleteReviewUseCase>().call(review.id, user.id);
@@ -157,6 +172,9 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
   }
 
   void _openWriteReview() async {
+    // Guard offline
+    if (!OfflineActionGuard.checkAndShow(context)) return;
+
     final user = sl<AuthRepository>().currentUser;
     if (user == null) {
       _showSnackBar(AppLocalizations.of(context)!.allReviewsLoginToWrite);
@@ -180,23 +198,33 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.zero,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A0C),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: Colors.white.withOpacity(0.07)),
+          ),
+          child: Text(
+            message,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
-        backgroundColor: const Color(0xFF333333),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
   String _formatDate(DateTime? date) {
     if (date == null) return '';
-    // Formattazione nativa in Dart (es. 05/05/2026) senza pacchetti esterni!
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     return '$day/$month/${date.year}';
@@ -205,88 +233,156 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0C), // Sfondo ultra scuro
+      backgroundColor: const Color(0xFF080809),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFF080809),
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111113),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withOpacity(0.07)),
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 15,
+              color: Colors.white,
+            ),
+          ),
+        ),
         title: Text(
           widget.title,
           style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
             color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 20,
-            color: Colors.white,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: Colors.white.withOpacity(0.05),
           ),
-          onPressed: () => Navigator.pop(context),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openWriteReview,
-        backgroundColor: Colors.orangeAccent,
-        icon: const Icon(Icons.edit_rounded, color: Colors.black),
-        label: Text(
-          AppLocalizations.of(context)!.allReviewsWrite,
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+      floatingActionButton: GestureDetector(
+        onTap: _openWriteReview,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF8C00), Color(0xFFE06500)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF8C00).withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.edit_rounded, color: Colors.black, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizations.of(context)!.allReviewsWrite,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: Column(
         children: [
-          // HEADER CON FILTRI
+          // Header con count e sort
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   _reviews != null
-                      ? AppLocalizations.of(context)!.allReviewsCount(_reviews!.length)
+                      ? AppLocalizations.of(context)!
+                            .allReviewsCount(_reviews!.length)
                       : AppLocalizations.of(context)!.allReviewsLoading,
-                  style: const TextStyle(
-                    color: Colors.white54,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.35),
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
                   ),
                 ),
+                // Sort pill
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF161618),
+                    color: const Color(0xFF111113),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.07),
+                    ),
                   ),
                   child: DropdownButton<String>(
                     value: _sortBy,
-                    dropdownColor: const Color(0xFF1E1E1E),
+                    dropdownColor: const Color(0xFF0D0D0F),
+                    isDense: true,
                     icon: const Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: Colors.orangeAccent,
-                      size: 18,
+                      color: Color(0xFFFF8C00),
+                      size: 14,
                     ),
                     underline: const SizedBox(),
                     style: const TextStyle(
-                      color: Colors.orangeAccent,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFFF8C00),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
                     items: [
                       DropdownMenuItem(
                         value: 'relevance',
-                        child: Text(AppLocalizations.of(context)!.allReviewsSortRelevant),
+                        child: Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.allReviewsSortRelevant,
+                        ),
                       ),
-                      DropdownMenuItem(value: 'recent', child: Text(AppLocalizations.of(context)!.allReviewsSortRecent)),
+                      DropdownMenuItem(
+                        value: 'recent',
+                        child: Text(
+                          AppLocalizations.of(context)!.allReviewsSortRecent,
+                        ),
+                      ),
                       DropdownMenuItem(
                         value: 'rating_desc',
-                        child: Text(AppLocalizations.of(context)!.allReviewsSortHighRating),
+                        child: Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.allReviewsSortHighRating,
+                        ),
                       ),
                       DropdownMenuItem(
                         value: 'rating_asc',
-                        child: Text(AppLocalizations.of(context)!.allReviewsSortLowRating),
+                        child: Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.allReviewsSortLowRating,
+                        ),
                       ),
                     ],
                     onChanged: (val) {
@@ -301,62 +397,35 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
             ),
           ),
 
-          // LISTA RECENSIONI
+          // Lista recensioni
           Expanded(
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
-                      color: Colors.orangeAccent,
+                      color: Color(0xFFFF8C00),
+                      strokeWidth: 2,
                     ),
                   )
                 : RefreshIndicator(
-                    color: Colors.orangeAccent,
-                    backgroundColor: const Color(0xFF161618),
+                    color: const Color(0xFFFF8C00),
+                    backgroundColor: const Color(0xFF111113),
                     onRefresh: _fetchReviews,
                     child: _reviews == null || _reviews!.isEmpty
-                        ? ListView(
-                            // Usiamo ListView per permettere il pull-to-refresh anche se vuoto
-                            children: [
-                              SizedBox(
-                                height:
-                                    MediaQuery.of(context).size.height * 0.3,
-                              ),
-                              Center(
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.forum_outlined,
-                                      size: 60,
-                                      color: Colors.white.withOpacity(0.1),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      AppLocalizations.of(context)!.allReviewsEmpty,
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.5),
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          )
+                        ? _buildEmptyState()
                         : ListView.separated(
                             padding: const EdgeInsets.only(
-                              left: 20,
-                              right: 20,
-                              bottom: 100,
-                            ), // Spazio per il FAB
+                              left: 16,
+                              right: 16,
+                              bottom: 120,
+                            ),
                             physics: const AlwaysScrollableScrollPhysics(
                               parent: BouncingScrollPhysics(),
                             ),
                             itemCount: _reviews!.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 16),
-                            itemBuilder: (context, index) {
-                              return _buildFullReviewCard(_reviews![index]);
-                            },
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) =>
+                                _buildFullReviewCard(_reviews![index]),
                           ),
                   ),
           ),
@@ -365,173 +434,263 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return ListView(
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+        Center(
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111113),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.06),
+                  ),
+                ),
+                child: Icon(
+                  Icons.forum_outlined,
+                  size: 30,
+                  color: Colors.white.withOpacity(0.15),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                AppLocalizations.of(context)!.allReviewsEmpty,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.3),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Scrivi la prima recensione',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.18),
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFullReviewCard(Review review) {
     final user = sl<AuthRepository>().currentUser;
     final canDelete = review.isWrittenBy(user?.id);
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161618),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.03)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0E0E10),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(0.06)),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // AUTORE E AVATAR
-          Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.white.withOpacity(0.05),
-                backgroundImage: review.avatarUrl != null
-                    ? CachedNetworkImageProvider(review.avatarUrl!)
-                    : null,
-                child: review.avatarUrl == null
-                    ? const Icon(Icons.person, color: Colors.white38, size: 24)
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      review.author,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
+              // Header autore
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar squircle
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: review.avatarUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: review.avatarUrl!,
+                            width: 38,
+                            height: 38,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) =>
+                                _defaultAvatar(review.author, 38),
+                          )
+                        : _defaultAvatar(review.author, 38),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (!review.isCustom)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.blueAccent.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              "TMDB",
+                        Text(
+                          review.author,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            if (!review.isCustom) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: Colors.blueAccent.withOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'TMDB',
+                                  style: TextStyle(
+                                    color: Colors.blueAccent,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            Text(
+                              _formatDate(review.createdAt),
                               style: TextStyle(
-                                color: Colors.blueAccent,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
+                                color: Colors.white.withOpacity(0.25),
+                                fontSize: 11,
                               ),
                             ),
-                          ),
-                        Text(
-                          _formatDate(review.createdAt),
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
-                            fontSize: 11,
-                          ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              if (canDelete)
-                IconButton(
-                  tooltip: AppLocalizations.of(context)!.allReviewsDeleteTooltip,
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: Colors.redAccent,
-                    size: 20,
                   ),
-                  onPressed: () => _handleDelete(review),
-                ),
-              // STELLINE
-              if (review.rating > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orangeAccent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
+                  // Badge rating + delete
+                  Row(
                     children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        color: Colors.orangeAccent,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        review.rating.toStringAsFixed(1),
-                        style: const TextStyle(
-                          color: Colors.orangeAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                      if (review.rating > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF8C00).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: const Color(0xFFFF8C00).withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                color: Color(0xFFFF8C00),
+                                size: 12,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                review.rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  color: Color(0xFFFF8C00),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      if (canDelete)
+                        IconButton(
+                          padding: const EdgeInsets.only(left: 8),
+                          constraints: const BoxConstraints(),
+                          tooltip: AppLocalizations.of(
+                            context,
+                          )!.allReviewsDeleteTooltip,
+                          icon: Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.redAccent.withOpacity(0.7),
+                            size: 17,
+                          ),
+                          onPressed: () => _handleDelete(review),
+                        ),
                     ],
                   ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // Separatore sottile
+              Container(height: 1, color: Colors.white.withOpacity(0.04)),
+              const SizedBox(height: 14),
+
+              // Testo recensione
+              Text(
+                review.content,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.72),
+                  fontSize: 14,
+                  height: 1.6,
                 ),
-            ],
-          ),
+              ),
 
-          const SizedBox(height: 16),
-
-          // TESTO RECENSIONE
-          Text(
-            review.content,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-              height: 1.6,
-            ),
-          ),
-
-          // BOTTONI VOTO (Solo per recensioni Custom)
-          if (review.isCustom) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Divider(color: Colors.white10, height: 1),
-            ),
-            Row(
-              children: [
-                _buildVoteButton(
-                  activeIcon: Icons.thumb_up_alt_rounded,
-                  inactiveIcon: Icons.thumb_up_alt_outlined,
-                  count: review.likes,
-                  isActive: review.userVote == 1,
-                  activeColor: Colors.greenAccent,
-                  onTap: () => _handleVote(review, 1),
-                ),
-                const SizedBox(width: 24),
-                _buildVoteButton(
-                  activeIcon: Icons.thumb_down_alt_rounded,
-                  inactiveIcon: Icons.thumb_down_alt_outlined,
-                  count: review.dislikes,
-                  isActive: review.userVote == -1,
-                  activeColor: Colors.redAccent,
-                  onTap: () => _handleVote(review, -1),
+              // Bottoni voto
+              if (review.isCustom) ...[
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _buildVoteButton(
+                      activeIcon: Icons.thumb_up_alt_rounded,
+                      inactiveIcon: Icons.thumb_up_alt_outlined,
+                      count: review.likes,
+                      isActive: review.userVote == 1,
+                      label: 'Utile',
+                      onTap: () => _handleVote(review, 1),
+                    ),
+                    const SizedBox(width: 10),
+                    _buildVoteButton(
+                      activeIcon: Icons.thumb_down_alt_rounded,
+                      inactiveIcon: Icons.thumb_down_alt_outlined,
+                      count: review.dislikes,
+                      isActive: review.userVote == -1,
+                      label: 'Non utile',
+                      onTap: () => _handleVote(review, -1),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ],
-        ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _defaultAvatar(String name, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1C),
+        borderRadius: BorderRadius.circular(size * 0.29),
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: TextStyle(
+            color: const Color(0xFFFF8C00),
+            fontWeight: FontWeight.w700,
+            fontSize: size * 0.36,
+          ),
+        ),
       ),
     );
   }
@@ -541,33 +700,45 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
     required IconData inactiveIcon,
     required int count,
     required bool isActive,
-    required Color activeColor,
+    required String label,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? activeColor.withOpacity(0.1) : Colors.transparent,
+          color: isActive
+              ? const Color(0xFFFF8C00).withOpacity(0.1)
+              : const Color(0xFF111113),
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isActive
+                ? const Color(0xFFFF8C00).withOpacity(0.3)
+                : Colors.white.withOpacity(0.06),
+            width: 1,
+          ),
         ),
         child: Row(
           children: [
             Icon(
               isActive ? activeIcon : inactiveIcon,
-              size: 20,
-              color: isActive ? activeColor : Colors.white38,
+              size: 15,
+              color: isActive
+                  ? const Color(0xFFFF8C00)
+                  : Colors.white.withOpacity(0.3),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 5),
             Text(
-              count.toString(),
+              '$count',
               style: TextStyle(
-                color: isActive ? activeColor : Colors.white38,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
+                color: isActive
+                    ? const Color(0xFFFF8C00)
+                    : Colors.white.withOpacity(0.3),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],

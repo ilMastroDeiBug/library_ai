@@ -13,6 +13,7 @@ class Movie {
   // Campi locali (Database)
   final String status;
   final String? aiAnalysis;
+  final int? runtime;
 
   Movie({
     required this.id,
@@ -27,6 +28,7 @@ class Movie {
     this.originalLanguage = '',
     this.status = 'none',
     this.aiAnalysis,
+    this.runtime,
   });
 
   // --- FIX QUI SOTTO ---
@@ -53,6 +55,7 @@ class Movie {
       releaseDate: json['release_date'] ?? '',
       originalLanguage: json['original_language'] ?? '',
       popularity: (json['popularity'] as num?)?.toDouble() ?? 0.0,
+      runtime: json['runtime'] as int?,
       status: 'none',
     );
   }
@@ -66,9 +69,10 @@ class Movie {
       backdropPath: data['backdropPath'] ?? '',
       voteAverage: (data['voteAverage'] as num?)?.toDouble() ?? 0.0,
       voteCount: (data['voteCount'] as num?)?.toInt() ?? 0,
-      popularity: (data['popularity'] as num?)?.toDouble() ?? 0,
+      popularity: (data['popularity'] as num?)?.toDouble() ?? 0.0,
       releaseDate: data['releaseDate'] ?? '',
       originalLanguage: data['originalLanguage'] ?? '',
+      runtime: data['runtime'] as int?,
       status: data['status'] ?? 'none',
       aiAnalysis: data['aiAnalysis'],
     );
@@ -84,9 +88,11 @@ class Movie {
       'voteCount': voteCount,
       'releaseDate': releaseDate,
       'originalLanguage': originalLanguage,
+      'popularity': popularity,
+      'runtime': runtime,
       'status': status,
       'aiAnalysis': aiAnalysis,
-      'popularity': popularity,
+      'type': 'movie',
     };
   }
 
@@ -103,6 +109,7 @@ class Movie {
     String? originalLanguage,
     String? status,
     String? aiAnalysis,
+    int? runtime,
   }) {
     return Movie(
       id: id ?? this.id,
@@ -117,6 +124,7 @@ class Movie {
       popularity: popularity ?? this.popularity,
       status: status ?? this.status,
       aiAnalysis: aiAnalysis ?? this.aiAnalysis,
+      runtime: runtime ?? this.runtime,
     );
   }
 }

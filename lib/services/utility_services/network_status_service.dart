@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class NetworkStatusService extends ChangeNotifier {
-  static const int _failuresBeforeOffline = 2;
   static const Duration _requestTimeout = Duration(seconds: 4);
 
   bool _isOnline = true;
   bool _isChecking = false;
   bool _hasResolvedInitialStatus = false;
   bool _hasEverBeenOnline = false;
-  int _consecutiveFailures = 0;
-  Timer? _timer;
+  
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   bool get isOnline => _isOnline;
   bool get hasResolvedInitialStatus => _hasResolvedInitialStatus;
@@ -22,9 +22,19 @@ class NetworkStatusService extends ChangeNotifier {
   }
 
   void _startMonitoring() {
+    // 1. Controllo iniziale
     unawaited(checkConnection());
-    _timer = Timer.periodic(const Duration(seconds: kIsWeb ? 5 : 3), (_) {
-      unawaited(checkConnection());
+
+    // 2. Ascolto i broadcast nativi di cambio rete invece del polling HTTP
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      // Se il telefono ci dice chiaramente che non ha rete, passiamo offline subito
+      if (results.contains(ConnectivityResult.none)) {
+        _handleReachabilityResult(false);
+      } else {
+        // Se il telefono dice che c'è rete (es. connesso al wifi),
+        // facciamo un singolo ping HTTP per confermare la vera connettività
+        unawaited(checkConnection());
+      }
     });
   }
 
@@ -62,20 +72,7 @@ class NetworkStatusService extends ChangeNotifier {
   }
 
   void _handleReachabilityResult(bool isReachable) {
-    if (isReachable) {
-      _consecutiveFailures = 0;
-      _updateStatus(true);
-      return;
-    }
-
-    _consecutiveFailures++;
-    _hasResolvedInitialStatus = true;
-
-    if (_consecutiveFailures >= _failuresBeforeOffline) {
-      _updateStatus(false);
-    } else {
-      notifyListeners();
-    }
+    _updateStatus(isReachable);
   }
 
   void _updateStatus(bool nextStatus) {
@@ -96,7 +93,8 @@ class NetworkStatusService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _connectivitySubscription?.cancel();
     super.dispose();
   }
 }
+

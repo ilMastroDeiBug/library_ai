@@ -14,6 +14,8 @@ class TvSeries {
   // Campi locali (Database)
   final String status;
   final String? aiAnalysis;
+  final int? runtime;
+  final int? numberOfEpisodes;
 
   TvSeries({
     required this.id,
@@ -29,6 +31,8 @@ class TvSeries {
     this.originalLanguage = '',
     this.status = 'none',
     this.aiAnalysis,
+    this.runtime,
+    this.numberOfEpisodes,
   });
 
   String get fullPosterUrl => posterPath.isNotEmpty
@@ -53,6 +57,8 @@ class TvSeries {
     List<dynamic>? seasons,
     String? status,
     String? aiAnalysis,
+    int? runtime,
+    int? numberOfEpisodes,
   }) {
     return TvSeries(
       id: id ?? this.id,
@@ -68,6 +74,8 @@ class TvSeries {
       seasons: seasons ?? this.seasons,
       status: status ?? this.status,
       aiAnalysis: aiAnalysis ?? this.aiAnalysis,
+      runtime: runtime ?? this.runtime,
+      numberOfEpisodes: numberOfEpisodes ?? this.numberOfEpisodes,
     );
   }
 
@@ -84,6 +92,10 @@ class TvSeries {
       originalLanguage: json['original_language'] ?? '',
       popularity: (json['popularity'] as num?)?.toDouble() ?? 0.0,
       seasons: json['seasons'] ?? [],
+      runtime: json['episode_run_time'] != null && (json['episode_run_time'] as List).isNotEmpty
+          ? (json['episode_run_time'][0] as num).toInt()
+          : null,
+      numberOfEpisodes: json['number_of_episodes'] as int?,
       status: 'none',
     );
   }
@@ -101,6 +113,8 @@ class TvSeries {
       originalLanguage: data['originalLanguage'] ?? '',
       popularity: (data['popularity'] as num?)?.toDouble() ?? 0,
       seasons: data['seasons'] ?? [],
+      runtime: data['runtime'] as int?,
+      numberOfEpisodes: data['numberOfEpisodes'] as int?,
       status: data['status'] ?? 'none',
       aiAnalysis: data['aiAnalysis'],
     );
@@ -120,6 +134,8 @@ class TvSeries {
       'originalLanguage': originalLanguage,
       'popularity': popularity,
       'seasons': seasons,
+      'runtime': runtime,
+      'numberOfEpisodes': numberOfEpisodes,
       'status': status,
       'aiAnalysis': aiAnalysis,
       'type': 'tv',

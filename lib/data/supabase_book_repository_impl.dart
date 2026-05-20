@@ -46,32 +46,30 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     }
 
     try {
-      yield* _supabase
+      final snapshot = await _supabase
           .from(_userTableName)
-          .stream(primaryKey: ['id'])
+          .select()
           .eq('user_id', userId)
-          .order('timestamp', ascending: false)
-          .handleError((_) {})
-          .asyncMap((snapshot) async {
-            final rows = snapshot
-                .map((row) => Map<String, dynamic>.from(row))
-                .toList();
-            final filteredRows = rows
-                .where((row) => row['status'] == status)
-                .toList();
+          .order('timestamp', ascending: false);
 
-            await cacheBox.put(cacheKey, filteredRows);
-            for (final row in filteredRows) {
-              final bookId = row['book_id'];
-              if (bookId != null) {
-                await cacheBox.put('book_${userId}_$bookId', row);
-              }
-            }
+      final rows = snapshot
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+      final filteredRows = rows
+          .where((row) => row['status'] == status)
+          .toList();
 
-            return _mapBookRowsToEntities(filteredRows, status);
-          });
+      await cacheBox.put(cacheKey, filteredRows);
+      for (final row in filteredRows) {
+        final bookId = row['book_id'];
+        if (bookId != null) {
+          await cacheBox.put('book_${userId}_$bookId', row);
+        }
+      }
+
+      yield _mapBookRowsToEntities(filteredRows, status);
     } catch (_) {
-      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
+      // Offline o errore: la UI continua a usare l'ultimo yield cache.
     }
   }
 
@@ -87,32 +85,28 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     }
 
     try {
-      yield* _supabase
+      final snapshot = await _supabase
           .from(_userTableName)
-          .stream(primaryKey: ['id'])
+          .select()
           .eq('user_id', userId)
-          .handleError((_) {})
-          .asyncMap((snapshot) async {
-            final bookRows = snapshot
-                .where((row) => row['book_id'] == docId)
-                .toList();
+          .eq('book_id', docId);
 
-            if (bookRows.isEmpty) {
-              await _cacheService.deleteBook(userId: userId, bookId: docId);
-              return null;
-            }
+      if (snapshot.isEmpty) {
+        await _cacheService.deleteBook(userId: userId, bookId: docId);
+        yield null;
+        return;
+      }
 
-            final row = Map<String, dynamic>.from(bookRows.first);
-            await _cacheService.upsertBook(
-              userId: userId,
-              bookId: docId,
-              row: row,
-            );
+      final row = Map<String, dynamic>.from(snapshot.first);
+      await _cacheService.upsertBook(
+        userId: userId,
+        bookId: docId,
+        row: row,
+      );
 
-            return _mapBookRowToEntity(row);
-          });
+      yield _mapBookRowToEntity(row);
     } catch (_) {
-      // Offline o errore realtime: la UI continua a usare l'ultimo yield cache.
+      // Offline o errore: la UI continua a usare l'ultimo yield cache.
     }
   }
 

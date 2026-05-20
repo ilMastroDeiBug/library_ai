@@ -106,8 +106,11 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   Widget _buildSliverAppBar(dynamic user) {
+    final topPad = MediaQuery.of(context).padding.top;
+    // Base 240 + status bar + 56px extra per il chip ore
+    final expandedH = topPad + 240.0 + (user != null ? 56.0 : 0.0);
     return SliverAppBar(
-      expandedHeight: 280.0,
+      expandedHeight: expandedH,
       pinned: true,
       backgroundColor: Colors.black,
       elevation: 0,

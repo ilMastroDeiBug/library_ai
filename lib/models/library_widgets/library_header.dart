@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import '../../pages/settings_page.dart';
+import 'package:library_ai/domain/use_cases/social_use_cases.dart';
+import 'package:library_ai/domain/entities/social_stats.dart';
+import 'package:library_ai/injection_container.dart';
 import '../app_mode.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
@@ -57,67 +60,117 @@ class LibraryHeader extends StatelessWidget {
           ),
         ),
 
-        // ── LAYER 2: Content ──────────────────────────────────────────────────
-        // Wrapped in SingleChildScrollView (non-scrollable) to prevent
-        // vertical overflow when the SliverAppBar collapses.
+        // ── LAYER 2: Content ─────────────────────────────────────────────
+        // Layout a colonna: menu in cima, titolo+chip ancorati al fondo.
         Positioned.fill(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 0),
-            child: SingleChildScrollView(
-              physics: const NeverScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. MENU E PROFILO
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: onOpenDrawer,
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.menu_rounded,
-                            color: Colors.white,
-                            size: 24,
+            padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // 1. MENU E PROFILO (in cima)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: onOpenDrawer,
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
+                        child: const Icon(
+                          Icons.menu_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
-                      _buildProfileAvatar(context, accentColor),
-                    ],
-                  ),
-
-                  // Fixed spacing instead of Spacer() to avoid overflow in shrinking containers
-                  const SizedBox(height: 40),
-
-                  // 2. TITOLO GIGANTE
-                  Text(
-                    mode == AppMode.books
-                        ? AppLocalizations.of(context)!.libHeaderVault
-                        : AppLocalizations.of(context)!.libHeaderWatchlist,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 42,
-                      fontWeight: FontWeight.w900,
-                      height: 1.05,
-                      letterSpacing: -1.5,
                     ),
-                  ),
+                    _buildProfileAvatar(context, accentColor),
+                  ],
+                ),
 
-                  const SizedBox(height: 70),
-                ],
-              ),
+                // 2. TITOLO + CHIP (ancorati in basso)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      mode == AppMode.books
+                          ? AppLocalizations.of(context)!.libHeaderVault
+                          : AppLocalizations.of(context)!.libHeaderWatchlist,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 42,
+                        fontWeight: FontWeight.w900,
+                        height: 1.05,
+                        letterSpacing: -1.5,
+                      ),
+                    ),
+                    if (mode != AppMode.books && user != null) ...[
+                      const SizedBox(height: 12),
+                      _buildWatchTimeChip(user!.id),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildWatchTimeChip(String userId) {
+    return FutureBuilder<SocialStats>(
+      future: sl<GetSocialStatsUseCase>().call(userId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final stats = snapshot.data!;
+
+        final h = stats.totalMinutes ~/ 60;
+        final m = stats.totalMinutes % 60;
+        final timeStr = m > 0 ? '${h}h ${m}m' : '${h}h';
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.timer_outlined, color: Colors.orangeAccent, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                timeStr,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'viste',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

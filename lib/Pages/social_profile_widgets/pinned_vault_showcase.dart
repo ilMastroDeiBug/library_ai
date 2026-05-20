@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/pinned_item.dart';
 import 'package:library_ai/domain/use_cases/social_use_cases.dart';
 import 'package:library_ai/injection_container.dart';
+import 'package:library_ai/services/utility_services/offline_action_guard.dart';
 
 /// La "Vetrina" del profilo: griglia asimmetrica 2x2 con le 4 opere pinnate.
 /// Slot vuoti mostrano un bottone per aggiungere un'opera.
@@ -337,6 +338,8 @@ class _UnpinSheet extends StatelessWidget {
               Expanded(
                 child: GestureDetector(
                   onTap: () async {
+                    // Guard offline
+                    if (!OfflineActionGuard.checkAndShow(context)) return;
                     Navigator.pop(context);
                     await sl<UnpinItemUseCase>().call(item.id);
                   },
