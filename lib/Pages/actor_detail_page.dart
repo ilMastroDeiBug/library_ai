@@ -38,22 +38,16 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
   }
 
   Future<void> _loadActorDetails() async {
+    if (mounted) setState(() { isLoading = true; errorMessage = null; });
     try {
-      final useCase = sl<GetActorDetailsUseCase>();
-      final result = await useCase.call(widget.actorId);
-      if (mounted) {
-        setState(() {
-          actor = result;
-          isLoading = false;
-        });
-      }
+      final result = await sl<GetActorDetailsUseCase>().call(widget.actorId);
+      if (mounted) setState(() { actor = result; isLoading = false; });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          errorMessage = e.toString();
-          isLoading = false;
-        });
-      }
+      if (mounted) setState(() {
+        // Pulisce il messaggio togliendo il prefisso 'Exception: '
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
+        isLoading = false;
+      });
     }
   }
 
@@ -128,29 +122,164 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     if (isLoading) {
       return const Scaffold(
         backgroundColor: _backgroundColor,
-        body: Center(child: CircularProgressIndicator(color: _brandColor)),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                color: _brandColor,
+                strokeWidth: 2,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Caricamento...',
+                style: TextStyle(color: Colors.white38, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
     if (errorMessage != null || actor == null) {
+      final isOffline = errorMessage?.contains('Internet') == true ||
+          errorMessage?.contains('TMDB') == true;
       return Scaffold(
         backgroundColor: _backgroundColor,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new,
-              color: Colors.white,
-              size: 20,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: Center(
-          child: Text(
-            '${AppLocalizations.of(context)!.actorError}$errorMessage',
-            style: const TextStyle(color: Colors.white70),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Back button
+              Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ),
+              ),
+              // Errore centrato
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Icona animata
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            color: (isOffline ? Colors.blueAccent : Colors.orangeAccent)
+                                .withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: (isOffline ? Colors.blueAccent : Colors.orangeAccent)
+                                  .withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Icon(
+                            isOffline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+                            color: isOffline ? Colors.blueAccent : Colors.orangeAccent,
+                            size: 40,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          isOffline ? 'Sei offline' : 'Qualcosa è andato storto',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          errorMessage ?? 'Impossibile caricare i dati.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.45),
+                            fontSize: 14,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 36),
+                        // Bottone Riprova
+                        GestureDetector(
+                          onTap: _loadActorDetails,
+                          child: Container(
+                            height: 48,
+                            width: double.infinity,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _brandColor,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _brandColor.withValues(alpha: 0.3),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.refresh_rounded, color: Colors.black, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Riprova',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Torna indietro
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            height: 48,
+                            width: double.infinity,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                            ),
+                            child: const Text(
+                              'Torna indietro',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );

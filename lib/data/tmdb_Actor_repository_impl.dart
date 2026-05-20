@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import '../domain/entities/actor.dart';
 import '../domain/repositories/actor_repository.dart';
 import '../services/utility_services/tmdb_service.dart';
@@ -56,8 +58,13 @@ class TmdbActorRepositoryImpl implements ActorRepository {
         knownForDepartment: data['known_for_department'] ?? 'Acting',
         credits: parsedCredits,
       );
+    } on SocketException {
+      throw Exception('Nessuna connessione a Internet. Connettiti e riprova.');
+    } on TimeoutException {
+      throw Exception('Il server TMDB non risponde. Riprova tra qualche secondo.');
     } catch (e) {
-      throw Exception('Errore durante il parsing dei dettagli attore: $e');
+      // Errore di parsing o altro — rilancia con messaggio pulito
+      throw Exception('Impossibile caricare i dettagli. Riprova.');
     }
   }
 
