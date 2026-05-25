@@ -34,7 +34,7 @@ class LibraryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentColor = Colors.orangeAccent;
+    const accentColor = Colors.white;
     final topPadding = MediaQuery.of(context).padding.top;
 
     return Stack(
@@ -50,9 +50,9 @@ class LibraryHeader extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.80),
-                  Colors.black.withOpacity(0.52),
-                  Colors.black.withOpacity(0.80),
+                  Colors.black.withValues(alpha: 0.80),
+                  Colors.black.withValues(alpha: 0.52),
+                  Colors.black.withValues(alpha: 0.80),
                 ],
                 stops: const [0.0, 0.5, 1.0],
               ),
@@ -147,7 +147,7 @@ class LibraryHeader extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.timer_outlined, color: Colors.orangeAccent, size: 16),
+              const Icon(Icons.timer_outlined, color: Colors.white, size: 16),
               const SizedBox(width: 6),
               Text(
                 timeStr,
@@ -186,10 +186,10 @@ class LibraryHeader extends StatelessWidget {
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: accent.withOpacity(0.5), width: 1.5),
+            border: Border.all(color: accent.withValues(alpha: 0.5), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: accent.withOpacity(0.15),
+                color: accent.withValues(alpha: 0.15),
                 blurRadius: 15,
                 spreadRadius: 2,
               ),
@@ -208,7 +208,7 @@ class LibraryHeader extends StatelessWidget {
                       placeholder: (context, url) => const Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.orangeAccent,
+                          color: Colors.white,
                         ),
                       ),
                       errorWidget: (context, url, error) => Text(

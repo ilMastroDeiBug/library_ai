@@ -29,12 +29,10 @@ class MediaBottomBar extends StatelessWidget {
         ), // Effetto vetro bello denso
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(
-              0xFF0A0A0C,
-            ).withOpacity(0.75), // Sfondo scurissimo semitrasparente
+            color: Colors.black.withValues(alpha: 0.6), // Sfondo scurissimo semitrasparente
             border: Border(
               // Bordino superiore sottilissimo per dare profondità al vetro
-              top: BorderSide(color: Colors.white.withOpacity(0.1), width: 0.5),
+              top: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 0.5),
             ),
           ),
           padding: EdgeInsets.only(
@@ -67,7 +65,7 @@ class MediaBottomBar extends StatelessWidget {
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = currentIndex == index;
-    const activeColor = Colors.orangeAccent;
+    const activeColor = Colors.white;
 
     return GestureDetector(
       onTap: () => onTap(index),
@@ -82,7 +80,7 @@ class MediaBottomBar extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? activeColor.withOpacity(0.15)
+              ? activeColor.withValues(alpha: 0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),

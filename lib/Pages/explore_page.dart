@@ -23,7 +23,7 @@ class ExplorePage extends StatefulWidget {
 }
 
 class _ExplorePageState extends State<ExplorePage> {
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
 
   // STATO LOCALE: Ricorda se stiamo guardando Film o Serie TV
   CinemaType _selectedCinemaType = CinemaType.movies;
@@ -52,7 +52,7 @@ class _ExplorePageState extends State<ExplorePage> {
     final topPadding = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0A0A0A),
       body: Stack(
         children: [
           // Slow cover collage background (different order from login)
@@ -75,9 +75,9 @@ class _ExplorePageState extends State<ExplorePage> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(0.70),
-                      Colors.black.withOpacity(0.50),
-                      Colors.black.withOpacity(0.72),
+                      Colors.black.withValues(alpha: 0.50),
+                      Colors.black.withValues(alpha: 0.30),
+                      Colors.black.withValues(alpha: 0.55),
                     ],
                   ),
                 ),
@@ -102,10 +102,10 @@ class _ExplorePageState extends State<ExplorePage> {
                             child: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: Colors.white.withValues(alpha: 0.05),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                 ),
                               ),
                               child: const Icon(
@@ -119,7 +119,7 @@ class _ExplorePageState extends State<ExplorePage> {
                             widget.mode == AppMode.books
                                 ? Icons.auto_stories_rounded
                                 : Icons.movie_filter_rounded,
-                            color: _brandColor.withOpacity(0.4),
+                            color: _brandColor.withValues(alpha: 0.4),
                             size: 32,
                           ),
                         ],
@@ -150,10 +150,10 @@ class _ExplorePageState extends State<ExplorePage> {
                         child: Container(
                           height: 50,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
+                            color: Colors.white.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(25),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                             ),
                           ),
                           child: Row(
@@ -161,7 +161,7 @@ class _ExplorePageState extends State<ExplorePage> {
                               const SizedBox(width: 18),
                               Icon(
                                 Icons.search_rounded,
-                                color: Colors.white.withOpacity(0.4),
+                                color: Colors.white.withValues(alpha: 0.4),
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
@@ -174,7 +174,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                         context,
                                       )!.searchPlaceholder,
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: Colors.white.withValues(alpha: 0.3),
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -250,7 +250,7 @@ class _ExplorePageState extends State<ExplorePage> {
             Icon(
               Icons.explore_off_rounded,
               size: 70,
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
             ),
             const SizedBox(height: 20),
             Text(

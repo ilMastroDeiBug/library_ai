@@ -24,7 +24,7 @@ class LibraryPage extends StatefulWidget {
 class _LibraryPageState extends State<LibraryPage> {
   bool get _isBooks => widget.mode == AppMode.books;
 
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
 
   String _tab1Label(BuildContext context) =>
       _isBooks ? AppLocalizations.of(context)!.libTabRead : AppLocalizations.of(context)!.watched;
@@ -43,7 +43,7 @@ class _LibraryPageState extends State<LibraryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0A0A0A),
       floatingActionButton: _isBooks ? _buildStyledFab() : null,
       body: Stack(
         children: [
@@ -112,7 +112,7 @@ class _LibraryPageState extends State<LibraryPage> {
     return SliverAppBar(
       expandedHeight: expandedH,
       pinned: true,
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0A0A0A),
       elevation: 0,
       automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
@@ -128,10 +128,10 @@ class _LibraryPageState extends State<LibraryPage> {
         child: Container(
           height: 60,
           decoration: BoxDecoration(
-            color: Colors.black,
+            color: const Color(0xFF0A0A0A),
             border: Border(
               bottom: BorderSide(
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 width: 1,
               ),
             ),
@@ -171,7 +171,7 @@ class _LibraryPageState extends State<LibraryPage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: _brandColor.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.2),
             blurRadius: 15,
             spreadRadius: 2,
           ),
@@ -199,7 +199,7 @@ class _LibraryPageState extends State<LibraryPage> {
           AppLocalizations.of(context)!.libManualInsertWip,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF333333),
+        backgroundColor: const Color(0xFF161616),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: const Duration(seconds: 2),
