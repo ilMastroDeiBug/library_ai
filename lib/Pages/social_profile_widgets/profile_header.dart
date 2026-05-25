@@ -113,7 +113,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -122,25 +122,36 @@ class _ProfileHeaderState extends State<ProfileHeader> {
             _displayName,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              height: 1.2,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.8,
+              height: 1.15,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            _badgeTitle(widget.stats.vaultCount),
-            style: const TextStyle(
-              color: Color(0xFFFF8C3A),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.0,
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF8C3A).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFFF8C3A).withValues(alpha: 0.25),
+                width: 0.8,
+              ),
+            ),
+            child: Text(
+              _badgeTitle(widget.stats.vaultCount),
+              style: const TextStyle(
+                color: Color(0xFFFF8C3A),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
 
-          // ── 2. AVATAR + CONTATORI (fila orizzontale, stile Instagram) ──────
+          // ── 2. AVATAR + CONTATORI ──────────────────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -149,26 +160,32 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                 onTap: _openAvatarSheet,
                 child: Stack(
                   children: [
-                    _AvatarRing(photoUrl: _photoUrl, size: 82),
+                    _AvatarRing(photoUrl: _photoUrl, size: 110),
                     // Badge fotocamera
                     Positioned(
-                      bottom: 0,
-                      right: 0,
+                      bottom: 2,
+                      right: 2,
                       child: Container(
-                        width: 24,
-                        height: 24,
+                        width: 30,
+                        height: 30,
                         decoration: BoxDecoration(
                           color: const Color(0xFFFF8C3A),
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF0A0A0A), width: 2),
+                          border: Border.all(color: const Color(0xFF0A0A0A), width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF8C3A).withValues(alpha: 0.4),
+                              blurRadius: 8,
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.photo_camera_rounded, size: 13, color: Colors.black),
+                        child: const Icon(Icons.photo_camera_rounded, size: 15, color: Colors.black),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 28),
+              const SizedBox(width: 32),
 
               // Contatori
               Expanded(
@@ -183,9 +200,9 @@ class _ProfileHeaderState extends State<ProfileHeader> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // ── 3. BIO (tappabile per modificare) ─────────────────────────────
+          // ── 3. BIO ────────────────────────────────────────────────────────
           GestureDetector(
             onTap: _editBio,
             child: AnimatedSwitcher(
@@ -197,23 +214,31 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.65),
-                        fontSize: 13,
-                        height: 1.5,
+                        color: Colors.white.withValues(alpha: 0.70),
+                        fontSize: 14,
+                        height: 1.55,
                       ),
                     )
-                  : Text(
-                      'Aggiungi una bio...',
+                  : Row(
                       key: const ValueKey('no_bio'),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                      ),
+                      children: [
+                        Icon(Icons.add_circle_outline_rounded,
+                            size: 14,
+                            color: Colors.white.withValues(alpha: 0.25)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Aggiungi una bio...',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.28),
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
 
           // ── 4. BOTTONI MODIFICA / CONDIVIDI ──────────────────────────────
           Row(
@@ -336,17 +361,17 @@ class _StatCol extends StatelessWidget {
           value.toString(),
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -1.0,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.38),
-            fontSize: 11,
+            color: Colors.white.withValues(alpha: 0.40),
+            fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -379,19 +404,19 @@ class _ActionButtonState extends State<_ActionButton> {
         scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 100),
         child: Container(
-          height: 36,
+          height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           ),
           child: Text(
             widget.label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.1,
             ),
           ),
@@ -413,14 +438,14 @@ class _IconActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36,
-        height: 36,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }

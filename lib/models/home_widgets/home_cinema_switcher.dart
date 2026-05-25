@@ -1,7 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../app_mode.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
+/// Switcher "Film / Serie TV" stile pill compatto.
+/// Palette: bianco/grigio-freddo su trasparente, zero colori sgargianti.
 class HomeCinemaSwitcher extends StatelessWidget {
   final CinemaType selectedType;
   final ValueChanged<CinemaType> onTypeChanged;
@@ -14,61 +17,78 @@ class HomeCinemaSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildTab(context, AppLocalizations.of(context)!.movies, CinemaType.movies),
-        const SizedBox(width: 25),
-        _buildTab(context, AppLocalizations.of(context)!.tvSeries, CinemaType.tvSeries),
-      ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.10),
+              width: 0.8,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PillTab(
+                label: AppLocalizations.of(context)!.movies,
+                isActive: selectedType == CinemaType.movies,
+                onTap: () => onTypeChanged(CinemaType.movies),
+              ),
+              _PillTab(
+                label: AppLocalizations.of(context)!.tvSeries,
+                isActive: selectedType == CinemaType.tvSeries,
+                onTap: () => onTypeChanged(CinemaType.tvSeries),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
+}
 
-  Widget _buildTab(BuildContext context, String text, CinemaType type) {
-    final isActive = selectedType == type;
+class _PillTab extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
 
+  const _PillTab({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => onTypeChanged(type),
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // TESTO ANIMATO
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.white.withOpacity(0.5),
-              fontSize: isActive ? 18 : 16,
-              fontWeight: isActive ? FontWeight.w900 : FontWeight.w600,
-              letterSpacing: 0.5,
-              shadows: isActive
-                  ? [
-                      Shadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 10,
-                      ),
-                    ]
-                  : [],
-            ),
-            child: Text(text),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: isActive
+              ? Colors.white.withValues(alpha: 0.92)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          style: TextStyle(
+            color: isActive ? Colors.black : Colors.white.withValues(alpha: 0.55),
+            fontSize: 13,
+            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+            letterSpacing: -0.1,
           ),
-          const SizedBox(height: 4),
-          // TRATTINO SOTTOSTANTE ANIMATO
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            height: 3,
-            width: isActive ? 20 : 0,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-              boxShadow: [
-                BoxShadow(color: Colors.white.withOpacity(0.5), blurRadius: 5),
-              ],
-            ),
-          ),
-        ],
+          child: Text(label),
+        ),
       ),
     );
   }

@@ -123,7 +123,7 @@ class _HomePageState extends State<HomePage> {
                 top: 0,
                 left: 0,
                 right: 0,
-                child: _buildModernHeader(context),
+              child: _buildModernHeader(context),
               ),
             ],
           ),
@@ -133,48 +133,44 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildModernHeader(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
+      padding: EdgeInsets.only(
+        top: topPad + 8,
+        bottom: 12,
+        left: 16,
+        right: 16,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.8),
-            Colors.black.withOpacity(0.3),
+            Colors.black.withValues(alpha: 0.72),
+            Colors.black.withValues(alpha: 0.30),
             Colors.transparent,
           ],
-          stops: const [0.0, 0.6, 1.0],
+          stops: const [0.0, 0.65, 1.0],
         ),
       ),
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 10,
-        bottom: 25,
-        left: 20,
-        right: 20,
-      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          GestureDetector(
+          // ── Menu ────────────────────────────────────────────────────────
+          _HeaderIconButton(
+            icon: Icons.menu_rounded,
             onTap: widget.onOpenDrawer,
-            child: const Icon(
-              Icons.menu_rounded,
-              color: Colors.white,
-              size: 28,
-              shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
-            ),
           ),
+          const Spacer(),
+
+          // ── Switcher centrato ──────────────────────────────────────────
           if (widget.mode == AppMode.movies)
             HomeCinemaSwitcher(
               selectedType: _selectedCinemaType,
               onTypeChanged: (newType) {
-                setState(() {
-                  _selectedCinemaType = newType;
-                });
+                setState(() => _selectedCinemaType = newType);
                 _cinemaPageController.animateToPage(
                   newType == CinemaType.movies ? 0 : 1,
-                  duration: const Duration(milliseconds: 400),
+                  duration: const Duration(milliseconds: 380),
                   curve: Curves.easeOutCubic,
                 );
               },
@@ -184,27 +180,25 @@ class _HomePageState extends State<HomePage> {
               AppLocalizations.of(context)!.homeLibrary,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-                shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
               ),
             ),
+
+          const Spacer(),
+
+          // ── Search ─────────────────────────────────────────────────────
           if (widget.mode == AppMode.movies)
-            GestureDetector(
+            _HeaderIconButton(
+              icon: Icons.search_rounded,
               onTap: () => showSearch(
                 context: context,
                 delegate: UniversalSearchDelegate(mode: widget.mode),
               ),
-              child: const Icon(
-                Icons.search_rounded,
-                color: Colors.white,
-                size: 28,
-                shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
-              ),
             )
           else
-            const SizedBox(width: 28),
+            const SizedBox(width: 40),
         ],
       ),
     );
@@ -320,11 +314,10 @@ class _HomePageState extends State<HomePage> {
                     cinemaType: type,
                     seenIds: seenIds,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 4),
                   // INIEZIONE DELLA SEZIONE STREAK "STAI GUARDANDO" SOTTO AL BANNER!
                   if (type == CinemaType.tvSeries)
                     const HomeTvProgressSection(),
-                  const SizedBox(height: 10),
                 ],
               ),
             );
@@ -353,5 +346,43 @@ class _KeepAliveSectionState extends State<_KeepAliveSection>
   Widget build(BuildContext context) {
     super.build(context);
     return widget.child;
+  }
+}
+
+// ─── Header icon button ───────────────────────────────────────────────────────
+// Bottone icona 40×40 con feedback tattile — niente glow, solo scala al tocco.
+
+class _HeaderIconButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _HeaderIconButton({required this.icon, required this.onTap});
+
+  @override
+  State<_HeaderIconButton> createState() => _HeaderIconButtonState();
+}
+
+class _HeaderIconButtonState extends State<_HeaderIconButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) { setState(() => _pressed = false); widget.onTap(); },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.92 : 1.0,
+        duration: const Duration(milliseconds: 90),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(
+            widget.icon,
+            color: Colors.white,
+            size: 24,
+          ),
+        ),
+      ),
+    );
   }
 }
