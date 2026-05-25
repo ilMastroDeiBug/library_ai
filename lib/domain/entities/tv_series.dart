@@ -10,9 +10,12 @@ class TvSeries {
   final String originalLanguage;
   final double popularity;
   final List<dynamic> seasons;
+  final List<String> genres;
+  final List<String> createdBy;
 
   // Campi locali (Database)
   final String status;
+  final String productionStatus;
   final String? aiAnalysis;
   final int? runtime;
   final int? numberOfEpisodes;
@@ -28,8 +31,11 @@ class TvSeries {
     required this.firstAirDate,
     required this.popularity,
     this.seasons = const [],
+    this.genres = const [],
+    this.createdBy = const [],
     this.originalLanguage = '',
     this.status = 'none',
+    this.productionStatus = '',
     this.aiAnalysis,
     this.runtime,
     this.numberOfEpisodes,
@@ -55,7 +61,10 @@ class TvSeries {
     String? originalLanguage,
     double? popularity,
     List<dynamic>? seasons,
+    List<String>? genres,
+    List<String>? createdBy,
     String? status,
+    String? productionStatus,
     String? aiAnalysis,
     int? runtime,
     int? numberOfEpisodes,
@@ -72,7 +81,10 @@ class TvSeries {
       originalLanguage: originalLanguage ?? this.originalLanguage,
       popularity: popularity ?? this.popularity,
       seasons: seasons ?? this.seasons,
+      genres: genres ?? this.genres,
+      createdBy: createdBy ?? this.createdBy,
       status: status ?? this.status,
+      productionStatus: productionStatus ?? this.productionStatus,
       aiAnalysis: aiAnalysis ?? this.aiAnalysis,
       runtime: runtime ?? this.runtime,
       numberOfEpisodes: numberOfEpisodes ?? this.numberOfEpisodes,
@@ -92,11 +104,14 @@ class TvSeries {
       originalLanguage: json['original_language'] ?? '',
       popularity: (json['popularity'] as num?)?.toDouble() ?? 0.0,
       seasons: json['seasons'] ?? [],
+      genres: (json['genres'] as List?)?.map((g) => g['name'].toString()).toList() ?? [],
+      createdBy: (json['created_by'] as List?)?.map((c) => c['name'].toString()).toList() ?? [],
       runtime: json['episode_run_time'] != null && (json['episode_run_time'] as List).isNotEmpty
           ? (json['episode_run_time'][0] as num).toInt()
           : null,
       numberOfEpisodes: json['number_of_episodes'] as int?,
       status: 'none',
+      productionStatus: json['status'] ?? '',
     );
   }
 
@@ -113,9 +128,12 @@ class TvSeries {
       originalLanguage: data['originalLanguage'] ?? '',
       popularity: (data['popularity'] as num?)?.toDouble() ?? 0,
       seasons: data['seasons'] ?? [],
+      genres: (data['genres'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      createdBy: (data['createdBy'] as List?)?.map((e) => e.toString()).toList() ?? [],
       runtime: data['runtime'] as int?,
       numberOfEpisodes: data['numberOfEpisodes'] as int?,
       status: data['status'] ?? 'none',
+      productionStatus: data['productionStatus'] ?? '',
       aiAnalysis: data['aiAnalysis'],
     );
   }
@@ -134,9 +152,12 @@ class TvSeries {
       'originalLanguage': originalLanguage,
       'popularity': popularity,
       'seasons': seasons,
+      'genres': genres,
+      'createdBy': createdBy,
       'runtime': runtime,
       'numberOfEpisodes': numberOfEpisodes,
       'status': status,
+      'productionStatus': productionStatus,
       'aiAnalysis': aiAnalysis,
       'type': 'tv',
     };

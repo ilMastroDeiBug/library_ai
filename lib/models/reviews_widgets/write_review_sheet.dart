@@ -74,9 +74,9 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
             right: 20,
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFF080809),
+            color: const Color(0xFF0A0A0A),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(color: Colors.white.withOpacity(0.07), width: 1),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -143,8 +143,8 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
                               ? Icons.star_rounded
                               : Icons.star_border_rounded,
                           color: isActive
-                              ? const Color(0xFFFF8C00)
-                              : Colors.white.withOpacity(0.2),
+                              ? Colors.amberAccent
+                              : Colors.white.withValues(alpha: 0.2),
                           size: 32,
                         ),
                       ),
@@ -177,34 +177,34 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
                   fontSize: 14,
                   height: 1.5,
                 ),
-                cursorColor: const Color(0xFFFF8C00),
+                cursorColor: Colors.white,
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.writeReviewHint,
                   hintStyle: TextStyle(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     fontSize: 14,
                   ),
                   filled: true,
-                  fillColor: const Color(0xFF111113),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: Colors.white.withOpacity(0.07),
+                      color: Colors.white.withValues(alpha: 0.1),
                       width: 1,
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: Colors.white.withOpacity(0.07),
+                      color: Colors.white.withValues(alpha: 0.1),
                       width: 1,
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: const Color(0xFFFF8C00).withOpacity(0.4),
+                      color: Colors.white.withValues(alpha: 0.3),
                       width: 1.5,
                     ),
                   ),
@@ -224,19 +224,12 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
                     onTap: _isLoading ? null : _submit,
                     child: Container(
                       decoration: BoxDecoration(
-                        gradient: canSubmit
-                            ? const LinearGradient(
-                                colors: [Color(0xFFFF8C00), Color(0xFFE06500)],
-                              )
-                            : null,
-                        color: canSubmit ? null : const Color(0xFF1A1A1C),
+                        color: canSubmit ? Colors.white : Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: canSubmit
                             ? [
                                 BoxShadow(
-                                  color: const Color(
-                                    0xFFFF8C00,
-                                  ).withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.15),
                                   blurRadius: 18,
                                   offset: const Offset(0, 5),
                                 ),
@@ -260,10 +253,10 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
                                 style: TextStyle(
                                   color: canSubmit
                                       ? Colors.black
-                                      : Colors.white.withOpacity(0.3),
-                                  fontWeight: FontWeight.w700,
+                                      : Colors.white.withValues(alpha: 0.3),
+                                  fontWeight: FontWeight.w800,
                                   fontSize: 15,
-                                  letterSpacing: 0.2,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                       ),

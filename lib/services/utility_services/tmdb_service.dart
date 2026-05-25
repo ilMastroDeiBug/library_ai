@@ -7,6 +7,7 @@ import 'package:library_ai/domain/entities/review.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/services/utility_services/cache_wrapper.dart';
 import '../../models/movie_widget/cast_model.dart';
+import '../../models/movie_widget/crew_model.dart';
 import '../../models/movie_widget/watch_provider_model.dart';
 import '../utility_services/language_service.dart';
 
@@ -210,6 +211,14 @@ class TmdbService {
     final cacheKey = 'tmdb_cast_${id}_$endpoint';
     final cacheBox = Hive.box('tmdb_cache');
 
+    final cachedData = await _readCachedList(cacheBox, cacheKey);
+    if (cachedData != null) {
+      return cachedData
+          .map((json) => CastMember.fromJson(Map<String, dynamic>.from(json)))
+          .take(10)
+          .toList();
+    }
+
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
@@ -220,17 +229,40 @@ class TmdbService {
             .map((json) => CastMember.fromJson(json))
             .take(10)
             .toList();
-      } else {
-        throw Exception('Status code: ${response.statusCode}');
       }
+      throw Exception('Status code: ${response.statusCode}');
     } catch (e) {
-      final cachedData = await _readCachedList(cacheBox, cacheKey);
-      if (cachedData != null) {
-        return cachedData
-            .map((json) => CastMember.fromJson(Map<String, dynamic>.from(json)))
-            .take(10)
-            .toList();
+      throw Exception('Errore connessione: $e');
+    }
+  }
+
+  Future<List<CrewMember>> fetchCrew(int id, {bool isTv = false}) async {
+    final endpoint = isTv ? 'tv' : 'movie';
+    final url = Uri.parse(
+      '$_baseUrl/$endpoint/$id/credits?language=$_language',
+    );
+    final cacheKey = 'tmdb_crew_${id}_$endpoint';
+    final cacheBox = Hive.box('tmdb_cache');
+
+    final cachedData = await _readCachedList(cacheBox, cacheKey);
+    if (cachedData != null) {
+      return cachedData
+          .map((json) => CrewMember.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
+    }
+
+    try {
+      final response = await _client.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List crewList = data['crew'] ?? [];
+        await _writeCache(cacheBox, cacheKey, crewList);
+        return crewList
+            .map((json) => CrewMember.fromJson(json))
+            .toList(); // Restituiamo tutti, poi la UI filtrerà e limiterà (es. Mostra tutti (39))
       }
+      throw Exception('Status code: ${response.statusCode}');
+    } catch (e) {
       throw Exception('Errore connessione: $e');
     }
   }
@@ -281,6 +313,15 @@ class TmdbService {
     final cacheKey = 'tmdb_trailer_${id}_$endpoint';
     final cacheBox = Hive.box('tmdb_cache');
 
+    final cachedData = await _readCachedList(cacheBox, cacheKey);
+    if (cachedData != null) {
+      final trailer = cachedData.firstWhere(
+        (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
+        orElse: () => null,
+      );
+      return trailer?['key'];
+    }
+
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
@@ -292,18 +333,9 @@ class TmdbService {
           orElse: () => null,
         );
         return trailer?['key'];
-      } else {
-        throw Exception('Status code: ${response.statusCode}');
       }
+      throw Exception('Status code: ${response.statusCode}');
     } catch (e) {
-      final cachedData = await _readCachedList(cacheBox, cacheKey);
-      if (cachedData != null) {
-        final trailer = cachedData.firstWhere(
-          (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
-          orElse: () => null,
-        );
-        return trailer?['key'];
-      }
       throw Exception('Errore connessione: $e');
     }
   }
@@ -317,6 +349,13 @@ class TmdbService {
     final cacheKey = 'tmdb_providers_${id}_$endpoint';
     final cacheBox = Hive.box('tmdb_cache');
 
+    final cachedData = await _readCachedMap(cacheBox, cacheKey);
+    if (cachedData != null && cachedData.containsKey('IT')) {
+      return WatchProvidersResult.fromJson(
+        Map<String, dynamic>.from(cachedData['IT']),
+      );
+    }
+
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
@@ -329,16 +368,9 @@ class TmdbService {
           }
         }
         return null;
-      } else {
-        throw Exception('Status code: ${response.statusCode}');
       }
+      throw Exception('Status code: ${response.statusCode}');
     } catch (e) {
-      final cachedData = await _readCachedMap(cacheBox, cacheKey);
-      if (cachedData != null && cachedData.containsKey('IT')) {
-        return WatchProvidersResult.fromJson(
-          Map<String, dynamic>.from(cachedData['IT']),
-        );
-      }
       return null;
     }
   }
@@ -350,18 +382,18 @@ class TmdbService {
     final cacheKey = 'tmdb_person_details_$personId';
     final cacheBox = Hive.box('tmdb_cache');
 
+    final cachedData = await _readCachedMap(cacheBox, cacheKey);
+    if (cachedData != null) return cachedData;
+
     try {
       final response = await _client.get(url, headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         await _writeCache(cacheBox, cacheKey, data);
         return data;
-      } else {
-        throw Exception('Status code: ${response.statusCode}');
       }
+      throw Exception('Status code: ${response.statusCode}');
     } catch (e) {
-      final cachedData = await _readCachedMap(cacheBox, cacheKey);
-      if (cachedData != null) return cachedData;
       throw Exception('Errore di Rete TMDB (Person): $e');
     }
   }

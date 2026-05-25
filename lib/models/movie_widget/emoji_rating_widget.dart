@@ -123,10 +123,7 @@ class _EmojiRatingWidgetState extends State<EmojiRatingWidget>
             // Nero profondo quasi puro
             color: const Color(0xFF080809),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.07),
-              width: 1,
-            ),
+            border: Border.all(color: Colors.white.withOpacity(0.07), width: 1),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -214,7 +211,8 @@ class _EmojiRatingWidgetState extends State<EmojiRatingWidget>
 
                     return Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => _selectedRating = ratingValue),
+                        onTap: () =>
+                            setState(() => _selectedRating = ratingValue),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
                           curve: Curves.easeOutCubic,
@@ -281,60 +279,56 @@ class _EmojiRatingWidgetState extends State<EmojiRatingWidget>
                     opacity: _selectedRating > 0 ? 1.0 : 0.35,
                     duration: const Duration(milliseconds: 200),
                     child: GestureDetector(
-                      onTap:
-                          _selectedRating > 0 && !_isSubmitting
-                              ? _submitRating
-                              : null,
+                      onTap: _selectedRating > 0 && !_isSubmitting
+                          ? _submitRating
+                          : null,
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient:
-                              _selectedRating > 0
-                                  ? const LinearGradient(
-                                    colors: [
-                                      Color(0xFFFF8C00),
-                                      Color(0xFFE06500),
-                                    ],
-                                  )
-                                  : null,
-                          color:
-                              _selectedRating == 0
-                                  ? const Color(0xFF1A1A1C)
-                                  : null,
+                          gradient: _selectedRating > 0
+                              ? const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFF8C00),
+                                    Color(0xFFE06500),
+                                  ],
+                                )
+                              : null,
+                          color: _selectedRating == 0
+                              ? const Color(0xFF1A1A1C)
+                              : null,
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow:
-                              _selectedRating > 0
-                                  ? [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFFFF8C00,
-                                      ).withOpacity(0.25),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 6),
-                                    ),
-                                  ]
-                                  : null,
+                          boxShadow: _selectedRating > 0
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFFFF8C00,
+                                    ).withOpacity(0.25),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Center(
                           child: _isSubmitting
                               ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : Text(
-                                AppLocalizations.of(context)!.ratingSubmit,
-                                style: TextStyle(
-                                  color: _selectedRating > 0
-                                      ? Colors.black
-                                      : Colors.white.withOpacity(0.3),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
+                                  AppLocalizations.of(context)!.ratingSubmit,
+                                  style: TextStyle(
+                                    color: _selectedRating > 0
+                                        ? Colors.black
+                                        : Colors.white.withOpacity(0.3),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2,
+                                  ),
                                 ),
-                              ),
                         ),
                       ),
                     ),

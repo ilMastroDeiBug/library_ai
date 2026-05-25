@@ -233,9 +233,9 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080809),
+      backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF080809),
+        backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: GestureDetector(
@@ -243,9 +243,9 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
           child: Container(
             margin: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF111113),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withOpacity(0.07)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: const Icon(
               Icons.arrow_back_ios_new_rounded,
@@ -276,13 +276,11 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFF8C00), Color(0xFFE06500)],
-            ),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFF8C00).withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
@@ -332,24 +330,24 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF111113),
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.07),
+                      color: Colors.white.withValues(alpha: 0.05),
                     ),
                   ),
                   child: DropdownButton<String>(
                     value: _sortBy,
-                    dropdownColor: const Color(0xFF0D0D0F),
+                    dropdownColor: const Color(0xFF161616),
                     isDense: true,
                     icon: const Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: Color(0xFFFF8C00),
+                      color: Colors.white,
                       size: 14,
                     ),
                     underline: const SizedBox(),
                     style: const TextStyle(
-                      color: Color(0xFFFF8C00),
+                      color: Colors.white,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -402,13 +400,13 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
-                      color: Color(0xFFFF8C00),
+                      color: Colors.white,
                       strokeWidth: 2,
                     ),
                   )
                 : RefreshIndicator(
-                    color: const Color(0xFFFF8C00),
-                    backgroundColor: const Color(0xFF111113),
+                    color: Colors.black,
+                    backgroundColor: Colors.white,
                     onRefresh: _fetchReviews,
                     child: _reviews == null || _reviews!.isEmpty
                         ? _buildEmptyState()
@@ -492,9 +490,9 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF0E0E10),
+            color: Colors.white.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.06)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,17 +538,17 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.blueAccent.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: Colors.blueAccent.withOpacity(0.2),
+                                    color: Colors.white.withValues(alpha: 0.2),
                                     width: 1,
                                   ),
                                 ),
                                 child: const Text(
                                   'TMDB',
                                   style: TextStyle(
-                                    color: Colors.blueAccent,
+                                    color: Colors.white,
                                     fontSize: 9,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -580,10 +578,10 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF8C00).withOpacity(0.1),
+                            color: Colors.amberAccent.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(9),
                             border: Border.all(
-                              color: const Color(0xFFFF8C00).withOpacity(0.2),
+                              color: Colors.amberAccent.withValues(alpha: 0.2),
                               width: 1,
                             ),
                           ),
@@ -592,15 +590,15 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
                             children: [
                               const Icon(
                                 Icons.star_rounded,
-                                color: Color(0xFFFF8C00),
+                                color: Colors.amberAccent,
                                 size: 12,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 review.rating.toStringAsFixed(1),
                                 style: const TextStyle(
-                                  color: Color(0xFFFF8C00),
-                                  fontWeight: FontWeight.w700,
+                                  color: Colors.amberAccent,
+                                  fontWeight: FontWeight.w800,
                                   fontSize: 12,
                                 ),
                               ),
@@ -711,13 +709,13 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isActive
-              ? const Color(0xFFFF8C00).withOpacity(0.1)
-              : const Color(0xFF111113),
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isActive
-                ? const Color(0xFFFF8C00).withOpacity(0.3)
-                : Colors.white.withOpacity(0.06),
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.1),
             width: 1,
           ),
         ),
@@ -727,16 +725,16 @@ class _AllReviewsPageState extends State<AllReviewsPage> {
               isActive ? activeIcon : inactiveIcon,
               size: 15,
               color: isActive
-                  ? const Color(0xFFFF8C00)
-                  : Colors.white.withOpacity(0.3),
+                  ? Colors.black
+                  : Colors.white,
             ),
             const SizedBox(width: 5),
             Text(
               '$count',
               style: TextStyle(
                 color: isActive
-                    ? const Color(0xFFFF8C00)
-                    : Colors.white.withOpacity(0.3),
+                    ? Colors.black
+                    : Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),

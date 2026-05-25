@@ -9,9 +9,11 @@ class Movie {
   final String releaseDate;
   final String originalLanguage;
   final double popularity;
+  final List<String> genres;
 
   // Campi locali (Database)
   final String status;
+  final String productionStatus;
   final String? aiAnalysis;
   final int? runtime;
 
@@ -25,8 +27,10 @@ class Movie {
     required this.voteCount,
     required this.releaseDate,
     required this.popularity,
+    this.genres = const [],
     this.originalLanguage = '',
     this.status = 'none',
+    this.productionStatus = '',
     this.aiAnalysis,
     this.runtime,
   });
@@ -55,8 +59,14 @@ class Movie {
       releaseDate: json['release_date'] ?? '',
       originalLanguage: json['original_language'] ?? '',
       popularity: (json['popularity'] as num?)?.toDouble() ?? 0.0,
+      genres:
+          (json['genres'] as List?)
+              ?.map((g) => g['name'].toString())
+              .toList() ??
+          [],
       runtime: json['runtime'] as int?,
       status: 'none',
+      productionStatus: json['status'] ?? '',
     );
   }
 
@@ -69,11 +79,14 @@ class Movie {
       backdropPath: data['backdropPath'] ?? '',
       voteAverage: (data['voteAverage'] as num?)?.toDouble() ?? 0.0,
       voteCount: (data['voteCount'] as num?)?.toInt() ?? 0,
-      popularity: (data['popularity'] as num?)?.toDouble() ?? 0.0,
       releaseDate: data['releaseDate'] ?? '',
       originalLanguage: data['originalLanguage'] ?? '',
+      popularity: (data['popularity'] as num?)?.toDouble() ?? 0.0,
+      genres:
+          (data['genres'] as List?)?.map((e) => e.toString()).toList() ?? [],
       runtime: data['runtime'] as int?,
       status: data['status'] ?? 'none',
+      productionStatus: data['productionStatus'] ?? '',
       aiAnalysis: data['aiAnalysis'],
     );
   }
@@ -89,8 +102,10 @@ class Movie {
       'releaseDate': releaseDate,
       'originalLanguage': originalLanguage,
       'popularity': popularity,
+      'genres': genres,
       'runtime': runtime,
       'status': status,
+      'productionStatus': productionStatus,
       'aiAnalysis': aiAnalysis,
       'type': 'movie',
     };
@@ -105,9 +120,11 @@ class Movie {
     double? voteAverage,
     int? voteCount,
     double? popularity,
+    List<String>? genres,
     String? releaseDate,
     String? originalLanguage,
     String? status,
+    String? productionStatus,
     String? aiAnalysis,
     int? runtime,
   }) {
@@ -122,7 +139,9 @@ class Movie {
       releaseDate: releaseDate ?? this.releaseDate,
       originalLanguage: originalLanguage ?? this.originalLanguage,
       popularity: popularity ?? this.popularity,
+      genres: genres ?? this.genres,
       status: status ?? this.status,
+      productionStatus: productionStatus ?? this.productionStatus,
       aiAnalysis: aiAnalysis ?? this.aiAnalysis,
       runtime: runtime ?? this.runtime,
     );

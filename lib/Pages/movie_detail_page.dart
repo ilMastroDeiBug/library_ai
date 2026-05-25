@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/injection_container.dart';
@@ -11,12 +12,11 @@ import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
 
 import '../services/pages_services/movie_detail_logic.dart';
 import '../models/ai_analysis_section.dart';
-import '../models/movie_widget/movie_stats_bar.dart';
 import '../models/movie_widget/movie_reviews_section.dart';
 import '../models/movie_widget/movie_cast_section.dart';
+import '../models/movie_widget/movie_crew_section.dart';
 import '../models/movie_widget/trailer_player_widget.dart';
 import '../models/movie_widget/watch_provider_widgets.dart';
-// IMPORTANTE: Importiamo la nuova sezione del tracking
 import 'package:library_ai/models/movie_widget/tv_series_tracker_section.dart';
 import '../models/movie_widget/emoji_rating_widget.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
@@ -34,7 +34,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   final MovieDetailLogic _logic = MovieDetailLogic();
   bool _isAnalyzing = false;
 
-  // UI OTTIMISTICA (Per il cuore e per i 3 bottoni di status)
+  // UI OTTIMISTICA
   StreamSubscription<bool>? _favSubscription;
   bool _isFavorite = false;
   bool _isTogglingHeart = false;
@@ -42,10 +42,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   String? _optimisticStatus;
   bool _isTogglingStatus = false;
 
-  Stream<dynamic>? _mediaStream;
+  Future<dynamic>? _mediaFuture;
 
   static const Color _brandColor = Colors.orangeAccent;
-  static const Color _backgroundColor = Colors.black;
+  static const Color _backgroundColor = Color(0xFF0A0A0A);
 
   bool get _isTv => widget.media is TvSeries;
   int get _id => widget.media.id;
@@ -56,7 +56,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     _initFavoriteStream();
     final user = sl<AuthRepository>().currentUser;
     if (user != null) {
-      _mediaStream = _getMediaStream(user.id);
+      _mediaFuture = _getMediaFuture(user.id);
     }
   }
 
@@ -72,15 +72,14 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       _favSubscription = sl<CheckFavoriteStatusUseCase>()
           .call(user.id, _id, _isTv ? 'tv' : 'movie')
           .listen((isFav) {
-            if (!_isTogglingHeart && mounted) {
-              setState(() => _isFavorite = isFav);
-            }
-          });
+        if (!_isTogglingHeart && mounted) {
+          setState(() => _isFavorite = isFav);
+        }
+      });
     }
   }
 
   void _showRatingBottomSheet(BuildContext context, dynamic media) {
-    // Guard offline: non aprire il sheet se non c'è connessione
     if (!OfflineActionGuard.checkAndShow(context)) return;
     showModalBottomSheet(
       context: context,
@@ -95,8 +94,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   void _handleFavoriteToggle(dynamic liveMedia) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return;
-
-    // Guard offline
     if (!OfflineActionGuard.checkAndShow(context)) return;
 
     setState(() {
@@ -108,15 +105,12 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       final result = await _logic.toggleFavorite(context, liveMedia);
       if (mounted) setState(() => _isFavorite = result);
     } catch (e) {
-      if (mounted) {
-        setState(() => _isFavorite = !_isFavorite); // Revert su errore
-      }
+      if (mounted) setState(() => _isFavorite = !_isFavorite);
     } finally {
       if (mounted) setState(() => _isTogglingHeart = false);
     }
   }
 
-  // --- GESTIONE OTTIMISTICA STATUS DEI PULSANTI ---
   void _handleStatusToggle(
     dynamic liveMedia,
     String action,
@@ -124,8 +118,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   ) async {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return;
-
-    // Guard offline: blocca qualsiasi cambio di status senza rete
     if (!OfflineActionGuard.checkAndShow(context)) return;
 
     final isRemoving = streamStatus == action;
@@ -144,7 +136,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         streamStatus,
       );
       if (mounted && !success) {
-        setState(() => _optimisticStatus = streamStatus); // Revert se fallisce
+        setState(() => _optimisticStatus = streamStatus);
       } else if (mounted && success && action == 'watched' && !isRemoving) {
         _showRatingBottomSheet(context, liveMedia);
       }
@@ -155,18 +147,17 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     }
   }
 
-  Stream<dynamic>? _getMediaStream(String userId) {
+  Future<dynamic>? _getMediaFuture(String userId) async {
     try {
       if (_isTv) {
-        return sl<GetSingleTvSeriesUseCase>().call(userId, _id.toString());
+        return await sl<GetSingleTvSeriesUseCase>().call(userId, _id.toString()).first;
       }
-      return sl<GetSingleMovieUseCase>().call(userId, _id.toString());
+      return await sl<GetSingleMovieUseCase>().call(userId, _id.toString()).first;
     } catch (e) {
       return null;
     }
   }
 
-  // Estrae in modo sicuro le stagioni per evitare crash
   Map<int, int> _extractSeasonsMap(dynamic liveMedia) {
     if (liveMedia is! TvSeries) return {};
     Map<int, int> map = {};
@@ -177,7 +168,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         final sNum = s['season_number'] ?? 0;
         final epCount = s['episode_count'] ?? 0;
         if (sNum > 0) {
-          // Ignoriamo la stagione 0 (Spciali)
           map[sNum] = epCount;
         }
       }
@@ -185,19 +175,33 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     return map;
   }
 
+  // Helpers per formattazione data
+  String _formatDate(String dateStr) {
+    if (dateStr.isEmpty) return '';
+    try {
+      final DateTime date = DateTime.parse(dateStr);
+      final List<String> months = [
+        'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+        'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'
+      ];
+      return '${date.day} ${months[date.month - 1]} ${date.year}';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = sl<AuthRepository>().currentUser;
 
-    return StreamBuilder<dynamic>(
-      stream: _mediaStream,
+    return FutureBuilder<dynamic>(
+      future: _mediaFuture,
       builder: (context, snapshot) {
         dynamic liveMedia = widget.media;
         if (snapshot.hasData && snapshot.data != null) {
           liveMedia = snapshot.data;
         }
 
-        // Il mix Optimistic UI: Prende lo stato reale se non stiamo cliccando.
         final String streamStatus = liveMedia.status ?? 'none';
         final String currentStatus = _isTogglingStatus
             ? _optimisticStatus!
@@ -207,85 +211,146 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         final String title = _isTv ? liveMedia.name : liveMedia.title;
         final String overview = liveMedia.overview;
         final String poster = liveMedia.fullPosterUrl;
-
-        final displayMovieForStats = _isTv
-            ? Movie(
-                id: _id,
-                title: title,
-                overview: overview,
-                posterPath: liveMedia.posterPath,
-                backdropPath: liveMedia.backdropPath,
-                voteAverage: liveMedia.voteAverage,
-                voteCount: liveMedia.voteCount,
-                releaseDate: liveMedia.firstAirDate,
-                popularity: liveMedia.popularity,
-                status: currentStatus,
-              )
-            : liveMedia as Movie;
+        final String backdrop = liveMedia.fullBackdropUrl;
+        final String releaseDate = _isTv ? liveMedia.firstAirDate : liveMedia.releaseDate;
+        final double voteAvg = liveMedia.voteAverage;
+        final int voteCount = liveMedia.voteCount;
+        final List<String> genres = liveMedia.genres;
+        final String productionStatus = liveMedia.productionStatus;
+        
+        final List<String> createdBy = _isTv ? liveMedia.createdBy : [];
+        final Map<int, int> seasonsMap = _extractSeasonsMap(liveMedia);
+        final int? runtime = liveMedia.runtime;
 
         return Scaffold(
           backgroundColor: _backgroundColor,
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildSliverAppBar(poster, title),
+              _buildSliverAppBar((poster.isNotEmpty ? poster : backdrop).replaceAll('w500', 'original')),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Cuore Preferiti allineato a destra
-                      if (user != null)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: GestureDetector(
-                            onTap: () => _handleFavoriteToggle(liveMedia),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: _isFavorite
-                                    ? Colors.redAccent.withOpacity(0.12)
-                                    : Colors.white.withOpacity(0.05),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: _isFavorite
-                                      ? Colors.redAccent.withOpacity(0.3)
-                                      : Colors.white.withOpacity(0.08),
-                                ),
-                              ),
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 200),
-                                transitionBuilder: (child, anim) =>
-                                    ScaleTransition(scale: anim, child: child),
-                                child: Icon(
-                                  _isFavorite
-                                      ? Icons.favorite_rounded
-                                      : Icons.favorite_border_rounded,
-                                  key: ValueKey(_isFavorite),
-                                  color: _isFavorite
-                                      ? Colors.redAccent
-                                      : Colors.white54,
-                                  size: 24,
-                                ),
+                      const SizedBox(height: 16),
+                      // Titolo e Azioni Rapide
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1.2,
+                                height: 1.1,
                               ),
                             ),
                           ),
-                        ),
-                      const SizedBox(height: 12),
-                      MovieStatsBar(movie: displayMovieForStats),
-                      const SizedBox(height: 30),
+                          const SizedBox(width: 12),
+                          if (user != null)
+                            Row(
+                              children: [
+                                _buildIconBtn(
+                                  icon: _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                  color: _isFavorite ? Colors.redAccent : Colors.white,
+                                  onTap: () => _handleFavoriteToggle(liveMedia),
+                                ),
+                                const SizedBox(width: 12),
+                                _buildIconBtn(
+                                  icon: Icons.share_rounded,
+                                  color: Colors.white,
+                                  onTap: () {}, // Implementare share se necessario
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
 
-                      // INIEZIONE CONDIZIONALE DELLA SEZIONE TRACKER
-                      if (_isTv &&
-                          currentStatus == 'watching' &&
-                          user != null) ...[
+                      // Info Chips
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (releaseDate.isNotEmpty)
+                            _GlassChip(text: _formatDate(releaseDate)),
+                          _GlassChip(
+                            text: _isTv ? 'Serie TV' : 'Film',
+                            baseColor: Colors.blueAccent,
+                            isSolid: true,
+                          ),
+                          if (_isTv && seasonsMap.isNotEmpty)
+                            _GlassChip(text: '${seasonsMap.length} Stagioni'),
+                          if (!_isTv && runtime != null && runtime > 0)
+                            _GlassChip(text: '$runtime min'),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      if (productionStatus.isNotEmpty)
+                        _GlassChip(text: 'Produzione: ${productionStatus.toUpperCase()}'),
+                      const SizedBox(height: 24),
+
+                      // Creato da
+                      if (_isTv && createdBy.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            const Text(
+                              'CREATO DA: ',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                createdBy.join(', '),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.people_outline, color: Colors.white54, size: 20),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // Generi
+                      if (genres.isNotEmpty) ...[
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: genres.map((g) => _GlassChip(text: g, dark: true)).toList(),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // Ratings Container
+                      if (voteAvg > 0) ...[
+                        _buildRatingContainer(voteAvg, voteCount),
+                        const SizedBox(height: 12),
+                      ],
+
+
+                      const SizedBox(height: 36),
+
+                      // TV TRACKER
+                      if (_isTv && currentStatus == 'watching' && user != null) ...[
                         Text(
                           AppLocalizations.of(context)!.viewProgress,
                           style: const TextStyle(
                             color: Colors.white38,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900,
                             letterSpacing: 1.5,
                             fontSize: 12,
                           ),
@@ -294,12 +359,12 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                         TvSeriesTrackerSection(
                           userId: user.id,
                           seriesId: _id,
-                          episodesPerSeason: _extractSeasonsMap(liveMedia),
+                          episodesPerSeason: seasonsMap,
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 36),
                       ],
 
-                      // I TRE BOTTONI OTTIMIZZATI
+                      // STATUS BUTTONS (Towatch, Watching, Watched)
                       Row(
                         children: [
                           Expanded(
@@ -307,11 +372,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               label: AppLocalizations.of(context)!.toWatch.toUpperCase(),
                               icon: Icons.bookmark_add_outlined,
                               isActive: currentStatus == 'towatch',
-                              onTap: () => _handleStatusToggle(
-                                liveMedia,
-                                'towatch',
-                                streamStatus,
-                              ),
+                              onTap: () => _handleStatusToggle(liveMedia, 'towatch', streamStatus),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -320,11 +381,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               label: AppLocalizations.of(context)!.watching.toUpperCase(),
                               icon: Icons.play_circle_outline_rounded,
                               isActive: currentStatus == 'watching',
-                              onTap: () => _handleStatusToggle(
-                                liveMedia,
-                                'watching',
-                                streamStatus,
-                              ),
+                              onTap: () => _handleStatusToggle(liveMedia, 'watching', streamStatus),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -333,17 +390,14 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               label: AppLocalizations.of(context)!.watchedAction.toUpperCase(),
                               icon: Icons.check_circle_outline,
                               isActive: currentStatus == 'watched',
-                              onTap: () => _handleStatusToggle(
-                                liveMedia,
-                                'watched',
-                                streamStatus,
-                              ),
+                              onTap: () => _handleStatusToggle(liveMedia, 'watched', streamStatus),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 40),
 
+                      // AI ANALYSIS
                       AIAnalysisSection(
                         analysisText: storedAnalysis,
                         isAnalyzing: _isAnalyzing,
@@ -355,38 +409,40 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       ),
                       const SizedBox(height: 40),
 
+                      // OVERVIEW
                       Text(
-                        AppLocalizations.of(context)!.plot,
+                        AppLocalizations.of(context)!.plot.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white38,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 1.5,
                           fontSize: 12,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Text(
-                        overview.isNotEmpty
-                            ? overview
-                            : AppLocalizations.of(context)!.noPlotAvailable,
+                        overview.isNotEmpty ? overview : AppLocalizations.of(context)!.noPlotAvailable,
                         style: const TextStyle(
                           color: Colors.white70,
-                          fontSize: 16,
+                          fontSize: 15,
                           height: 1.6,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                       const SizedBox(height: 40),
 
+                      // WATCH PROVIDERS & TRAILER
                       WatchProvidersWidget(mediaId: _id, isTvSeries: _isTv),
                       TrailerPlayerWidget(mediaId: _id, isTvSeries: _isTv),
+                      
+                      // CAST & CREW
                       MovieCastSection(id: _id, isTvSeries: _isTv),
-                      const SizedBox(height: 40),
-                      MovieReviewsSection(
-                        id: _id,
-                        title: title,
-                        isTvSeries: _isTv,
-                      ),
-                      const SizedBox(height: 50),
+                      const SizedBox(height: 24),
+                      MovieCrewSection(id: _id, isTvSeries: _isTv),
+                      
+                      // REVIEWS
+                      MovieReviewsSection(id: _id, title: title, isTvSeries: _isTv),
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
@@ -398,32 +454,25 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
-  Widget _buildSliverAppBar(String poster, String title) {
-    // Usa poster w780 per qualità massima (non il backdrop panoramico sgranato)
-    final posterHD = poster.isNotEmpty
-        ? poster.replaceFirst('w342', 'w780').replaceFirst('original', 'w780')
-        : poster;
-
+  Widget _buildSliverAppBar(String imageUrl) {
     return SliverAppBar(
-      expandedHeight: 520,
+      expandedHeight: 450,
       pinned: true,
       stretch: true,
       backgroundColor: _backgroundColor,
+      elevation: 0,
+      scrolledUnderElevation: 0,
       leading: Padding(
         padding: const EdgeInsets.all(8),
         child: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.55),
+              color: Colors.black.withValues(alpha: 0.3),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
-            child: const Icon(
-              Icons.arrow_back_ios_new,
-              size: 18,
-              color: Colors.white,
-            ),
+            child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
           ),
         ),
       ),
@@ -432,67 +481,45 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            // Poster HD centrato
+            // Blurred background layer
             CachedNetworkImage(
-              imageUrl: posterHD.isNotEmpty ? posterHD : poster,
+              imageUrl: imageUrl,
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
-              placeholder: (_, __) => Container(
-                color: const Color(0xFF0D0D0D),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    color: Colors.orangeAccent,
-                  ),
+              placeholder: (_, __) => const ColoredBox(color: Color(0xFF0C0C0C)),
+              errorWidget: (_, __, ___) => const ColoredBox(color: Color(0xFF0A0A0A)),
+            ),
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(color: Colors.black.withValues(alpha: 0.6)),
+            ),
+            
+            // Sharp, fully visible poster layer
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
                 ),
               ),
-              errorWidget: (_, __, ___) => Container(color: _backgroundColor),
             ),
-
-            // Gradiente: trasparente in alto, nero denso in basso
+            
+            // Gradient cinematico profondo per sfumare dolcemente con il background
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.transparent,
-                    Colors.transparent,
-                    Color(0xCC000000),
-                    Colors.black,
+                    Color(0x000A0A0A),
+                    Color(0x000A0A0A),
+                    Color(0x880A0A0A),
+                    Color(0xFF0A0A0A),
                   ],
-                  stops: [0.0, 0.45, 0.75, 1.0],
-                ),
-              ),
-            ),
-
-            // Titolo centrato in basso con font premium
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: 20,
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.0,
-                  height: 1.1,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black,
-                      blurRadius: 20,
-                      offset: Offset(0, 2),
-                    ),
-                    Shadow(
-                      color: Colors.black87,
-                      blurRadius: 40,
-                    ),
-                  ],
+                  stops: [0.0, 0.5, 0.8, 1.0],
                 ),
               ),
             ),
@@ -502,6 +529,59 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     );
   }
 
+  Widget _buildIconBtn({required IconData icon, required Color color, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Icon(icon, color: color, size: 26),
+    );
+  }
+
+  Widget _buildRatingContainer(double voteAvg, int voteCount) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161616),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, color: Colors.amberAccent, size: 32),
+          const SizedBox(width: 12),
+          Text(
+            voteAvg.toStringAsFixed(1),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'TMDB', // Uso TMDB al posto di IMDB visto che la fonte è quella
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$voteCount voti',
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
   Widget _buildActionButton({
     required String label,
     required IconData icon,
@@ -509,29 +589,93 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     required VoidCallback onTap,
   }) {
     return SizedBox(
-      height: 45,
+      height: 48,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          backgroundColor: isActive
-              ? _brandColor
-              : Colors.white.withOpacity(0.05),
+          backgroundColor: isActive ? _brandColor : const Color(0xFF1A1A1A),
           foregroundColor: isActive ? Colors.black : Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isActive ? _brandColor : Colors.white.withValues(alpha: 0.1),
+            ),
           ),
+          elevation: 0,
         ),
         onPressed: onTap,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18),
+            Icon(icon, size: 20),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 9),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 9, letterSpacing: 0.5),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Componente GlassChip ────────────────────────────────────────────────────
+class _GlassChip extends StatelessWidget {
+  final String text;
+  final bool dark;
+  final bool isSolid;
+  final Color? baseColor;
+
+  const _GlassChip({
+    required this.text,
+    this.dark = false,
+    this.isSolid = false,
+    this.baseColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isSolid && baseColor != null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: baseColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: dark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.10),
+              width: 0.7,
+            ),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: dark ? Colors.white70 : Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );

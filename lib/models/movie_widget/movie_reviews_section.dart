@@ -223,11 +223,11 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
           children: [
             Text(
               AppLocalizations.of(context)!.reviewsTitle,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.35),
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                fontSize: 11,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
               ),
             ),
             // Sort pill
@@ -374,13 +374,13 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
         child: Container(
           decoration: BoxDecoration(
             color: isOrange
-                ? const Color(0xFFFF8C00).withOpacity(0.08)
-                : const Color(0xFF111113),
-            borderRadius: BorderRadius.circular(13),
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isOrange
-                  ? const Color(0xFFFF8C00).withOpacity(0.3)
-                  : Colors.white.withOpacity(0.07),
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.1),
               width: 1,
             ),
           ),
@@ -390,18 +390,18 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
               Icon(
                 icon,
                 color: isOrange
-                    ? const Color(0xFFFF8C00)
-                    : Colors.white.withOpacity(0.5),
-                size: 16,
+                    ? Colors.black
+                    : Colors.white,
+                size: 18,
               ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
                   color: isOrange
-                      ? const Color(0xFFFF8C00)
-                      : Colors.white.withOpacity(0.5),
-                  fontWeight: FontWeight.w600,
+                      ? Colors.black
+                      : Colors.white,
+                  fontWeight: FontWeight.w800,
                   fontSize: 13,
                 ),
               ),
@@ -417,17 +417,17 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
     final canDelete = review.isWrittenBy(user?.id);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 16),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF0E0E10),
+              color: Colors.white.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.06)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,10 +489,10 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF8C00).withOpacity(0.1),
+                          color: Colors.amberAccent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: const Color(0xFFFF8C00).withOpacity(0.2),
+                            color: Colors.amberAccent.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -501,16 +501,16 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                           children: [
                             const Icon(
                               Icons.star_rounded,
-                              color: Color(0xFFFF8C00),
-                              size: 11,
+                              color: Colors.amberAccent,
+                              size: 12,
                             ),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 4),
                             Text(
                               review.rating.toStringAsFixed(1),
                               style: const TextStyle(
-                                color: Color(0xFFFF8C00),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11,
+                                color: Colors.amberAccent,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
                               ),
                             ),
                           ],
