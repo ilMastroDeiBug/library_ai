@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/user_cases.dart';
@@ -5,6 +6,7 @@ import 'package:library_ai/injection_container.dart';
 import '../models/app_mode.dart';
 import '../models/library_widgets/library_grid.dart';
 import '../models/library_widgets/library_header.dart';
+import '../models/login_widgets/cascading_background.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
 class LibraryPage extends StatefulWidget {
@@ -47,21 +49,16 @@ class _LibraryPageState extends State<LibraryPage> {
       floatingActionButton: _isBooks ? _buildStyledFab() : null,
       body: Stack(
         children: [
-          // Sfondo Logo (solo watchlist o ovunque se preferito)
+          // Sfondo animato a cascata con copertine
           if (!_isBooks)
-            Positioned.fill(
+            const Positioned.fill(
               child: Opacity(
-                opacity: 0.2, // Più visibile e colorato
-                child: Align(
-                  alignment: const Alignment(
-                    0,
-                    0.5,
-                  ), // Più in basso rispetto al centro
-                  child: Image.asset(
-                    'assets/images/logoCine.png',
-                    width: MediaQuery.of(context).size.width * 0.8,
-                    fit: BoxFit.contain,
-                  ),
+                opacity: 0.65, // Regolata per non disturbare la lettura
+                child: CascadingBackground(
+                  speed1: 120, // Leggermente più lento per eleganza
+                  speed2: 110,
+                  speed3: 130,
+                  speed4: 115,
                 ),
               ),
             ),
@@ -112,7 +109,7 @@ class _LibraryPageState extends State<LibraryPage> {
     return SliverAppBar(
       expandedHeight: expandedH,
       pinned: true,
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Colors.transparent,
       elevation: 0,
       automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
@@ -125,17 +122,20 @@ class _LibraryPageState extends State<LibraryPage> {
       ),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(60),
-        child: Container(
-          height: 60,
-          decoration: BoxDecoration(
-            color: const Color(0xFF0A0A0A),
-            border: Border(
-              bottom: BorderSide(
-                color: Colors.white.withValues(alpha: 0.05),
-                width: 1,
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A0A0A).withOpacity(0.7),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withOpacity(0.05),
+                    width: 1,
+                  ),
+                ),
               ),
-            ),
-          ),
           child: TabBar(
             isScrollable:
                 true, // <-- Mettiamo true così ci stanno 4 tab senza stringersi
@@ -162,8 +162,10 @@ class _LibraryPageState extends State<LibraryPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildStyledFab() {
     return Container(

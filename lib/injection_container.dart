@@ -51,8 +51,6 @@ import 'package:library_ai/domain/use_cases/save_rating_use_case.dart';
 
 // Import Services Libri (DORMIENTI)
 import 'package:library_ai/services/utility_services/open_library_service.dart';
-import 'package:library_ai/services/utility_services/google_books_service.dart';
-
 import 'package:supabase_flutter/supabase_flutter.dart'; // Import necessario per passare il client al repository
 
 final sl = GetIt.instance;
@@ -71,8 +69,6 @@ Future<void> init() async {
 
   // 🔒 Libri (Dormienti)
   sl.registerLazySingleton<OpenLibraryService>(() => OpenLibraryService());
-  sl.registerLazySingleton<GoogleBooksService>(() => GoogleBooksService());
-
   // =========================================================================
   // REPOSITORIES
   // =========================================================================
@@ -90,13 +86,13 @@ Future<void> init() async {
     () => TmdbActorRepositoryImpl(tmdbService: sl()),
   );
 
-  sl.registerLazySingleton<BookRepository>(
+  /*sl.registerLazySingleton<BookRepository>(
     () => SupabaseBookRepositoryImpl(
       openLibraryService: sl(),
       googleBooksService: sl(),
       cacheService: sl(),
     ),
-  );
+  );*/
 
   sl.registerLazySingleton<MovieRepository>(
     () => SupabaseMovieRepositoryImpl(tmdbService: sl(), cacheService: sl()),
@@ -117,9 +113,7 @@ Future<void> init() async {
 
   // REGISTRAZIONE REPOSITORY RATING
   sl.registerLazySingleton<RatingRepository>(
-    () => SupabaseRatingRepositoryImpl(
-      supabase: Supabase.instance.client,
-    ),
+    () => SupabaseRatingRepositoryImpl(supabase: Supabase.instance.client),
   );
 
   // =========================================================================
@@ -171,13 +165,17 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetMovieTrailerUseCase(sl()));
   sl.registerLazySingleton(() => GetMovieWatchProvidersUseCase(sl()));
   sl.registerLazySingleton(() => GetSingleMovieUseCase(sl()));
-  sl.registerLazySingleton(() => ImportLetterboxdUseCase(
-        tmdbService: sl(),
-        saveMovieUseCase: sl(),
-        submitReviewUseCase: sl(),
-        toggleFavoriteUseCase: sl(),
-      ));
-  sl.registerLazySingleton(() => ExportUserDataUseCase(Supabase.instance.client));
+  sl.registerLazySingleton(
+    () => ImportLetterboxdUseCase(
+      tmdbService: sl(),
+      saveMovieUseCase: sl(),
+      submitReviewUseCase: sl(),
+      toggleFavoriteUseCase: sl(),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => ExportUserDataUseCase(Supabase.instance.client),
+  );
 
   // AI Use Cases...
   sl.registerLazySingleton(() => GetAiTokensUseCase(sl()));

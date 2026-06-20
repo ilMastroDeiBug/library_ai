@@ -132,17 +132,17 @@ class _ProfileHeaderState extends State<ProfileHeader> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             decoration: BoxDecoration(
-              color: const Color(0xFFFF8C3A).withValues(alpha: 0.12),
+              color: Colors.white.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: const Color(0xFFFF8C3A).withValues(alpha: 0.25),
+                color: Colors.white.withValues(alpha: 0.15),
                 width: 0.8,
               ),
             ),
             child: Text(
               _badgeTitle(widget.stats.vaultCount),
               style: const TextStyle(
-                color: Color(0xFFFF8C3A),
+                color: Colors.white70,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.2,
@@ -169,12 +169,12 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF8C3A),
+                          color: Colors.white,
                           shape: BoxShape.circle,
                           border: Border.all(color: const Color(0xFF0A0A0A), width: 2.5),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFFF8C3A).withValues(alpha: 0.4),
+                              color: Colors.white.withValues(alpha: 0.2),
                               blurRadius: 8,
                             ),
                           ],
@@ -300,14 +300,14 @@ class _AvatarRing extends StatelessWidget {
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFF8C3A), Color(0xFF9B6DFF)],
+        gradient: LinearGradient(
+          colors: [Colors.white.withValues(alpha: 0.8), Colors.white.withValues(alpha: 0.1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFF8C3A).withValues(alpha: 0.25),
+            color: Colors.white.withValues(alpha: 0.1),
             blurRadius: 20,
             spreadRadius: 1,
           ),
@@ -584,12 +584,12 @@ class _EditSheetState extends State<_EditSheet> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: _saving
-                        ? Colors.orangeAccent.withValues(alpha: 0.5)
-                        : Colors.orangeAccent,
+                        ? Colors.white.withValues(alpha: 0.5)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: _saving
                         ? []
-                        : [BoxShadow(color: Colors.orangeAccent.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 6))],
+                        : [BoxShadow(color: Colors.white.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 6))],
                   ),
                   child: _saving
                       ? const SizedBox(
@@ -649,7 +649,7 @@ class _InputField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFFF8C3A), width: 1.5),
+          borderSide: const BorderSide(color: Colors.white, width: 1.5),
         ),
       ),
     );

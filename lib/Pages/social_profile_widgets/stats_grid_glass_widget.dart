@@ -2,13 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:library_ai/domain/entities/social_stats.dart';
 
-// Palette colori accent – vividi ma mai neon
-const _cBlue = Color(0xFF4C8EF7);
-const _cPurple = Color(0xFF9B6DFF);
-const _cOrange = Color(0xFFFF8C3A);
-const _cTeal = Color(0xFF2DD4BF);
-const _cPink = Color(0xFFFF5FA0);
-const _cGold = Color(0xFFFFCC00);
+// Palette colori accent – monocromatica B/W
+const _cWhite = Colors.white;
+const _cLightGrey = Colors.white70;
+const _cMidGrey = Colors.white60;
+const _cDarkGrey = Colors.white54;
+const _cDimGrey = Colors.white38;
 
 class StatsGridGlassWidget extends StatelessWidget {
   final SocialStats stats;
@@ -39,7 +38,7 @@ class StatsGridGlassWidget extends StatelessWidget {
             label: 'ORE TOTALI',
             value: _fmt(stats.totalMinutes),
             sub: 'di contenuto visto',
-            accent: const Color.fromARGB(255, 247, 125, 76),
+            accent: _cWhite,
             icon: Icons.play_circle_outline_rounded,
           ),
           const SizedBox(height: 10),
@@ -53,7 +52,7 @@ class StatsGridGlassWidget extends StatelessWidget {
                   child: _MiniCard(
                     label: 'ANNO',
                     value: _fmt(stats.yearMinutes, compact: true),
-                    accent: _cPurple,
+                    accent: _cLightGrey,
                     icon: Icons.local_fire_department_outlined,
                   ),
                 ),
@@ -62,7 +61,7 @@ class StatsGridGlassWidget extends StatelessWidget {
                   child: _MiniCard(
                     label: 'MESE',
                     value: _fmt(stats.monthMinutes, compact: true),
-                    accent: _cOrange,
+                    accent: _cMidGrey,
                     icon: Icons.calendar_month_outlined,
                   ),
                 ),
@@ -71,7 +70,7 @@ class StatsGridGlassWidget extends StatelessWidget {
                   child: _MiniCard(
                     label: 'SETTIMANA',
                     value: _fmt(stats.weekMinutes, compact: true),
-                    accent: _cPink,
+                    accent: _cDarkGrey,
                     icon: Icons.view_week_outlined,
                   ),
                 ),
@@ -89,7 +88,7 @@ class StatsGridGlassWidget extends StatelessWidget {
                   child: _CountCard(
                     label: 'Film',
                     value: stats.moviesCount,
-                    accent: _cTeal,
+                    accent: _cLightGrey,
                     icon: Icons.movie_creation_outlined,
                   ),
                 ),
@@ -98,7 +97,7 @@ class StatsGridGlassWidget extends StatelessWidget {
                   child: _CountCard(
                     label: 'Serie TV',
                     value: stats.tvCount,
-                    accent: _cPink,
+                    accent: _cMidGrey,
                     icon: Icons.tv_rounded,
                   ),
                 ),
@@ -107,7 +106,7 @@ class StatsGridGlassWidget extends StatelessWidget {
                   child: _CountCard(
                     label: 'Da vedere',
                     value: stats.watchlistCount,
-                    accent: _cGold,
+                    accent: _cDimGrey,
                     icon: Icons.bookmark_outline_rounded,
                   ),
                 ),

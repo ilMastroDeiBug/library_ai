@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../models/app_mode.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
+/// Netflix-style floating pill navbar.
+/// Semi-transparent, rounded, centered — floats above content.
 class MediaBottomBar extends StatelessWidget {
   final int currentIndex;
   final AppMode currentMode;
@@ -17,95 +19,176 @@ class MediaBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calcoliamo lo spazio per la "Home Indicator" (la barra di sistema in basso)
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final loc = AppLocalizations.of(context)!;
 
-    return ClipRRect(
-      // Evita che l'effetto sfocato sbavi fuori dal menu
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 25,
-          sigmaY: 25,
-        ), // Effetto vetro bello denso
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.6), // Sfondo scurissimo semitrasparente
-            border: Border(
-              // Bordino superiore sottilissimo per dare profondità al vetro
-              top: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 0.5),
-            ),
-          ),
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 10,
-            bottom: bottomPadding > 0
-                ? bottomPadding
-                : 16, // Rispetta il bordo del telefono
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildNavItem(0, Icons.home_rounded, AppLocalizations.of(context)!.navHome),
-              _buildNavItem(
-                1,
-                currentMode == AppMode.books
-                    ? Icons.menu_book_rounded
-                    : Icons.movie_filter_rounded,
-                currentMode == AppMode.books ? AppLocalizations.of(context)!.navVault : AppLocalizations.of(context)!.watchlist,
+    final items = [
+      (Icons.home_rounded,         Icons.home_outlined,          loc.navHome),
+      (
+        currentMode == AppMode.books ? Icons.menu_book_rounded : Icons.movie_filter_rounded,
+        currentMode == AppMode.books ? Icons.menu_book_outlined : Icons.movie_filter_outlined,
+        currentMode == AppMode.books ? loc.navVault : loc.watchlist,
+      ),
+      (Icons.explore_rounded,      Icons.explore_outlined,       loc.navExplore),
+      (Icons.auto_awesome_rounded, Icons.auto_awesome_outlined,  loc.navAI),
+    ];
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        bottom: bottomPadding > 0 ? bottomPadding + 8 : 20,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(36),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: Container(
+            height: 60,
+            decoration: BoxDecoration(
+              // Deep translucent black pill
+              color: Colors.black.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(36),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.10),
+                width: 1,
               ),
-              _buildNavItem(2, Icons.explore_rounded, AppLocalizations.of(context)!.navExplore),
-              _buildNavItem(3, Icons.auto_awesome_rounded, AppLocalizations.of(context)!.navAI),
-            ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(
+                  items.length,
+                  (i) => _NavItem(
+                    index: i,
+                    currentIndex: currentIndex,
+                    iconOn: items[i].$1,
+                    iconOff: items[i].$2,
+                    label: items[i].$3,
+                    onTap: onTap,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = currentIndex == index;
-    const activeColor = Colors.white;
+class _NavItem extends StatefulWidget {
+  final int index;
+  final int currentIndex;
+  final IconData iconOn;
+  final IconData iconOff;
+  final String label;
+  final Function(int) onTap;
+
+  const _NavItem({
+    required this.index,
+    required this.currentIndex,
+    required this.iconOn,
+    required this.iconOff,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  State<_NavItem> createState() => _NavItemState();
+}
+
+class _NavItemState extends State<_NavItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.88).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = widget.currentIndex == widget.index;
 
     return GestureDetector(
-      onTap: () => onTap(index),
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap(widget.index);
+      },
+      onTapCancel: () => _ctrl.reverse(),
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutCubic,
-        // L'animazione a pillola RIMANE per la singola icona selezionata!
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 20 : 12,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? activeColor.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? activeColor : Colors.white54,
-              size:
-                  26, // Leggermente più grandi ora che abbiamo larghezza piena
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: activeColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  letterSpacing: 0.5,
+      child: ScaleTransition(
+        scale: _scale,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.symmetric(
+            horizontal: isSelected ? 16 : 14,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.white.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, anim) => ScaleTransition(
+                  scale: Tween(begin: 0.75, end: 1.0).animate(anim),
+                  child: child,
+                ),
+                child: Icon(
+                  isSelected ? widget.iconOn : widget.iconOff,
+                  key: ValueKey(isSelected),
+                  color: isSelected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.40),
+                  size: 24,
                 ),
               ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOutCubic,
+                child: isSelected
+                    ? Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          Text(
+                            widget.label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:library_ai/domain/entities/app_user.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
+/// Minimal centered profile header — avatar + name + email stacked vertically.
+/// No card box, no backdrop filter. Pure editorial layout.
 class SettingsHeader extends StatefulWidget {
   final AppUser? user;
   final String bio;
@@ -30,10 +32,9 @@ class _SettingsHeaderState extends State<SettingsHeader>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 130),
     );
-    // Tactile push
-    _scale = Tween<double>(begin: 1.0, end: 0.97).animate(
+    _scale = Tween<double>(begin: 1.0, end: 0.95).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
     );
   }
@@ -44,175 +45,157 @@ class _SettingsHeaderState extends State<SettingsHeader>
     super.dispose();
   }
 
+  String get _initial {
+    final name = widget.user?.displayName;
+    if (name != null && name.isNotEmpty) return name[0].toUpperCase();
+    final email = widget.user?.email ?? '';
+    return email.isNotEmpty ? email[0].toUpperCase() : '?';
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool hasPhoto =
         widget.user?.photoUrl != null && widget.user!.photoUrl!.isNotEmpty;
 
-    return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onPhotoTap();
-      },
-      onTapCancel: () => _ctrl.reverse(),
-      child: ScaleTransition(
-        scale: _scale,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.08),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Asymmetric Squircle Avatar
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      color: hasPhoto
-                          ? Colors.black
-                          : Colors.orangeAccent.withOpacity(0.1),
-                      border: Border.all(
-                        color: hasPhoto
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.orangeAccent.withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orangeAccent.withOpacity(0.15),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // ── Avatar (tapable) ────────────────────────────────────────────
+        GestureDetector(
+          onTapDown: (_) => _ctrl.forward(),
+          onTapUp: (_) {
+            _ctrl.reverse();
+            widget.onPhotoTap();
+          },
+          onTapCancel: () => _ctrl.reverse(),
+          child: ScaleTransition(
+            scale: _scale,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Avatar circle
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      width: 1.5,
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22.5),
-                      child: hasPhoto
-                          ? CachedNetworkImage(
-                              imageUrl: widget.user!.photoUrl!,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => const Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.orangeAccent,
-                                  ),
+                  ),
+                  child: ClipOval(
+                    child: hasPhoto
+                        ? CachedNetworkImage(
+                            imageUrl: widget.user!.photoUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (ctx, url) => const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white30,
                                 ),
                               ),
-                              errorWidget: (context, url, error) => _buildPlaceholder(),
-                            )
-                          : _buildPlaceholder(),
+                            ),
+                            errorWidget: (ctx, url, _) =>
+                                _buildAvatarFallback(),
+                          )
+                        : _buildAvatarFallback(),
+                  ),
+                ),
+                // Camera badge
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: Colors.black,
+                      size: 14,
                     ),
                   ),
-                  const SizedBox(width: 20),
-
-                  // Info (Left Aligned for Layout Diversification)
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.user?.displayName ??
-                              AppLocalizations.of(context)!.settingsUnknownUser,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1.0,
-                            height: 1.1,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                            ),
-                          ),
-                          child: Text(
-                            widget.user?.email ?? "no-email@cineshare.app",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.6),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'monospace', // Rule 6: Monospace for data/numbers
-                              letterSpacing: 0.5,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          widget.bio,
-                          style: const TextStyle(
-                            color: Color(0xFF9CA3AF), // Dim text color
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
-      ),
+
+        const SizedBox(height: 16),
+
+        // ── Display name ────────────────────────────────────────────────
+        Text(
+          widget.user?.displayName ??
+              AppLocalizations.of(context)!.settingsUnknownUser,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.6,
+            height: 1.1,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        const SizedBox(height: 6),
+
+        // ── Email ────────────────────────────────────────────────────────
+        Text(
+          widget.user?.email ?? '',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.38),
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            letterSpacing: 0.1,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        if (widget.bio.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          // ── Bio ─────────────────────────────────────────────────────
+          Text(
+            widget.bio,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.35),
+              fontSize: 13,
+              height: 1.5,
+              letterSpacing: 0.1,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildAvatarFallback() {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1C1C1E),
-            Color(0xFF0A0A0C),
-          ],
-        ),
-      ),
+      color: const Color(0xFF111111),
       child: Center(
-        child: Image.asset(
-          'assets/images/logoCine.png',
-          width: 32,
-          color: Colors.white.withOpacity(0.8),
+        child: Text(
+          _initial,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 36,
+            letterSpacing: -1,
+          ),
         ),
       ),
     );

@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,15 +10,7 @@ import 'package:library_ai/injection_container.dart';
 import '../app_mode.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
-// Pre-shuffled cover list — fixed seed so order is stable across rebuilds
-final List<String> _shuffledCovers = () {
-  final list = List<String>.generate(
-    30,
-    (i) => 'assets/images/covers/cover_${i + 1}.jpg',
-  );
-  list.shuffle(math.Random(7)); // seed = 7 → deterministic mixed order
-  return list;
-}();
+
 
 class LibraryHeader extends StatelessWidget {
   final AppMode mode;
@@ -39,10 +31,7 @@ class LibraryHeader extends StatelessWidget {
 
     return Stack(
       children: [
-        // ── LAYER 0: Static cover mosaic ─────────────────────────────────────
-        Positioned.fill(child: _StaticCoverMosaic()),
-
-        // ── LAYER 1: Gradient overlay (dark at top/bottom, lighter in middle)
+        // ── LAYER 1: Gradient overlay for text readability ────────────────────
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -50,9 +39,9 @@ class LibraryHeader extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withValues(alpha: 0.80),
-                  Colors.black.withValues(alpha: 0.52),
-                  Colors.black.withValues(alpha: 0.80),
+                  Colors.black.withOpacity(0.95), // Più scuro in cima per la status bar
+                  Colors.black.withOpacity(0.50),
+                  Colors.transparent, // Sfuma dolcemente verso il contenuto
                 ],
                 stops: const [0.0, 0.5, 1.0],
               ),
@@ -241,57 +230,3 @@ class LibraryHeader extends StatelessWidget {
   }
 }
 
-// ─── Static cover mosaic widget ───────────────────────────────────────────────
-class _StaticCoverMosaic extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    const double targetTileH = 76.0; // ~2:3 poster ratio at ~52px wide
-    const double targetTileW = 52.0;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Safety checks for invalid or infinite constraints
-        double maxWidth = constraints.maxWidth;
-        double maxHeight = constraints.maxHeight;
-
-        if (maxWidth <= 0 || maxHeight <= 0) return const SizedBox();
-        if (maxWidth == double.infinity)
-          maxWidth = MediaQuery.of(context).size.width;
-        if (maxHeight == double.infinity) maxHeight = 300.0; // Fallback height
-
-        // Compute exact tile width so tiles fill the row with zero remainder gap
-        final cols = (maxWidth / targetTileW).ceil();
-        final tileW = maxWidth / cols;
-        final tileH = tileW * (targetTileH / targetTileW); // preserve ratio
-        final rows = (maxHeight / tileH).ceil() + 1;
-        final totalTiles = cols * rows;
-
-        return SizedBox(
-          width: maxWidth,
-          height: maxHeight,
-          child: ClipRect(
-            child: OverflowBox(
-              maxWidth: maxWidth + 2.0, // Allow slight bleed for precision
-              maxHeight: double.infinity,
-              alignment: Alignment.topLeft,
-              child: Wrap(
-                children: List.generate(totalTiles, (i) {
-                  return SizedBox(
-                    width: tileW,
-                    height: tileH,
-                    child: Image.asset(
-                      _shuffledCovers[i % _shuffledCovers.length],
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const ColoredBox(color: Color(0xFF1C1C1E)),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}

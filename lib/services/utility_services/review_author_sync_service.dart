@@ -4,10 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class ReviewAuthorSyncService {
   final SupabaseClient _supabase;
 
-  static const List<String> _cacheBoxNames = [
-    'cinelib_cache',
-    'tmdb_cache',
-  ];
+  static const List<String> _cacheBoxNames = ['cinelib_cache', 'tmdb_cache'];
 
   ReviewAuthorSyncService({SupabaseClient? supabaseClient})
     : _supabase = supabaseClient ?? Supabase.instance.client;
@@ -81,7 +78,10 @@ class ReviewAuthorSyncService {
         }
       }
 
-      return _CacheMutation(value: changed ? nextList : value, changed: changed);
+      return _CacheMutation(
+        value: changed ? nextList : value,
+        changed: changed,
+      );
     }
 
     if (value is Map) {
@@ -139,8 +139,5 @@ class _CacheMutation {
   final Object? value;
   final bool changed;
 
-  const _CacheMutation({
-    required this.value,
-    required this.changed,
-  });
+  const _CacheMutation({required this.value, required this.changed});
 }

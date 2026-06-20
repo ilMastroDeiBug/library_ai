@@ -1,4 +1,4 @@
-import 'package:hive/hive.dart';
+/*import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/book_repository.dart';
 import '../../domain/entities/book.dart';
@@ -370,3 +370,4 @@ class SupabaseBookRepositoryImpl implements BookRepository {
     );
   }
 }
+*/

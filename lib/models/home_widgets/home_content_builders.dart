@@ -214,7 +214,10 @@ class HomeContentBuilder {
           return const SizedBox(
             height: 350,
             child: Center(
-              child: CircularProgressIndicator(color: Colors.orangeAccent),
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Colors.white24,
+              ),
             ),
           );
         }
@@ -285,9 +288,9 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
-          color: Colors.orangeAccent.withOpacity(0.9),
+          color: Colors.white.withOpacity(0.5),
           fontSize: 12,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w800,
           letterSpacing: 2.5,
         ),
       ),

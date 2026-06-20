@@ -63,9 +63,9 @@ class HomeTvProgressSection extends StatelessWidget {
                         ),
                       ),
                       Icon(
-                        Icons.local_fire_department_rounded,
-                        color: Colors.orangeAccent.withOpacity(0.8),
-                        size: 20,
+                        Icons.play_circle_fill_rounded,
+                        size: 16,
+                        color: Colors.white.withOpacity(0.6),
                       ),
                     ],
                   ),

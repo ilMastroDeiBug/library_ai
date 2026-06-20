@@ -52,12 +52,6 @@ class MovieCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
                       color: Colors.grey[900],
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.orangeAccent,
-                        ),
-                      ),
                     ),
                     errorWidget: (ctx, url, error) => Container(
                       color: Colors.grey[900],
@@ -94,27 +88,27 @@ class MovieCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withOpacity(0.65),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: Colors.orangeAccent.withOpacity(0.5),
+                        color: Colors.white.withOpacity(0.15),
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Icons.star,
-                          color: Colors.orangeAccent,
+                          Icons.star_rounded,
+                          color: Colors.white70,
                           size: 10,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Text(
                           rating,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],

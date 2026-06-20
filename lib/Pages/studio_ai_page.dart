@@ -285,60 +285,66 @@ class _CoverCollage extends StatelessWidget {
     const tileWidth = 100.0;
     const tileHeight = 150.0;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final rows = (constraints.maxHeight / tileHeight).ceil() + 3;
-        final totalWidth = columns * tileWidth;
-        final totalHeight = rows * tileHeight;
-        final driftOffset = driftValue * 60.0;
+    return ClipRect(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final rows = (constraints.maxHeight / tileHeight).ceil() + 3;
+          final totalWidth = columns * tileWidth;
+          final totalHeight = rows * tileHeight;
+          // Extra buffer accounts for the odd-column vertical offset (tileHeight/2)
+          final maxH = totalHeight + tileHeight;
+          final driftOffset = driftValue * 60.0;
 
-        return OverflowBox(
-          maxWidth: totalWidth.toDouble(),
-          maxHeight: (totalHeight + 60).toDouble(),
-          alignment: Alignment.topLeft,
-          child: Transform.translate(
-            offset: Offset(0, -driftOffset),
-            child: SizedBox(
-              width: totalWidth.toDouble(),
-              height: totalHeight.toDouble(),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: List.generate(columns, (col) {
-                  final vertOffset = col.isOdd ? tileHeight / 2 : 0.0;
-                  final extraRow = col.isOdd ? 1 : 0;
-                  final colRows = rows + extraRow;
+          return OverflowBox(
+            maxWidth: totalWidth.toDouble(),
+            maxHeight: maxH.toDouble(),
+            alignment: Alignment.topLeft,
+            child: Transform.translate(
+              offset: Offset(0, -driftOffset),
+              child: SizedBox(
+                width: totalWidth.toDouble(),
+                height: totalHeight.toDouble(),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: List.generate(columns, (col) {
+                    final vertOffset = col.isOdd ? tileHeight / 2 : 0.0;
+                    final extraRow = col.isOdd ? 1 : 0;
+                    final colRows = rows + extraRow;
 
-                  return SizedBox(
-                    width: tileWidth,
-                    child: Transform.translate(
-                      offset: Offset(0, vertOffset),
-                      child: SizedBox(
-                        height: colRows * tileHeight,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: List.generate(colRows, (row) {
-                            final idx = (col * rows + row) % _coverPaths.length;
-                            return SizedBox(
-                              width: tileWidth,
-                              height: tileHeight,
-                              child: Image.asset(
-                                _coverPaths[idx],
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    Container(color: const Color(0xFF1C1C1E)),
-                              ),
-                            );
-                          }),
+                    return SizedBox(
+                      width: tileWidth,
+                      child: Transform.translate(
+                        offset: Offset(0, vertOffset),
+                        child: SizedBox(
+                          height: colRows * tileHeight,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.max,
+                            children: List.generate(colRows, (row) {
+                              final idx =
+                                  (col * rows + row) % _coverPaths.length;
+                              return SizedBox(
+                                width: tileWidth,
+                                height: tileHeight,
+                                child: Image.asset(
+                                  _coverPaths[idx],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: const Color(0xFF1C1C1E),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }),
+                    );
+                  }),
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

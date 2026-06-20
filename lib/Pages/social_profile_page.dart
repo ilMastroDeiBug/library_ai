@@ -278,9 +278,9 @@ class _SocialProfilePageState extends State<SocialProfilePage>
           Text(
             text.toUpperCase(),
             style: TextStyle(
-              color: Colors.orangeAccent.withOpacity(0.9),
+              color: Colors.white.withOpacity(0.5),
               fontSize: 11,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               letterSpacing: 2.0,
             ),
           ),

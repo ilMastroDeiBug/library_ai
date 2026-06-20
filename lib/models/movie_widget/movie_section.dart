@@ -88,13 +88,16 @@ class _MovieSectionState extends State<MovieSection> {
 
         // Lista Orizzontale
         SizedBox(
-          height: 180,
+          height: 200,
           child: StreamBuilder<List<dynamic>>(
             stream: _stream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
-                  child: CircularProgressIndicator(color: Colors.orangeAccent),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: Colors.white24,
+                  ),
                 );
               }
               if (snapshot.hasError) {

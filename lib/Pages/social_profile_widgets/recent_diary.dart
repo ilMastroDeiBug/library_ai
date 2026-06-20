@@ -271,7 +271,7 @@ class _StarRating extends StatelessWidget {
               : (filled ? Icons.star_rounded : Icons.star_border_rounded),
           size: 13,
           color: filled || half
-              ? Colors.orangeAccent
+              ? Colors.white
               : Colors.white.withOpacity(0.2),
         );
       }),
@@ -313,11 +313,11 @@ class _StatusChip extends StatelessWidget {
   (String, Color) _resolveStatus(String status) {
     return switch (status) {
       'watched' ||
-      'completed' => ('Visto', const Color.fromARGB(255, 214, 111, 42)),
-      'watching' => ('In corso', const Color.fromARGB(255, 214, 111, 42)),
+      'completed' => ('Visto', Colors.white70),
+      'watching' => ('In corso', Colors.white70),
       'towatch' ||
-      'want_to_read' => ('Da vedere', const Color.fromARGB(255, 214, 111, 42)),
-      'reading' => ('Leggendo', const Color.fromARGB(255, 214, 111, 42)),
+      'want_to_read' => ('Da vedere', Colors.white70),
+      'reading' => ('Leggendo', Colors.white70),
       'dropped' => ('Abbandonato', Colors.redAccent),
       _ => (status, Colors.white38),
     };

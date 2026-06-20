@@ -55,48 +55,75 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
     });
   }
 
+  static const int _kMinItems = 8;
+
+  Future<List<dynamic>> _fetchPage(int page) async {
+    final raw = widget.isTv
+        ? await sl<GetTvSeriesByCategoryUseCase>()
+              .call(widget.path, page: page)
+              .first
+        : await sl<GetMoviesByCategoryUseCase>()
+              .call(widget.path, page: page)
+              .first;
+    return List<dynamic>.from(raw);
+  }
+
+  List<dynamic> _filterUnique(
+    List<dynamic> rawItems,
+    Set<int> localAddedIds,
+  ) {
+    final List<dynamic> unique = [];
+    for (final item in rawItems) {
+      final int id;
+      if (item is Movie) {
+        id = item.id;
+      } else if (item is TvSeries) {
+        id = item.id;
+      } else {
+        continue;
+      }
+      if (!widget.seenIds.contains(id)) {
+        unique.add(item);
+        widget.seenIds.add(id);
+        localAddedIds.add(id);
+      }
+    }
+    return unique;
+  }
+
   Stream<List<dynamic>> _fetchAndFilter() async* {
-    int pageToFetch = 1;
-
-    final Stream<List<dynamic>> stream = widget.isTv
-        ? sl<GetTvSeriesByCategoryUseCase>()
-              .call(widget.path, page: pageToFetch)
-              .map((items) => List<dynamic>.from(items))
-        : sl<GetMoviesByCategoryUseCase>()
-              .call(widget.path, page: pageToFetch)
-              .map((items) => List<dynamic>.from(items));
-
+    final List<dynamic> accumulated = [];
     final Set<int> localAddedIds = {};
 
-    await for (final rawItems in stream) {
-      widget.seenIds.removeAll(localAddedIds);
-      localAddedIds.clear();
+    // Clear any ids tracked from a previous fetch of this section
+    widget.seenIds.removeAll(localAddedIds);
+    localAddedIds.clear();
 
-      List<dynamic> uniqueItems = [];
-      for (var item in rawItems) {
-        int currentId = 0;
-        if (item is Movie) {
-          currentId = item.id;
-        } else if (item is TvSeries) {
-          currentId = item.id;
-        } else {
-          continue;
-        }
+    try {
+      // Page 1 — always fetch
+      accumulated.addAll(_filterUnique(await _fetchPage(1), localAddedIds));
 
-        if (!widget.seenIds.contains(currentId)) {
-          uniqueItems.add(item);
-          widget.seenIds.add(currentId);
-          localAddedIds.add(currentId);
-        }
+      // Page 2 — fetch only if still below the minimum
+      if (accumulated.length < _kMinItems) {
+        accumulated.addAll(_filterUnique(await _fetchPage(2), localAddedIds));
+      }
+
+      // Page 3 — fetch only if still below the minimum
+      if (accumulated.length < _kMinItems) {
+        accumulated.addAll(_filterUnique(await _fetchPage(3), localAddedIds));
       }
 
       if (widget.path.contains('with_genres=')) {
-        uniqueItems.shuffle();
+        accumulated.shuffle();
       }
 
-      // FIX FONDAMENTALE: Yield incondizionato.
-      // Se la lista è vuota (es. hai rimosso l'ultimo film in corso), invia [] alla UI per pulirla!
-      yield uniqueItems;
+      yield accumulated;
+    } catch (_) {
+      if (accumulated.isNotEmpty) {
+        yield accumulated;
+      } else {
+        yield [];
+      }
     }
   }
 
@@ -110,10 +137,13 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.orangeAccent,
+          return const SizedBox(
+            height: 240,
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Colors.white24,
+              ),
             ),
           );
         }

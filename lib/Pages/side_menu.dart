@@ -54,33 +54,51 @@ class SideMenu extends StatelessWidget {
                 ),
               ),
               child: Drawer(
-                child: ClipRect(
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.horizontal(
+                    right: Radius.circular(28),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.horizontal(
+                    right: Radius.circular(28),
+                  ),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.45),
+                        // Pure black — same as home page backgroundColor
+                        color: Colors.black,
                         border: Border(
                           right: BorderSide(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.08),
                             width: 1,
                           ),
                         ),
                       ),
                       child: Column(
                         children: [
+                          // ── Header card ─────────────────────────────────
                           SideMenuHeader(user: user),
-                          const SizedBox(height: 10),
+
+                          // ── Nav list ────────────────────────────────────
                           Expanded(
                             child: ListView(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                               physics: const BouncingScrollPhysics(),
                               children: [
-                                _buildSectionLabel(AppLocalizations.of(context)!.sideMenuExplore),
-                                const SizedBox(height: 10),
+                                _buildSectionLabel(
+                                  AppLocalizations.of(context)!.sideMenuExplore,
+                                ),
+                                const SizedBox(height: 6),
+
                                 SideMenuItem(
                                   icon: Icons.movie_filter_rounded,
-                                  text: AppLocalizations.of(context)!.sideMenuCinemaTv,
+                                  text: AppLocalizations.of(context)!
+                                      .sideMenuCinemaTv,
                                   isSelected: !isSocialActive,
                                   activeColor: _brandColor,
                                   onTap: () {
@@ -88,12 +106,21 @@ class SideMenu extends StatelessWidget {
                                     Navigator.pop(context);
                                   },
                                 ),
-                                const SizedBox(height: 30),
-                                _buildSectionLabel(AppLocalizations.of(context)!.sideMenuCommunity),
-                                const SizedBox(height: 10),
+
+                                const SizedBox(height: 24),
+                                _buildDivider(),
+                                const SizedBox(height: 24),
+
+                                _buildSectionLabel(
+                                  AppLocalizations.of(context)!
+                                      .sideMenuCommunity,
+                                ),
+                                const SizedBox(height: 6),
+
                                 SideMenuItem(
                                   icon: Icons.public_rounded,
-                                  text: AppLocalizations.of(context)!.sideMenuSocial,
+                                  text: AppLocalizations.of(context)!
+                                      .sideMenuSocial,
                                   isSelected: isSocialActive,
                                   activeColor: _brandColor,
                                   onTap: () {
@@ -101,20 +128,20 @@ class SideMenu extends StatelessWidget {
                                     Navigator.pop(context);
                                   },
                                 ),
-                                const SizedBox(height: 30),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  child: Divider(
-                                    color: Colors.white.withOpacity(0.05),
-                                    height: 1,
-                                  ),
+
+                                const SizedBox(height: 24),
+                                _buildDivider(),
+                                const SizedBox(height: 24),
+
+                                _buildSectionLabel(
+                                  AppLocalizations.of(context)!.sideMenuProject,
                                 ),
-                                const SizedBox(height: 20),
-                                _buildSectionLabel(AppLocalizations.of(context)!.sideMenuProject),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 6),
+
                                 SideMenuItem(
                                   icon: Icons.info_outline_rounded,
-                                  text: AppLocalizations.of(context)!.sideMenuInfoSupport,
+                                  text: AppLocalizations.of(context)!
+                                      .sideMenuInfoSupport,
                                   isSelected: false,
                                   activeColor: _brandColor,
                                   onTap: () {
@@ -122,17 +149,26 @@ class SideMenu extends StatelessWidget {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const AboutPage(),
+                                        builder: (_) => const AboutPage(),
                                       ),
                                     );
                                   },
                                 ),
-                                const SizedBox(height: 30),
-                                _buildSectionLabel(AppLocalizations.of(context)!.sideMenuDataPortability),
-                                const SizedBox(height: 10),
+
+                                const SizedBox(height: 24),
+                                _buildDivider(),
+                                const SizedBox(height: 24),
+
+                                _buildSectionLabel(
+                                  AppLocalizations.of(context)!
+                                      .sideMenuDataPortability,
+                                ),
+                                const SizedBox(height: 6),
+
                                 SideMenuItem(
                                   icon: Icons.file_download_outlined,
-                                  text: AppLocalizations.of(context)!.sideMenuImportLetterboxd,
+                                  text: AppLocalizations.of(context)!
+                                      .sideMenuImportLetterboxd,
                                   isSelected: false,
                                   activeColor: _brandColor,
                                   onTap: () {
@@ -140,46 +176,62 @@ class SideMenu extends StatelessWidget {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const ImportLetterboxdPage(),
+                                        builder: (_) =>
+                                            const ImportLetterboxdPage(),
                                       ),
                                     );
                                   },
                                 ),
-                                const SizedBox(height: 10),
+
                                 SideMenuItem(
                                   icon: Icons.upload_file_outlined,
-                                  text: AppLocalizations.of(context)!.sideMenuExportData,
+                                  text: AppLocalizations.of(context)!
+                                      .sideMenuExportData,
                                   isSelected: false,
                                   activeColor: _brandColor,
                                   onTap: () async {
-                                    final currentUser = sl<AuthRepository>().currentUser;
+                                    final currentUser =
+                                        sl<AuthRepository>().currentUser;
                                     if (currentUser == null) return;
-                                    
+
                                     showDialog(
                                       context: context,
                                       barrierDismissible: false,
-                                      builder: (context) => const Center(
-                                        child: CircularProgressIndicator(color: Colors.orangeAccent),
+                                      builder: (_) => const Center(
+                                        child: CircularProgressIndicator(
+                                          color: Colors.orangeAccent,
+                                        ),
                                       ),
                                     );
-                                    
+
                                     try {
-                                      await sl<ExportUserDataUseCase>().call(currentUser.id);
+                                      await sl<ExportUserDataUseCase>()
+                                          .call(currentUser.id);
                                       if (context.mounted) {
-                                        Navigator.pop(context); // chiudi caricamento
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text(AppLocalizations.of(context)!.exportDataSuccess),
+                                            content: Text(
+                                              AppLocalizations.of(context)!
+                                                  .exportDataSuccess,
+                                            ),
                                             backgroundColor: Colors.green,
                                           ),
                                         );
                                       }
                                     } catch (e) {
                                       if (context.mounted) {
-                                        Navigator.pop(context); // chiudi caricamento
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text(AppLocalizations.of(context)!.exportDataError(e.toString())),
+                                            content: Text(
+                                              AppLocalizations.of(context)!
+                                                  .exportDataError(
+                                                    e.toString(),
+                                                  ),
+                                            ),
                                             backgroundColor: Colors.redAccent,
                                           ),
                                         );
@@ -190,8 +242,10 @@ class SideMenu extends StatelessWidget {
                               ],
                             ),
                           ),
+
+                          // ── Logout footer ────────────────────────────────
                           const Padding(
-                            padding: EdgeInsets.fromLTRB(20, 0, 20, 40),
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 36),
                             child: LogoutButton(),
                           ),
                         ],
@@ -209,16 +263,25 @@ class SideMenu extends StatelessWidget {
 
   Widget _buildSectionLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(left: 15, bottom: 8),
+      padding: const EdgeInsets.only(left: 16, bottom: 4),
       child: Text(
-        text,
+        text.toUpperCase(),
         style: TextStyle(
-          color: Colors.white.withOpacity(0.3),
-          fontSize: 11,
+          color: Colors.white.withValues(alpha: 0.25),
+          fontSize: 10,
           fontWeight: FontWeight.w800,
-          letterSpacing: 1.5,
+          letterSpacing: 1.8,
         ),
       ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Divider(
+      color: Colors.white.withValues(alpha: 0.08),
+      height: 1,
+      indent: 16,
+      endIndent: 16,
     );
   }
 }
