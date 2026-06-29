@@ -204,41 +204,10 @@ class HomeContentBuilder {
     CinemaType cinemaType = CinemaType.movies,
     Set<int>? seenIds,
   }) {
-    final languageCode = sl<LanguageService>().currentLanguage;
-
-    return StreamBuilder<List<dynamic>>(
-      key: ValueKey('hero_${mode.index}_${cinemaType.index}_$languageCode'),
-      stream: _heroItemsStream(mode, cinemaType, seenIds),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 350,
-            child: Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: Colors.white24,
-              ),
-            ),
-          );
-        }
-        final heroItems = snapshot.data ?? [];
-        if (heroItems.isEmpty) return const SizedBox(height: 350);
-        return AiHeroBanner(
-          items: heroItems.take(5).toList(),
-          onItemTap: (item) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (_) =>
-                        item is Book
-                            ? BookDetailPage(book: item)
-                            : MovieDetailPage(media: item),
-              ),
-            );
-          },
-        );
-      },
+    return _HeroBannerWrapper(
+      mode: mode,
+      cinemaType: cinemaType,
+      seenIds: seenIds,
     );
   }
 
@@ -276,6 +245,90 @@ class HomeContentBuilder {
       yield [];
     }
   }
+}
+
+class _HeroBannerWrapper extends StatefulWidget {
+  final AppMode mode;
+  final CinemaType cinemaType;
+  final Set<int>? seenIds;
+
+  const _HeroBannerWrapper({
+    required this.mode,
+    required this.cinemaType,
+    this.seenIds,
+  });
+
+  @override
+  State<_HeroBannerWrapper> createState() => _HeroBannerWrapperState();
+}
+
+class _HeroBannerWrapperState extends State<_HeroBannerWrapper> {
+  late Stream<List<dynamic>> _stream;
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = HomeContentBuilder._heroItemsStream(
+      widget.mode,
+      widget.cinemaType,
+      widget.seenIds,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _HeroBannerWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.mode != widget.mode ||
+        oldWidget.cinemaType != widget.cinemaType) {
+      _stream = HomeContentBuilder._heroItemsStream(
+        widget.mode,
+        widget.cinemaType,
+        widget.seenIds,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final languageCode = sl<LanguageService>().currentLanguage;
+
+    return StreamBuilder<List<dynamic>>(
+      key: ValueKey('hero_${widget.mode.index}_${widget.cinemaType.index}_$languageCode'),
+      stream: _stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 350,
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Colors.white24,
+              ),
+            ),
+          );
+        }
+        final heroItems = snapshot.data ?? [];
+        if (heroItems.isEmpty) return const SizedBox(height: 350);
+        return AiHeroBanner(
+          items: heroItems.take(5).toList(),
+          onItemTap: (item) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (_) =>
+                        item is Book
+                            ? BookDetailPage(book: item)
+                            : MovieDetailPage(media: item),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+
 }
 
 class _SectionHeader extends StatelessWidget {

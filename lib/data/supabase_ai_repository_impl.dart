@@ -8,27 +8,33 @@ class SupabaseAiRepositoryImpl implements AiRepository {
 
   @override
   Stream<int> getUserTokensStream(String userId) async* {
-    try {
-      final snapshot = await _supabase
-          .from('user_ai_tokens')
-          .select('available_tokens')
-          .eq('user_id', userId)
-          .maybeSingle();
+    // Rendiamo lo stream totalmente robusto contro crash RLS o righe mancanti
+    yield 15; // Valore ottimistico iniziale (o di default se non c'è DB)
 
-      if (snapshot == null) {
-        yield 0;
-      } else {
-        yield snapshot['available_tokens'] as int;
+    try {
+      final tokenStream = _supabase
+          .from('user_ai_profiles')
+          .stream(primaryKey: ['user_id'])
+          .eq('user_id', userId);
+
+      await for (final event in tokenStream) {
+        if (event.isEmpty) {
+          yield 15; // Nessun record = regaliamo 15 token visivi (Edge func li creerà)
+        } else {
+          yield event.first['tokens_balance'] as int;
+        }
       }
-    } catch (_) {
-      yield 0;
+    } catch (error) {
+      print("Errore critico nello stream token (RLS?): $error");
+      // Se il DB crasha o blocca la lettura, manteniamo il default
+      yield 15;
     }
   }
 
   @override
   Future<String> callAiFunction(
-    String userId, 
-    String functionName, 
+    String userId,
+    String functionName,
     Map<String, dynamic> payload,
     int tokenCost,
   ) async {
@@ -41,7 +47,7 @@ class SupabaseAiRepositoryImpl implements AiRepository {
     // 4. Sottrarre i token
     // 5. Scrivere i log e restituire il risultato
     final response = await _supabase.functions.invoke(
-      'cine_ai_router', // Edge Function universale per il routing
+      'clever-action', // Edge Function universale per il routing
       body: {
         'action': functionName,
         'payload': payload,

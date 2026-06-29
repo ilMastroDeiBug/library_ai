@@ -202,20 +202,9 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
                           Positioned(
                             top: 8,
                             right: 8,
-                            child: StreamBuilder<TvSeriesProgress?>(
-                              stream: sl<GetSeriesProgressUseCase>().call(
-                                user.id,
-                                mediaItem.id,
-                              ),
-                              builder: (context, streakSnapshot) {
-                                if (!streakSnapshot.hasData ||
-                                    streakSnapshot.data == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                return StreakWidget(
-                                  progress: streakSnapshot.data!,
-                                );
-                              },
+                            child: _TvSeriesProgressWrapper(
+                              userId: user.id,
+                              seriesId: mediaItem.id,
                             ),
                           ),
                       ],
@@ -225,6 +214,59 @@ class _CinemaHorizontalListState extends State<CinemaHorizontalList> {
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _TvSeriesProgressWrapper extends StatefulWidget {
+  final String userId;
+  final int seriesId;
+
+  const _TvSeriesProgressWrapper({
+    required this.userId,
+    required this.seriesId,
+  });
+
+  @override
+  State<_TvSeriesProgressWrapper> createState() => _TvSeriesProgressWrapperState();
+}
+
+class _TvSeriesProgressWrapperState extends State<_TvSeriesProgressWrapper> {
+  late Stream<TvSeriesProgress?> _progressStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _progressStream = sl<GetSeriesProgressUseCase>().call(
+      widget.userId,
+      widget.seriesId,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _TvSeriesProgressWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.seriesId != widget.seriesId) {
+      _progressStream = sl<GetSeriesProgressUseCase>().call(
+        widget.userId,
+        widget.seriesId,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<TvSeriesProgress?>(
+      stream: _progressStream,
+      builder: (context, streakSnapshot) {
+        if (!streakSnapshot.hasData || streakSnapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+        return StreakWidget(
+          progress: streakSnapshot.data!,
         );
       },
     );

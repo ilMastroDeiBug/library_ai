@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/use_cases/book_use_cases.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
@@ -45,27 +45,63 @@ class UserBooksSection extends StatelessWidget {
             ),
             SizedBox(
               height: 240,
-              child: StreamBuilder<List<Book>>(
-                stream: sl<GetUserBooksUseCase>().call(user.id, status),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return _buildEmptyState();
-                  }
-                  final books = snapshot.data!;
-                  return ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.only(left: 20),
-                    itemCount: books.length,
-                    itemBuilder: (context, index) => BookCard(book: books[index]),
-                  );
-                },
-              ),
+              child: _UserBooksListWrapper(userId: user.id, status: status),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _UserBooksListWrapper extends StatefulWidget {
+  final String userId;
+  final String status;
+
+  const _UserBooksListWrapper({
+    required this.userId,
+    required this.status,
+  });
+
+  @override
+  State<_UserBooksListWrapper> createState() => _UserBooksListWrapperState();
+}
+
+class _UserBooksListWrapperState extends State<_UserBooksListWrapper> {
+  late Stream<List<Book>> _booksStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _booksStream = sl<GetUserBooksUseCase>().call(widget.userId, widget.status);
+  }
+
+  @override
+  void didUpdateWidget(covariant _UserBooksListWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId || oldWidget.status != widget.status) {
+      _booksStream = sl<GetUserBooksUseCase>().call(widget.userId, widget.status);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Book>>(
+      stream: _booksStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return _buildEmptyState();
+        }
+        final books = snapshot.data!;
+        return ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(left: 20),
+          itemCount: books.length,
+          itemBuilder: (context, index) => BookCard(book: books[index]),
         );
       },
     );

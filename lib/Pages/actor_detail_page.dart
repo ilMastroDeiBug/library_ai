@@ -26,6 +26,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
   // UI OTTIMISTICA
   bool? _optimisticIsFavorite;
   bool _isTogglingHeart = false;
+  Stream<bool>? _favoriteStream;
 
   static const Color _brandColor = Colors.orangeAccent;
   static const Color _backgroundColor = Colors.black;
@@ -41,7 +42,20 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
     if (mounted) setState(() { isLoading = true; errorMessage = null; });
     try {
       final result = await sl<GetActorDetailsUseCase>().call(widget.actorId);
-      if (mounted) setState(() { actor = result; isLoading = false; });
+      final user = sl<AuthRepository>().currentUser;
+      if (mounted) {
+        setState(() { 
+          actor = result; 
+          if (user != null) {
+            _favoriteStream = sl<CheckFavoriteStatusUseCase>().call(
+              user.id,
+              result.id,
+              'person',
+            );
+          }
+          isLoading = false; 
+        });
+      }
     } catch (e) {
       if (mounted) setState(() {
         // Pulisce il messaggio togliendo il prefisso 'Exception: '
@@ -315,13 +329,9 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      if (user != null)
+                      if (user != null && _favoriteStream != null)
                         StreamBuilder<bool>(
-                          stream: sl<CheckFavoriteStatusUseCase>().call(
-                            user.id,
-                            actor!.id,
-                            'person',
-                          ),
+                          stream: _favoriteStream,
                           builder: (context, favSnapshot) {
                             final streamValue = favSnapshot.data ?? false;
                             final isFavorite = _isTogglingHeart

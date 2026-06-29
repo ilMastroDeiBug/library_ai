@@ -9,6 +9,7 @@ import 'package:library_ai/domain/repositories/auth_repository.dart';
 import 'package:library_ai/domain/use_cases/movie_use_cases.dart';
 import 'package:library_ai/domain/use_cases/tv_series_use_cases.dart';
 import 'package:library_ai/domain/use_cases/favorite_use_cases.dart';
+import 'package:library_ai/domain/use_cases/ai_use_cases.dart';
 
 import '../services/pages_services/movie_detail_logic.dart';
 import '../models/ai_analysis_section.dart';
@@ -145,6 +146,171 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     } finally {
       if (mounted) setState(() => _isTogglingStatus = false);
     }
+  }
+
+  // Nuova funzione per Memory Forge Ultra Premium
+  Future<void> _showMemoryForgeDialog(String title) async {
+    bool isLoading = false;
+    String? resultText;
+    String? errorMessage;
+    final user = sl<AuthRepository>().currentUser;
+    if (user == null) return;
+
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.8),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF09090B).withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.05),
+                          blurRadius: 30,
+                          spreadRadius: -5,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 48),
+                        const SizedBox(height: 24),
+                        const Text(
+                          "Memory Forge",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.0,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Forgiando ricordi per: $title",
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.5),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 32),
+                        if (resultText == null && errorMessage == null && !isLoading) ...[
+                           Text(
+                            "Vuoi creare un ricordo dettagliato con l'AI per questa opera? Costerà 1 token.",
+                            style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 16, height: 1.5),
+                            textAlign: TextAlign.center,
+                          ),
+                        ] else if (isLoading) ...[
+                          const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          const SizedBox(height: 24),
+                          const Text(
+                            "Forgiatura in corso...",
+                            style: TextStyle(color: Colors.white70, fontSize: 16),
+                            textAlign: TextAlign.center,
+                          )
+                        ] else if (errorMessage != null) ...[
+                          const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                          const SizedBox(height: 16),
+                          Text(
+                            errorMessage!,
+                            style: const TextStyle(color: Colors.redAccent, fontSize: 15),
+                            textAlign: TextAlign.center,
+                          ),
+                        ] else if (resultText != null) ...[
+                          Flexible(
+                            child: SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              child: Text(
+                                resultText!,
+                                style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.6),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 32),
+                        Row(
+                          children: [
+                            if (!isLoading)
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
+                                  child: Text(
+                                    resultText != null ? "Chiudi" : "Annulla",
+                                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ),
+                            if (!isLoading && resultText == null && errorMessage == null) ...[
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
+                                  onPressed: () async {
+                                    setState(() {
+                                      isLoading = true;
+                                      errorMessage = null;
+                                    });
+                                    try {
+                                      final useCase = sl<CallAiFunctionUseCase>();
+                                      final response = await useCase.call(
+                                        userId: user.id,
+                                        functionName: 'memory_forge',
+                                        payload: {'title': title},
+                                        tokenCost: 1, 
+                                      );
+                                      setState(() {
+                                        resultText = response;
+                                        isLoading = false;
+                                      });
+                                    } catch (e) {
+                                      setState(() {
+                                        errorMessage = "Errore durante la generazione: ${e.toString().replaceAll('Exception: ', '')}";
+                                        isLoading = false;
+                                      });
+                                    }
+                                  },
+                                  child: const Text("Forgia Ora", style: TextStyle(fontWeight: FontWeight.w800)),
+                                ),
+                              ),
+                            ]
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<dynamic>? _getMediaFuture(String userId) async {
@@ -406,6 +572,58 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                           await _logic.handleAnalysis(context, liveMedia);
                           if (mounted) setState(() => _isAnalyzing = false);
                         },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // MEMORY FORGE BUTTON
+                      GestureDetector(
+                        onTap: () => _showMemoryForgeDialog(title),
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Icon(Icons.auto_stories_rounded, color: Colors.black, size: 24),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "Memory Forge",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Genera un ricordo ultra-dettagliato di quest'opera.",
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 40),
 

@@ -11,19 +11,44 @@ import '../movie_widget/streak_widget.dart';
 import '../../services/utility_services/watchlist_realtime_notifier.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
-class HomeTvProgressSection extends StatelessWidget {
+class HomeTvProgressSection extends StatefulWidget {
   const HomeTvProgressSection({super.key});
+
+  @override
+  State<HomeTvProgressSection> createState() => _HomeTvProgressSectionState();
+}
+
+class _HomeTvProgressSectionState extends State<HomeTvProgressSection> {
+  late Stream<List<TvSeriesProgress>> _progressStream;
+  String? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = sl<AuthRepository>().currentUser;
+    _currentUserId = user?.id;
+    if (_currentUserId != null) {
+      _progressStream = sl<GetAllUserProgressUseCase>().call(_currentUserId!);
+    } else {
+      _progressStream = const Stream.empty();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = sl<AuthRepository>().currentUser;
     if (user == null) return const SizedBox.shrink();
 
+    if (user.id != _currentUserId) {
+      _currentUserId = user.id;
+      _progressStream = sl<GetAllUserProgressUseCase>().call(_currentUserId!);
+    }
+
     return ValueListenableBuilder<Map<int, String>>(
       valueListenable: globalOptimisticStatus,
       builder: (context, optimisticStatuses, child) {
         return StreamBuilder<List<TvSeriesProgress>>(
-          stream: sl<GetAllUserProgressUseCase>().call(user.id),
+          stream: _progressStream,
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const SizedBox.shrink();
 
