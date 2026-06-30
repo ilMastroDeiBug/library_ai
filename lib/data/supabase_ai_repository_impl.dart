@@ -61,4 +61,30 @@ class SupabaseAiRepositoryImpl implements AiRepository {
 
     return response.data['result'] as String;
   }
+
+  @override
+  Future<void> syncTokens() async {
+    try {
+      await _supabase.rpc('refresh_ai_tokens');
+    } catch (e) {
+      print("Errore durante il sync dei token: $e");
+    }
+  }
+
+  @override
+  Future<DateTime?> getNextResetDate(String userId) async {
+    try {
+      final res = await _supabase
+          .from('user_ai_profiles')
+          .select('next_reset_date')
+          .eq('user_id', userId)
+          .maybeSingle();
+      if (res != null && res['next_reset_date'] != null) {
+        return DateTime.parse(res['next_reset_date']);
+      }
+    } catch (e) {
+      print("Errore fetch reset date: $e");
+    }
+    return null;
+  }
 }

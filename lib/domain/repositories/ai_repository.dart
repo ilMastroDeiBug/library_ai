@@ -1,5 +1,7 @@
 abstract class AiRepository {
   Stream<int> getUserTokensStream(String userId);
+  Future<void> syncTokens();
+  Future<DateTime?> getNextResetDate(String userId);
   
   /// Invia la richiesta all'Edge Function su Supabase.
   /// Sarà l'Edge Function a dedurre i token in modo sicuro tramite un Admin Client

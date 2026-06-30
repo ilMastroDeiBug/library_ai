@@ -1,14 +1,18 @@
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/domain/repositories/auth_repository.dart';
+import 'package:library_ai/domain/repositories/ai_repository.dart';
 import 'package:library_ai/domain/use_cases/ai_use_cases.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
+import 'package:library_ai/Pages/ai_features/time_box_tetris_dialog.dart';
+import 'package:library_ai/Pages/ai_features/what_to_watch_next_dialog.dart';
 
 // ─── Brand colors ─────────────────────────────────────────────────────────────
 const Color _kBg = Color(0xFF000000);
-const Color _kBrand = Colors.white; // Brand is now pure white for high contrast
+const Color _kBrand = Colors.white;
 const Color _kTextDim = Color(0xFFA1A1AA); // Zinc 400
 const Color _kBorderColor = Color(0x14FFFFFF); // ~8% white
 
@@ -64,7 +68,6 @@ List<_AiFeature> _buildFeatures(AppLocalizations l) => [
     icon: Icons.security_rounded,
     tokenCost: 1,
   ),
-  // memory_forge removed as per design guidelines (moved to detail page)
   _AiFeature(
     id: 'scene_correlation',
     title: l.aiFeatureSceneTitle,
@@ -72,6 +75,24 @@ List<_AiFeature> _buildFeatures(AppLocalizations l) => [
     badge: l.aiFeatureSceneBadge,
     icon: Icons.image_search_rounded,
     tokenCost: 3,
+  ),
+  _AiFeature(
+    id: 'time_box_tetris',
+    title: "Time-Box Tetris",
+    description:
+        "L'Ottimizzatore di Sonno: trova l'incastro perfetto prima di andare a letto.",
+    badge: "NUOVO",
+    icon: Icons.access_time_filled_rounded,
+    tokenCost: 2,
+  ),
+  _AiFeature(
+    id: 'what_to_watch_next',
+    title: "Cosa Guardare Dopo?",
+    description:
+        "Cerca un titolo appena finito e ricevi 3 raccomandazioni perfette.",
+    badge: "NUOVO",
+    icon: Icons.auto_awesome_rounded,
+    tokenCost: 2,
   ),
 ];
 
@@ -83,20 +104,54 @@ class StudioAIPage extends StatefulWidget {
   State<StudioAIPage> createState() => _StudioAIPageState();
 }
 
-class _StudioAIPageState extends State<StudioAIPage> {
+class _StudioAIPageState extends State<StudioAIPage>
+    with SingleTickerProviderStateMixin {
   String _userId = '';
   int _tokens = 15;
+  DateTime? _nextResetDate;
+
+  late final AnimationController _glowCtrl;
 
   @override
   void initState() {
     super.initState();
+
+    _glowCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+
     final user = sl<AuthRepository>().currentUser;
     if (user != null) {
       _userId = user.id;
-      sl<GetAiTokensUseCase>().call(_userId).listen((t) {
-        if (mounted) setState(() => _tokens = t);
+
+      _initTokensAndSync();
+    }
+  }
+
+  Future<void> _initTokensAndSync() async {
+    final aiRepo = sl<AiRepository>();
+    // Sync tokens securely via DB RPC
+    await aiRepo.syncTokens();
+
+    // Fetch stream for real-time updates
+    sl<GetAiTokensUseCase>().call(_userId).listen((t) {
+      if (mounted) setState(() => _tokens = t);
+    });
+
+    // Fetch next reset date for the countdown
+    final resetDate = await aiRepo.getNextResetDate(_userId);
+    if (mounted) {
+      setState(() {
+        _nextResetDate = resetDate;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _glowCtrl.dispose();
+    super.dispose();
   }
 
   void _onFeatureTap(_AiFeature feature, AppLocalizations l) {
@@ -105,7 +160,11 @@ class _StudioAIPageState extends State<StudioAIPage> {
         SnackBar(
           content: Text(l.aiStudioInsufficientTokens(feature.tokenCost)),
           backgroundColor: Colors.white,
-          action: SnackBarAction(label: 'OK', textColor: Colors.black, onPressed: () {}),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.black,
+            onPressed: () {},
+          ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -115,11 +174,24 @@ class _StudioAIPageState extends State<StudioAIPage> {
       return;
     }
 
+    if (feature.id == 'time_box_tetris') {
+      showTimeBoxTetrisModal(context);
+      return;
+    }
+
+    if (feature.id == 'what_to_watch_next') {
+      showWhatToWatchNextModal(context, null);
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           l.aiStudioOpening(feature.title),
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         backgroundColor: Colors.white,
         behavior: SnackBarBehavior.floating,
@@ -137,56 +209,107 @@ class _StudioAIPageState extends State<StudioAIPage> {
 
     return Scaffold(
       backgroundColor: _kBg,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(24, topPadding + 40, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _TokenPill(tokens: _tokens, l: l),
-                  const SizedBox(height: 32),
-                  Text(
-                    l.aiStudioTitle,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 42,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -2.0,
-                      height: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l.aiStudioSubtitle,
-                    style: const TextStyle(
-                      color: _kTextDim,
-                      fontSize: 16,
-                      height: 1.6,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                ],
+      body: Stack(
+        children: [
+          // LAYER 0: Collage Covers Background
+          Positioned.fill(child: _CoversBackground()),
+
+          // LAYER 1: Subtle Gradient overlay to ensure text readability
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.4),
+                    Colors.black.withOpacity(0.8),
+                  ],
+                  stops: const [0.0, 0.4],
+                ),
               ),
             ),
           ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding + 100),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _FeatureCard(
-                    feature: features[i],
-                    onTap: () => _onFeatureTap(features[i], l),
+
+          // LAYER 2: Scrollable content
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(24, topPadding + 40, 24, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _TokenPill(
+                        tokens: _tokens,
+                        nextResetDate: _nextResetDate,
+                        l: l,
+                      ),
+                      const SizedBox(height: 32),
+                      AnimatedBuilder(
+                        animation: _glowCtrl,
+                        builder: (context, child) {
+                          return ShaderMask(
+                            shaderCallback: (bounds) {
+                              return LinearGradient(
+                                colors: [
+                                  Colors.white,
+                                  Colors.white.withOpacity(
+                                    0.6 + (_glowCtrl.value * 0.4),
+                                  ),
+                                  Colors.white,
+                                ],
+                                stops: [0.0, _glowCtrl.value, 1.0],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ).createShader(bounds);
+                            },
+                            child: child,
+                          );
+                        },
+                        child: Text(
+                          l.aiStudioTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 42,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -2.0,
+                            height: 1.0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        l.aiStudioSubtitle,
+                        style: const TextStyle(
+                          color: _kTextDim,
+                          fontSize: 16,
+                          height: 1.6,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                    ],
                   ),
                 ),
-                childCount: features.length,
               ),
-            ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding + 100),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _FeatureCard(
+                        feature: features[i],
+                        onTap: () => _onFeatureTap(features[i], l),
+                      ),
+                    ),
+                    childCount: features.length,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -194,16 +317,124 @@ class _StudioAIPageState extends State<StudioAIPage> {
   }
 }
 
-// ─── Token pill ───────────────────────────────────────────────────────────────
+// ─── Covers Background ────────────────────────────────────────────────────────
+class _CoversBackground extends StatefulWidget {
+  @override
+  State<_CoversBackground> createState() => _CoversBackgroundState();
+}
+
+class _CoversBackgroundState extends State<_CoversBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  final List<String> _images = List.generate(
+    30,
+    (i) => 'assets/images/covers/cover_${i + 1}.jpg',
+  )..shuffle();
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 40),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            Row(
+              children: List.generate(4, (colIndex) {
+                final int itemsPerCol = (_images.length / 4).ceil();
+                final colImages = _images
+                    .skip(colIndex * itemsPerCol)
+                    .take(itemsPerCol)
+                    .toList();
+
+                final double offset =
+                    (colIndex % 2 == 0 ? -_ctrl.value : (_ctrl.value - 1)) *
+                    1000;
+
+                return Expanded(
+                  child: OverflowBox(
+                    maxHeight: double.infinity,
+                    alignment: Alignment.topCenter,
+                    child: Transform.translate(
+                      offset: Offset(0, offset),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ...colImages.map(_buildImage),
+                          ...colImages.map(_buildImage),
+                          ...colImages.map(_buildImage),
+                          ...colImages.map(
+                            _buildImage,
+                          ), // Ripetizioni per scroll infinito
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildImage(String path) {
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.asset(
+          path,
+          fit: BoxFit.cover,
+          height: 180,
+          width: double.infinity,
+          errorBuilder: (context, error, stackTrace) =>
+              Container(height: 180, color: Colors.white.withOpacity(0.05)),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Token pill with Countdown ────────────────────────────────────────────────
 class _TokenPill extends StatelessWidget {
   final int tokens;
+  final DateTime? nextResetDate;
   final AppLocalizations l;
-  const _TokenPill({required this.tokens, required this.l});
+
+  const _TokenPill({required this.tokens, this.nextResetDate, required this.l});
+
+  String _getResetText() {
+    if (nextResetDate == null) return "Calcolo...";
+    final now = DateTime.now().toUtc();
+    final diff = nextResetDate!.difference(now);
+    if (diff.isNegative) return "Ricarica imminente";
+
+    if (diff.inDays > 0) return "Ricarica tra ${diff.inDays} giorni";
+    if (diff.inHours > 0) return "Ricarica tra ${diff.inHours} ore";
+    if (diff.inMinutes > 0) return "Ricarica tra ${diff.inMinutes} min";
+    return "Ricarica tra poco";
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFF18181B), // Zinc 900
         borderRadius: BorderRadius.circular(100),
@@ -212,15 +443,26 @@ class _TokenPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.auto_awesome, color: Colors.white, size: 14),
+          const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
           const SizedBox(width: 8),
           Text(
             l.aiStudioTokensRemaining(tokens),
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
               letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(width: 1, height: 12, color: Colors.white.withOpacity(0.2)),
+          const SizedBox(width: 12),
+          Text(
+            _getResetText(),
+            style: const TextStyle(
+              color: _kTextDim,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -239,14 +481,20 @@ class _FeatureCard extends StatefulWidget {
   State<_FeatureCard> createState() => _FeatureCardState();
 }
 
-class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderStateMixin {
+class _FeatureCardState extends State<_FeatureCard>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final SpringSimulation _springSim;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, lowerBound: 0.96, upperBound: 1.0, value: 1.0);
+    _ctrl = AnimationController(
+      vsync: this,
+      lowerBound: 0.96,
+      upperBound: 1.0,
+      value: 1.0,
+    );
     _springSim = SpringSimulation(
       const SpringDescription(mass: 1, stiffness: 400, damping: 25),
       _ctrl.value,
@@ -262,7 +510,11 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
   }
 
   void _onTapDown(TapDownDetails details) {
-    _ctrl.animateTo(0.96, duration: const Duration(milliseconds: 100), curve: Curves.easeOut);
+    _ctrl.animateTo(
+      0.96,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeOut,
+    );
   }
 
   void _onTapUp(TapUpDetails details) {
@@ -282,10 +534,8 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
       onTapCancel: _onTapCancel,
       child: AnimatedBuilder(
         animation: _ctrl,
-        builder: (context, child) => Transform.scale(
-          scale: _ctrl.value,
-          child: child,
-        ),
+        builder: (context, child) =>
+            Transform.scale(scale: _ctrl.value, child: child),
         child: Container(
           decoration: BoxDecoration(
             color: const Color(0xFF09090B), // Zinc 950
@@ -357,9 +607,7 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.03),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _kBorderColor,
-                        ),
+                        border: Border.all(color: _kBorderColor),
                       ),
                       child: Text(
                         widget.feature.badge,
@@ -392,7 +640,11 @@ class _TokenBadge extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.bolt_rounded, color: Colors.white.withOpacity(0.5), size: 14),
+        Icon(
+          Icons.bolt_rounded,
+          color: Colors.white.withOpacity(0.5),
+          size: 14,
+        ),
         const SizedBox(width: 2),
         Text(
           cost.toString(),

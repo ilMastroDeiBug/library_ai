@@ -24,6 +24,7 @@ import 'package:library_ai/services/utility_services/watchlist_realtime_notifier
 import 'package:library_ai/Pages/book_detail_page.dart';
 import 'package:library_ai/Pages/movie_detail_page.dart';
 import 'package:library_ai/Pages/actor_detail_page.dart';
+import 'package:library_ai/Pages/ai_features/what_to_watch_next_dialog.dart';
 import 'package:library_ai/models/movie_widget/streak_widget.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 import 'package:library_ai/services/utility_services/offline_action_guard.dart';
@@ -45,6 +46,7 @@ class _LibraryGridState extends State<LibraryGrid> {
   late Stream<List<dynamic>> _dataStream;
 
   bool _isSelectionMode = false;
+  bool _aiWhatToWatchNextMode = false;
   final Set<dynamic> _selectedItems = {};
   bool _isBulkActionLoading = false;
 
@@ -69,6 +71,7 @@ class _LibraryGridState extends State<LibraryGrid> {
     if (oldWidget.mode != widget.mode || oldWidget.status != widget.status) {
       _initStream();
       _isSelectionMode = false;
+      _aiWhatToWatchNextMode = false;
       _selectedItems.clear();
     }
   }
@@ -182,6 +185,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       if (mounted) {
         setState(() {
           _isSelectionMode = false;
+          _aiWhatToWatchNextMode = false;
           _selectedItems.clear();
           _isBulkActionLoading = false;
         });
@@ -237,7 +241,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                           !snapshot.hasData) {
                         return const Center(
                           child: CircularProgressIndicator(
-                            color: Colors.orangeAccent,
+                            color: Colors.white,
                           ),
                         );
                       }
@@ -251,25 +255,34 @@ class _LibraryGridState extends State<LibraryGrid> {
 
                       if (filteredItems.isEmpty) return _buildEmptyState();
 
-                      return GridView.builder(
-                        padding: const EdgeInsets.only(
-                          top: 10,
-                          left: 15,
-                          right: 15,
-                          bottom: 150,
-                        ),
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: filteredItems.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              childAspectRatio: 0.68,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (widget.status == 'watching' && !_isSelectionMode)
+                            _buildAiWhatToWatchNextButton(),
+                          Expanded(
+                            child: GridView.builder(
+                              padding: const EdgeInsets.only(
+                                top: 10,
+                                left: 15,
+                                right: 15,
+                                bottom: 150,
+                              ),
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: filteredItems.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 0.68,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                              ),
+                              itemBuilder: (context, index) {
+                                return _buildItemCard(context, filteredItems[index]);
+                              },
                             ),
-                        itemBuilder: (context, index) {
-                          return _buildItemCard(context, filteredItems[index]);
-                        },
+                          ),
+                        ],
                       );
                     },
                   ),
@@ -282,7 +295,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                   color: Colors.black54,
                   child: const Center(
                     child: CircularProgressIndicator(
-                      color: Colors.orangeAccent,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -377,15 +390,18 @@ class _LibraryGridState extends State<LibraryGrid> {
                 onPressed: () {
                   setState(() {
                     _isSelectionMode = !_isSelectionMode;
-                    if (!_isSelectionMode) _selectedItems.clear();
+                    if (!_isSelectionMode) {
+                      _selectedItems.clear();
+                      _aiWhatToWatchNextMode = false;
+                    }
                   });
                 },
                 child: Text(
                   _isSelectionMode ? AppLocalizations.of(context)!.libCancel : AppLocalizations.of(context)!.libSelect,
                   style: TextStyle(
                     color: _isSelectionMode
-                        ? Colors.redAccent
-                        : Colors.orangeAccent,
+                        ? (_aiWhatToWatchNextMode ? Colors.white : Colors.redAccent)
+                        : Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -415,7 +431,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                         ),
                       ),
                       selected: isSelected,
-                      selectedColor: Colors.orangeAccent,
+                      selectedColor: _aiWhatToWatchNextMode ? Colors.white : Colors.white,
                       backgroundColor: Colors.white.withOpacity(0.05),
                       side: BorderSide.none,
                       showCheckmark: false,
@@ -455,7 +471,16 @@ class _LibraryGridState extends State<LibraryGrid> {
     return GestureDetector(
       onTap: () {
         if (_isSelectionMode) {
-          _toggleSelection(item);
+          if (_aiWhatToWatchNextMode) {
+            // Annulliamo la mode UI così torna alla normalità
+            setState(() {
+              _isSelectionMode = false;
+              _aiWhatToWatchNextMode = false;
+            });
+            showWhatToWatchNextModal(context, item);
+          } else {
+            _toggleSelection(item);
+          }
           return;
         }
 
@@ -537,7 +562,7 @@ class _LibraryGridState extends State<LibraryGrid> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isSelected
-                    ? Colors.orangeAccent
+                    ? Colors.white
                     : Colors.white.withOpacity(0.05),
                 width: isSelected ? 2 : 1,
               ),
@@ -554,7 +579,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                       placeholder: (context, url) => const Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.orangeAccent,
+                          color: Colors.white,
                         ),
                       ),
                       errorWidget: (_, __, ___) => Center(
@@ -641,7 +666,7 @@ class _LibraryGridState extends State<LibraryGrid> {
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected ? Colors.orangeAccent : Colors.black45,
+                  color: isSelected ? Colors.white : Colors.black45,
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),
                 child: Padding(
@@ -703,7 +728,7 @@ class _LibraryGridState extends State<LibraryGrid> {
         _buildBulkBtn(
           Icons.play_circle_outline,
           AppLocalizations.of(context)!.libBulkWatching,
-          Colors.orangeAccent,
+          Colors.white,
           () => _performBulkAction(
             widget.mode == AppMode.books ? 'reading' : 'watching',
           ),
@@ -789,6 +814,63 @@ class _LibraryGridState extends State<LibraryGrid> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAiWhatToWatchNextButton() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isSelectionMode = true;
+          _aiWhatToWatchNextMode = true;
+          _selectedItems.clear();
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(15, 0, 15, 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Cosa guardare dopo?",
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    "Scopri cosa guardare dopo che avrai finito il titolo selezionato.",
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.monetization_on, color: Colors.black, size: 14),
+                  SizedBox(width: 4),
+                  Text("2", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
