@@ -70,7 +70,7 @@ class _ImportLetterboxdPageState extends State<ImportLetterboxdPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(AppLocalizations.of(context)!.importLetterboxdSuccess),
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.white,
               ),
             );
             Navigator.pop(context); // Torna indietro alla fine
@@ -82,7 +82,7 @@ class _ImportLetterboxdPageState extends State<ImportLetterboxdPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.importLetterboxdError(e.toString())),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Colors.white,
           ),
         );
       }
@@ -140,7 +140,7 @@ class _ImportLetterboxdPageState extends State<ImportLetterboxdPage> {
                     LinearProgressIndicator(
                       value: _totalRows > 0 ? _processedRows / _totalRows : null,
                       backgroundColor: Colors.white10,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.orangeAccent),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                       minHeight: 8,
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -148,7 +148,7 @@ class _ImportLetterboxdPageState extends State<ImportLetterboxdPage> {
                     Text(
                       AppLocalizations.of(context)!.importLetterboxdProgress(_processedRows, _totalRows),
                       style: const TextStyle(
-                        color: Colors.orangeAccent,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -161,7 +161,7 @@ class _ImportLetterboxdPageState extends State<ImportLetterboxdPage> {
                   child: ElevatedButton.icon(
                     onPressed: _importFromLetterboxd,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orangeAccent,
+                      backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -195,15 +195,15 @@ class _ImportLetterboxdPageState extends State<ImportLetterboxdPage> {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: Colors.orangeAccent.withValues(alpha: 0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.5)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
             ),
             child: Center(
               child: Text(
                 stepNumber,
                 style: const TextStyle(
-                  color: Colors.orangeAccent,
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),

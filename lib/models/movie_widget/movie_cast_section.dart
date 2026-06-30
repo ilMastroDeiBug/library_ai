@@ -48,7 +48,7 @@ class MovieCastSection extends StatelessWidget {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(
-                      color: Colors.orangeAccent,
+                      color: Colors.white,
                     ),
                   );
                 }
@@ -107,7 +107,7 @@ class MovieCastSection extends StatelessWidget {
                                               child:
                                                   CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                color: Colors.orangeAccent,
+                                                color: Colors.white,
                                               ),
                                             ),
                                         errorWidget: (_, __, ___) =>

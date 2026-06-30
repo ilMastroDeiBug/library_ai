@@ -77,7 +77,7 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${AppLocalizations.of(context)!.settingsSaveError}$e'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Colors.white,
           ),
         );
       }
@@ -149,19 +149,19 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                         duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Colors.orangeAccent.withOpacity(0.1)
+                              ? Colors.white.withOpacity(0.1)
                               : Colors.white.withOpacity(0.02),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: isSelected
-                                ? Colors.orangeAccent
+                                ? Colors.white
                                 : Colors.white.withOpacity(0.05),
                             width: isSelected ? 2 : 1,
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: Colors.orangeAccent.withOpacity(0.2),
+                                    color: Colors.white.withOpacity(0.2),
                                     blurRadius: 20,
                                     spreadRadius: -5,
                                   ),
@@ -182,7 +182,7 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                               placeholder: (context, url) => const Center(
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.orangeAccent,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),
@@ -205,13 +205,13 @@ class _AvatarSelectionSheetState extends State<AvatarSelectionSheet> {
                     height: 55,
                     decoration: BoxDecoration(
                       color: _isSaving 
-                          ? Colors.orangeAccent.withOpacity(0.5)
-                          : Colors.orangeAccent,
+                          ? Colors.white.withOpacity(0.5)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(100),
                       boxShadow: [
                         if (!_isSaving)
                           BoxShadow(
-                            color: Colors.orangeAccent.withOpacity(0.25),
+                            color: Colors.white.withOpacity(0.25),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),

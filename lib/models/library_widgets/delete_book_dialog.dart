@@ -20,13 +20,13 @@ class DeleteBookDialog extends StatelessWidget {
         backgroundColor: const Color(0xFF1E1E1E).withOpacity(0.9),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
+          side: BorderSide(color: Colors.white.withOpacity(0.3)),
         ),
         title: Row(
           children: [
             const Icon(
               Icons.warning_amber_rounded,
-              color: Colors.redAccent,
+              color: Colors.white,
               size: 28,
             ),
             const SizedBox(width: 10),
@@ -47,8 +47,8 @@ class DeleteBookDialog extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent.withOpacity(0.2),
-              foregroundColor: Colors.redAccent,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              foregroundColor: Colors.white,
               elevation: 0,
             ),
             onPressed: () {

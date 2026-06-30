@@ -153,7 +153,7 @@ class _DepartmentBlockState extends State<_DepartmentBlock> {
           Text(
             widget.title,
             style: const TextStyle(
-              color: Colors.orangeAccent,
+              color: Colors.white,
               fontSize: 11,
               fontWeight: FontWeight.w900,
               letterSpacing: 2.0,
@@ -228,7 +228,7 @@ class _DepartmentBlockState extends State<_DepartmentBlock> {
                   child: Text(
                     'Mostra tutti (${widget.members.length})',
                     style: const TextStyle(
-                      color: Colors.orangeAccent,
+                      color: Colors.white,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),

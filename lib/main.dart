@@ -84,17 +84,30 @@ class MyApp extends StatelessWidget {
           supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(
             brightness: Brightness.dark,
-            primaryColor: Colors.orangeAccent,
+            primaryColor: Colors.white,
             scaffoldBackgroundColor: Colors.black,
             colorScheme: const ColorScheme.dark(
-              primary: Colors.orangeAccent,
-              secondary: Colors.orangeAccent,
+              primary: Colors.white,
+              secondary: Colors.white,
               surface: Color(0xFF0A0A0C),
             ),
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.transparent,
               elevation: 0,
               centerTitle: false,
+            ),
+            snackBarTheme: const SnackBarThemeData(
+              backgroundColor: Colors.white,
+              contentTextStyle: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
+              elevation: 8,
             ),
             useMaterial3: true,
           ),
@@ -187,7 +200,7 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
                   color: const Color(0xFF161618),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Colors.orangeAccent.withOpacity(0.3),
+                    color: Colors.white.withOpacity(0.3),
                     width: 1.5,
                   ),
                   boxShadow: [
@@ -203,12 +216,12 @@ class _GlobalNetworkBannerState extends State<GlobalNetworkBanner> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.orangeAccent.withOpacity(0.1),
+                        color: Colors.white.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.wifi_off_rounded,
-                        color: Colors.orangeAccent,
+                        color: Colors.white,
                         size: 22,
                       ),
                     ),
@@ -263,7 +276,7 @@ class AuthGate extends StatelessWidget {
           return const Scaffold(
             backgroundColor: Colors.black,
             body: Center(
-              child: CircularProgressIndicator(color: Colors.orangeAccent),
+              child: CircularProgressIndicator(color: Colors.white),
             ),
           );
         }
@@ -314,7 +327,7 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
           return const Scaffold(
             backgroundColor: Colors.black,
             body: Center(
-              child: CircularProgressIndicator(color: Colors.orangeAccent),
+              child: CircularProgressIndicator(color: Colors.white),
             ),
           );
         }

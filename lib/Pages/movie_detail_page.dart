@@ -22,6 +22,7 @@ import 'package:library_ai/models/movie_widget/tv_series_tracker_section.dart';
 import '../models/movie_widget/emoji_rating_widget.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 import 'package:library_ai/services/utility_services/offline_action_guard.dart';
+import 'package:library_ai/Pages/collections/add_to_collection_bottom_sheet.dart';
 
 class MovieDetailPage extends StatefulWidget {
   final dynamic media;
@@ -45,7 +46,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   Future<dynamic>? _mediaFuture;
 
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
   static const Color _backgroundColor = Color(0xFF0A0A0A);
 
   bool get _isTv => widget.media is TvSeries;
@@ -110,6 +111,23 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     } finally {
       if (mounted) setState(() => _isTogglingHeart = false);
     }
+  }
+
+  void _showCollectionsBottomSheet(String title) {
+    if (!OfflineActionGuard.checkAndShow(context)) return;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return AddToCollectionBottomSheet(
+          itemId: _id.toString(),
+          itemType: _isTv ? 'tv' : 'movie',
+          title: title,
+        );
+      },
+    );
   }
 
   void _handleStatusToggle(
@@ -225,11 +243,11 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                             textAlign: TextAlign.center,
                           )
                         ] else if (errorMessage != null) ...[
-                          const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                          const Icon(Icons.error_outline, color: Colors.white, size: 48),
                           const SizedBox(height: 16),
                           Text(
                             errorMessage!,
-                            style: const TextStyle(color: Colors.redAccent, fontSize: 15),
+                            style: const TextStyle(color: Colors.white, fontSize: 15),
                             textAlign: TextAlign.center,
                           ),
                         ] else if (resultText != null) ...[
@@ -423,8 +441,14 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                               children: [
                                 _buildIconBtn(
                                   icon: _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                                  color: _isFavorite ? Colors.redAccent : Colors.white,
+                                  color: _isFavorite ? Colors.white : Colors.white,
                                   onTap: () => _handleFavoriteToggle(liveMedia),
+                                ),
+                                const SizedBox(width: 12),
+                                _buildIconBtn(
+                                  icon: Icons.collections_bookmark_outlined,
+                                  color: Colors.white,
+                                  onTap: () => _showCollectionsBottomSheet(title),
                                 ),
                                 const SizedBox(width: 12),
                                 _buildIconBtn(
@@ -447,7 +471,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                             _GlassChip(text: _formatDate(releaseDate)),
                           _GlassChip(
                             text: _isTv ? 'Serie TV' : 'Film',
-                            baseColor: Colors.blueAccent,
+                            baseColor: Colors.white,
                             isSolid: true,
                           ),
                           if (_isTv && seasonsMap.isNotEmpty)
@@ -765,7 +789,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, color: Colors.amberAccent, size: 32),
+          const Icon(Icons.star_rounded, color: Colors.white, size: 32),
           const SizedBox(width: 12),
           Text(
             voteAvg.toStringAsFixed(1),

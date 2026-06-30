@@ -9,7 +9,7 @@ class StarRating extends StatelessWidget {
     super.key,
     required this.rating,
     this.size = 14,
-    this.color = Colors.amber,
+    this.color = Colors.white,
   });
 
   @override

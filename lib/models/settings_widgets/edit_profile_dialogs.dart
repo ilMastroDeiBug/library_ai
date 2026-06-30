@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
 class EditProfileDialogs {
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
   static const Color _surfaceColor = Color(0xFF09090B); // Zinc 950
 
   static Future<void> showNameDialog(

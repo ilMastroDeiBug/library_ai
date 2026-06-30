@@ -160,6 +160,8 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
   }
 
   void _nextStep() {
+    // 🟡 FIX #10: Guard contro doppia chiamata
+    if (_isLoading) return;
     if (_currentStep < 2) {
       setState(() => _currentStep++);
       _pageCtrl.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
@@ -580,7 +582,8 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildNextButton("Suggerisci Titoli", disabled: _selectedVibe.isEmpty || _selectedLength.isEmpty),
+          // 🟡 FIX #9: Validare anche _selectedTwist
+          _buildNextButton("Suggerisci Titoli", disabled: _selectedVibe.isEmpty || _selectedLength.isEmpty || _selectedTwist.isEmpty),
         ],
       ),
     );
@@ -639,11 +642,11 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+              const Icon(Icons.error_outline, color: Colors.white, size: 48),
               const SizedBox(height: 16),
               Text(
                 _errorMessage!,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 16),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),

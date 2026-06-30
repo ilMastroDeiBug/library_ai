@@ -6,7 +6,7 @@ class AIAnalysisSection extends StatelessWidget {
   final bool isAnalyzing;
   final VoidCallback onAnalyzeTap;
 
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
   static const Color _cardColor = Color(
     0xFF1A1A1A,
   ); // Grigio scurissimo per staccare dal nero puro

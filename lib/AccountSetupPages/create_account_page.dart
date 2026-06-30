@@ -21,7 +21,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Compila tutti i campi"),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: Colors.white,
         ),
       );
       return;
@@ -32,7 +32,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(
-          child: CircularProgressIndicator(color: Colors.orangeAccent),
+          child: CircularProgressIndicator(color: Colors.white),
         ),
       );
 
@@ -65,7 +65,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 },
                 child: const Text(
                   "OK",
-                  style: TextStyle(color: Colors.orangeAccent),
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ],
@@ -91,7 +91,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMsg),
-            backgroundColor: Colors.orangeAccent,
+            backgroundColor: Colors.white,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -165,7 +165,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.orangeAccent.withOpacity(0.3),
+                            color: Colors.white.withOpacity(0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 5),
                           ),
@@ -173,7 +173,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                       ),
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orangeAccent,
+                          backgroundColor: Colors.white,
                           foregroundColor: Colors.black87,
                           minimumSize: const Size(double.infinity, 55),
                           shape: RoundedRectangleBorder(
@@ -221,7 +221,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-          prefixIcon: Icon(icon, color: Colors.orangeAccent.withOpacity(0.7)),
+          prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(

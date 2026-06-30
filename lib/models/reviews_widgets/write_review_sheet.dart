@@ -143,7 +143,7 @@ class _WriteReviewSheetState extends State<WriteReviewSheet> {
                               ? Icons.star_rounded
                               : Icons.star_border_rounded,
                           color: isActive
-                              ? Colors.amberAccent
+                              ? Colors.white
                               : Colors.white.withValues(alpha: 0.2),
                           size: 32,
                         ),

@@ -68,12 +68,12 @@ class _OnboardingAvatarCarouselState extends State<OnboardingAvatarCarousel> {
                     0.05,
                   ), // Sfondo per gli avatar trasparenti
                   border: isCenter
-                      ? Border.all(color: Colors.orangeAccent, width: 3)
+                      ? Border.all(color: Colors.white, width: 3)
                       : null,
                   boxShadow: isCenter
                       ? [
                           BoxShadow(
-                            color: Colors.orangeAccent.withOpacity(0.4),
+                            color: Colors.white.withOpacity(0.4),
                             blurRadius: 20,
                             spreadRadius: 2,
                           ),
@@ -91,7 +91,7 @@ class _OnboardingAvatarCarouselState extends State<OnboardingAvatarCarousel> {
                     placeholder: (context, url) => const Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.orangeAccent,
+                        color: Colors.white,
                       ),
                     ),
                   ),

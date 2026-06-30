@@ -28,7 +28,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
   bool _isTogglingHeart = false;
   Stream<bool>? _favoriteStream;
 
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
   static const Color _backgroundColor = Colors.black;
   static const Color _cardColor = Color(0xFF1A1A1A);
 
@@ -195,17 +195,17 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                           width: 88,
                           height: 88,
                           decoration: BoxDecoration(
-                            color: (isOffline ? Colors.blueAccent : Colors.orangeAccent)
+                            color: (isOffline ? Colors.white : Colors.white)
                                 .withValues(alpha: 0.08),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: (isOffline ? Colors.blueAccent : Colors.orangeAccent)
+                              color: (isOffline ? Colors.white : Colors.white)
                                   .withValues(alpha: 0.2),
                             ),
                           ),
                           child: Icon(
                             isOffline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
-                            color: isOffline ? Colors.blueAccent : Colors.orangeAccent,
+                            color: isOffline ? Colors.white : Colors.white,
                             size: 40,
                           ),
                         ),
@@ -345,7 +345,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: isFavorite
-                                      ? Colors.redAccent.withOpacity(0.1)
+                                      ? Colors.white.withOpacity(0.1)
                                       : Colors.white.withOpacity(0.05),
                                   shape: BoxShape.circle,
                                 ),
@@ -362,7 +362,7 @@ class _ActorDetailPageState extends State<ActorDetailPage> {
                                         : Icons.favorite_border_rounded,
                                     key: ValueKey(isFavorite),
                                     color: isFavorite
-                                        ? Colors.redAccent
+                                        ? Colors.white
                                         : Colors.white,
                                     size: 26,
                                   ),

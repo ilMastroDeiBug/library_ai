@@ -82,7 +82,7 @@ class _AddBookSheetState extends State<AddBookSheet> {
             height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyanAccent,
+                backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -117,7 +117,7 @@ class _AddBookSheetState extends State<AddBookSheet> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.cyanAccent),
+          borderSide: const BorderSide(color: Colors.white),
         ),
       ),
     );

@@ -79,7 +79,7 @@ class _MovieSectionState extends State<MovieSection> {
               ),
               const Icon(
                 Icons.arrow_forward,
-                color: Colors.orangeAccent,
+                color: Colors.white,
                 size: 18,
               ),
             ],

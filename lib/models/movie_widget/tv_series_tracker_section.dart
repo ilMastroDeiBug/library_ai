@@ -63,8 +63,8 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
     bool isCurrentlyWatched,
   ) {
     final titleColor = isCurrentlyWatched
-        ? Colors.redAccent
-        : Colors.orangeAccent;
+        ? Colors.white
+        : Colors.white;
     final titleText = isCurrentlyWatched
         ? AppLocalizations.of(context)!.trackerRemoveFromHere
         : AppLocalizations.of(context)!.trackerMarkUpToHere;
@@ -205,7 +205,7 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? Colors.orangeAccent
+                            ? Colors.white
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
@@ -255,12 +255,12 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
                     duration: const Duration(milliseconds: 300),
                     decoration: BoxDecoration(
                       color: isWatched
-                          ? Colors.orangeAccent.withOpacity(0.2)
+                          ? Colors.white.withOpacity(0.2)
                           : Colors.white10,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isWatched
-                            ? Colors.orangeAccent
+                            ? Colors.white
                             : Colors.transparent,
                         width: 2,
                       ),
@@ -269,7 +269,7 @@ class _TvSeriesTrackerSectionState extends State<TvSeriesTrackerSection> {
                       child: isWatched
                           ? const Icon(
                               Icons.check_circle_rounded,
-                              color: Colors.orangeAccent,
+                              color: Colors.white,
                             )
                           : Text(
                               "$epNum",

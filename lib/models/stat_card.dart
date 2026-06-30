@@ -13,7 +13,7 @@ class StatCard extends StatelessWidget {
         Text(
           count,
           style: const TextStyle(
-            color: Colors.cyanAccent,
+            color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),

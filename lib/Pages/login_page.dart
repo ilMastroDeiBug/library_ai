@@ -53,7 +53,7 @@ class _LoginPageState extends State<LoginPage>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Accesso con Google fallito. Riprova."),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Colors.white,
           ),
         );
       }
@@ -105,7 +105,7 @@ class _LoginPageState extends State<LoginPage>
                           color: Colors.white,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.orangeAccent.withOpacity(0.15),
+                              color: Colors.white.withOpacity(0.15),
                               blurRadius: 45,
                               spreadRadius: 5,
                             ),
@@ -169,7 +169,7 @@ class _LoginPageState extends State<LoginPage>
                             context,
                             "Registrati",
                             const CreateAccountPage(),
-                            Colors.orangeAccent,
+                            Colors.white,
                             isFilled: true,
                           ),
                         ),

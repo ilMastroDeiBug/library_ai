@@ -111,11 +111,11 @@ class _WatchProvidersWidgetState extends State<WatchProvidersWidget> {
                 icon: const Icon(
                   Icons.open_in_new,
                   size: 16,
-                  color: Colors.orangeAccent,
+                  color: Colors.white,
                 ),
                 label: Text(
                   AppLocalizations.of(context)!.providersAllOptions,
-                  style: const TextStyle(color: Colors.orangeAccent),
+                  style: const TextStyle(color: Colors.white),
                 ),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
@@ -170,7 +170,7 @@ class _WatchProvidersWidgetState extends State<WatchProvidersWidget> {
                           child: const Center(
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.orangeAccent,
+                              color: Colors.white,
                             ),
                           ),
                         ),

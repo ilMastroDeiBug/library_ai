@@ -48,8 +48,8 @@ class SettingsSwitchTile extends StatelessWidget {
                 ),
               ),
               Switch.adaptive(
-                activeColor: Colors.orangeAccent,
-                activeTrackColor: Colors.orangeAccent.withOpacity(0.3),
+                activeColor: Colors.white,
+                activeTrackColor: Colors.white.withOpacity(0.3),
                 inactiveThumbColor: Colors.white54,
                 inactiveTrackColor: Colors.white.withOpacity(0.1),
                 value: value,

@@ -57,10 +57,10 @@ class _LogoutButtonState extends State<LogoutButton>
         child: Container(
           height: 50,
           decoration: BoxDecoration(
-            color: Colors.redAccent.withOpacity(0.07),
+            color: Colors.white.withOpacity(0.07),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: Colors.redAccent.withOpacity(0.18),
+              color: Colors.white.withOpacity(0.18),
               width: 1,
             ),
           ),
@@ -69,14 +69,14 @@ class _LogoutButtonState extends State<LogoutButton>
             children: [
               Icon(
                 Icons.logout_rounded,
-                color: Colors.redAccent.withOpacity(0.85),
+                color: Colors.white.withOpacity(0.85),
                 size: 18,
               ),
               const SizedBox(width: 10),
               Text(
                 loc.settingsLogout,
                 style: TextStyle(
-                  color: Colors.redAccent.withOpacity(0.85),
+                  color: Colors.white.withOpacity(0.85),
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
                   letterSpacing: 0.2,

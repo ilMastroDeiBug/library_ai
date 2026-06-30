@@ -19,7 +19,7 @@ class BookDetailPage extends StatefulWidget {
 class _BookDetailPageState extends State<BookDetailPage> {
   final BookDetailLogic _logic = BookDetailLogic();
   bool _isAnalyzing = false;
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +120,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                               label: "LETTO",
                               icon: Icons.check_circle_outline,
                               isActive: currentStatus == 'read',
-                              activeColor: Colors.orange,
+                              activeColor: Colors.white,
                               onTap: () => _logic.handleStatusAction(
                                 context,
                                 liveBook,

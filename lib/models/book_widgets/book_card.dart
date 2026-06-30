@@ -104,7 +104,7 @@ class BookCard extends StatelessWidget {
                           StarRating(
                             rating: book.rating, // Ora è double, perfetto
                             size: 10,
-                            color: Colors.amber,
+                            color: Colors.white,
                           ),
 
                           const SizedBox(width: 4),
@@ -148,7 +148,7 @@ class BookCard extends StatelessWidget {
       child: const Center(
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          color: Colors.orangeAccent,
+          color: Colors.white,
         ),
       ),
     );

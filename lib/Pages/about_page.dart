@@ -9,7 +9,7 @@ class AboutPage extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(AppLocalizations.of(context)!.aboutDonationMsg),
-        backgroundColor: Colors.orangeAccent,
+        backgroundColor: Colors.white,
       ),
     );
     // TODO: Usa url_launcher per aprire il link a Ko-fi / BuyMeACoffee / PayPal
@@ -53,7 +53,7 @@ class AboutPage extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: Colors.white.withOpacity(0.05),
                   border: Border.all(
-                    color: Colors.orangeAccent.withOpacity(0.3),
+                    color: Colors.white.withOpacity(0.3),
                     width: 2,
                   ),
                 ),
@@ -119,7 +119,7 @@ class AboutPage extends StatelessWidget {
                       text: AppLocalizations.of(context)!.aboutStoryAge,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.orangeAccent,
+                        color: Colors.white,
                       ),
                     ),
                     TextSpan(
@@ -147,14 +147,14 @@ class AboutPage extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.orangeAccent.withOpacity(0.1),
+                    Colors.white.withOpacity(0.1),
                     Colors.transparent,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
@@ -204,7 +204,7 @@ class AboutPage extends StatelessWidget {
               icon: Icons.local_cafe_rounded,
               title: AppLocalizations.of(context)!.aboutDonateCoffeeTitle,
               subtitle: AppLocalizations.of(context)!.aboutDonateCoffeeSubtitle,
-              color: Colors.orangeAccent,
+              color: Colors.white,
               onTap: () => _openDonation(context),
             ),
             const SizedBox(height: 12),
@@ -220,7 +220,7 @@ class AboutPage extends StatelessWidget {
               icon: Icons.star_rate_rounded,
               title: AppLocalizations.of(context)!.aboutRateTitle,
               subtitle: AppLocalizations.of(context)!.aboutRateSubtitle,
-              color: Colors.yellow.shade700,
+              color: Colors.white,
               onTap: () {
                 // TODO: Integrare in_app_review
               },

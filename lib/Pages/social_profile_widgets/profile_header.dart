@@ -509,7 +509,7 @@ class _EditSheetState extends State<_EditSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Errore: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Errore: $e'), backgroundColor: Colors.white),
         );
       }
     } finally {

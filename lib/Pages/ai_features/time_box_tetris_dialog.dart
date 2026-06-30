@@ -61,6 +61,8 @@ class _TimeBoxTetrisDialogState extends State<TimeBoxTetrisDialog> {
   List<dynamic> _suggestions = [];
 
   void _nextStep() {
+    // 🟡 FIX #10: Guard contro doppia chiamata
+    if (_isLoading) return;
     if (_currentStep < 3) {
       setState(() => _currentStep++);
       _pageCtrl.nextPage(
@@ -99,7 +101,7 @@ class _TimeBoxTetrisDialogState extends State<TimeBoxTetrisDialog> {
 
       final decoded = jsonDecode(jsonResult);
       final rawSuggestions = decoded['suggestions'] ?? [];
-      
+
       // Match reale con TMDB per avere veri ID e veri Poster!
       List<dynamic> validSuggestions = [];
       for (var s in rawSuggestions) {
@@ -573,15 +575,11 @@ class _TimeBoxTetrisDialogState extends State<TimeBoxTetrisDialog> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.error_outline,
-                color: Colors.redAccent,
-                size: 48,
-              ),
+              const Icon(Icons.error_outline, color: Colors.white, size: 48),
               const SizedBox(height: 16),
               Text(
                 _errorMessage!,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 16),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),

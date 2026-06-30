@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen>
               height: 40,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.orangeAccent.withOpacity(0.8),
+                color: Colors.white.withOpacity(0.8),
               ),
             ),
           ),

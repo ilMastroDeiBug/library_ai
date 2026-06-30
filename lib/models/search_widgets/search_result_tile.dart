@@ -91,7 +91,7 @@ class SearchResultTile extends StatelessWidget {
                         child: const Center(
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.orangeAccent,
+                            color: Colors.white,
                           ),
                         ),
                       ),

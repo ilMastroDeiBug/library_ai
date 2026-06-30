@@ -49,6 +49,11 @@ import 'package:library_ai/domain/repositories/rating_repository.dart';
 import 'package:library_ai/data/repositories/supabase_rating_repository_impl.dart';
 import 'package:library_ai/domain/use_cases/save_rating_use_case.dart';
 
+// Collections
+import 'package:library_ai/domain/repositories/collection_repository.dart';
+import 'package:library_ai/data/supabase_collection_repository_impl.dart';
+import 'package:library_ai/domain/use_cases/collection_use_cases.dart';
+
 // Import Services Libri (DORMIENTI)
 import 'package:library_ai/services/utility_services/open_library_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // Import necessario per passare il client al repository
@@ -114,6 +119,11 @@ Future<void> init() async {
   // REGISTRAZIONE REPOSITORY RATING
   sl.registerLazySingleton<RatingRepository>(
     () => SupabaseRatingRepositoryImpl(supabase: Supabase.instance.client),
+  );
+
+  // REGISTRAZIONE REPOSITORY COLLECTIONS
+  sl.registerLazySingleton<CollectionRepository>(
+    () => SupabaseCollectionRepositoryImpl(Supabase.instance.client),
   );
 
   // =========================================================================
@@ -220,6 +230,15 @@ Future<void> init() async {
 
   // Ratings...
   sl.registerLazySingleton(() => SaveRatingUseCase(sl()));
+
+  // Collections...
+  sl.registerLazySingleton(() => GetCollectionsStreamUseCase(sl()));
+  sl.registerLazySingleton(() => CreateCollectionUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteCollectionUseCase(sl()));
+  sl.registerLazySingleton(() => AddMediaToCollectionUseCase(sl()));
+  sl.registerLazySingleton(() => RemoveMediaFromCollectionUseCase(sl()));
+  sl.registerLazySingleton(() => GetCollectionItemsStreamUseCase(sl()));
+  sl.registerLazySingleton(() => GetItemCollectionIdsUseCase(sl()));
 
   // Social...
   sl.registerLazySingleton<SocialRepository>(

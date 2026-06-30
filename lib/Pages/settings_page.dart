@@ -15,7 +15,7 @@ import '../models/settings_widgets/delete_account_dialog.dart';
 import '../models/settings_widgets/avatar_selection_sheet.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 
-const Color _kBrand = Colors.orangeAccent;
+const Color _kBrand = Colors.white;
 const Color _kBg = Colors.black;
 
 class SettingsPage extends StatefulWidget {
@@ -250,7 +250,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: AppLocalizations.of(context)!.settingsDeleteAccount,
                     subtitle: AppLocalizations.of(context)!.settingsDeleteAccountDesc,
                     iconColor: Colors.white38,
-                    textColor: Colors.redAccent.withValues(alpha: 0.80),
+                    textColor: Colors.white.withValues(alpha: 0.80),
                     isBottom: true,
                     onTap: () {
                       showDialog(
@@ -455,7 +455,7 @@ class _LogoutButtonState extends State<_LogoutButton>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(100),
             border: Border.all(
-              color: Colors.redAccent.withValues(alpha: 0.30),
+              color: Colors.white.withValues(alpha: 0.30),
               width: 1,
             ),
           ),
@@ -464,14 +464,14 @@ class _LogoutButtonState extends State<_LogoutButton>
             children: [
               Icon(
                 Icons.power_settings_new_rounded,
-                color: Colors.redAccent.withValues(alpha: 0.75),
+                color: Colors.white.withValues(alpha: 0.75),
                 size: 16,
               ),
               const SizedBox(width: 10),
               Text(
                 widget.label,
                 style: TextStyle(
-                  color: Colors.redAccent.withValues(alpha: 0.75),
+                  color: Colors.white.withValues(alpha: 0.75),
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                   letterSpacing: 0.2,

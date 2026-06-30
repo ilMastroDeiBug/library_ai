@@ -64,7 +64,7 @@ class _BookSectionState extends State<BookSection> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                   child: CircularProgressIndicator(
-                    color: Colors.cyanAccent,
+                    color: Colors.white,
                     strokeWidth: 2,
                   ),
                 );

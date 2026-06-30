@@ -247,9 +247,9 @@ class _TypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (mediaType) {
-      'tv' => ('Serie', Colors.blueAccent),
-      'book' => ('Libro', Colors.teal),
-      _ => ('Film', Colors.orangeAccent),
+      'tv' => ('Serie', Colors.white),
+      'book' => ('Libro', Colors.white),
+      _ => ('Film', Colors.white),
     };
 
     return Container(
@@ -346,15 +346,15 @@ class _UnpinSheet extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     decoration: BoxDecoration(
-                      color: Colors.redAccent.withOpacity(0.15),
+                      color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
                     ),
                     child: const Center(
                       child: Text(
                         'Rimuovi',
                         style: TextStyle(
-                          color: Colors.redAccent,
+                          color: Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

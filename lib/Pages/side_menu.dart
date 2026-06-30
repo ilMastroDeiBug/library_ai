@@ -20,7 +20,7 @@ class SideMenu extends StatelessWidget {
   final Function(AppMode) onModeChanged;
   final VoidCallback onSocialTap;
 
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
 
   const SideMenu({
     super.key,
@@ -199,7 +199,7 @@ class SideMenu extends StatelessWidget {
                                       barrierDismissible: false,
                                       builder: (_) => const Center(
                                         child: CircularProgressIndicator(
-                                          color: Colors.orangeAccent,
+                                          color: Colors.white,
                                         ),
                                       ),
                                     );
@@ -216,7 +216,7 @@ class SideMenu extends StatelessWidget {
                                               AppLocalizations.of(context)!
                                                   .exportDataSuccess,
                                             ),
-                                            backgroundColor: Colors.green,
+                                            backgroundColor: Colors.white,
                                           ),
                                         );
                                       }
@@ -232,7 +232,7 @@ class SideMenu extends StatelessWidget {
                                                     e.toString(),
                                                   ),
                                             ),
-                                            backgroundColor: Colors.redAccent,
+                                            backgroundColor: Colors.white,
                                           ),
                                         );
                                       }

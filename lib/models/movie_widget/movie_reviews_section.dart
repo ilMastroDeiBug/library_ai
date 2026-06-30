@@ -149,7 +149,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               AppLocalizations.of(context)!.delete,
-              style: const TextStyle(color: Colors.redAccent),
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -489,10 +489,10 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.amberAccent.withValues(alpha: 0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.amberAccent.withValues(alpha: 0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -501,14 +501,14 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                           children: [
                             const Icon(
                               Icons.star_rounded,
-                              color: Colors.amberAccent,
+                              color: Colors.white,
                               size: 12,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               review.rating.toStringAsFixed(1),
                               style: const TextStyle(
-                                color: Colors.amberAccent,
+                                color: Colors.white,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 12,
                               ),
@@ -524,7 +524,7 @@ class _MovieReviewsSectionState extends State<MovieReviewsSection> {
                             .reviewsDeleteTooltip,
                         icon: Icon(
                           Icons.delete_outline_rounded,
-                          color: Colors.redAccent.withOpacity(0.7),
+                          color: Colors.white.withOpacity(0.7),
                           size: 16,
                         ),
                         onPressed: () => _handleDelete(review),

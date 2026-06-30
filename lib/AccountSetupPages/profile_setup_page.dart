@@ -52,7 +52,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Inserisci un nome valido."),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: Colors.white,
         ),
       );
       return;
@@ -85,7 +85,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            backgroundColor: Colors.orangeAccent,
+            backgroundColor: Colors.white,
           ),
         );
 
@@ -101,7 +101,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceAll("Exception: ", "")),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Colors.white,
           ),
         );
       }
@@ -125,7 +125,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.orangeAccent.withOpacity(0.15),
+                color: Colors.white.withOpacity(0.15),
               ),
             ),
           ),
@@ -221,7 +221,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.orangeAccent.withOpacity(0.3),
+                              color: Colors.white.withOpacity(0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 5),
                             ),
@@ -229,7 +229,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         ),
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orangeAccent,
+                            backgroundColor: Colors.white,
                             foregroundColor: Colors.black,
                             minimumSize: const Size(double.infinity, 60),
                             shape: RoundedRectangleBorder(

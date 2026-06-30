@@ -28,6 +28,7 @@ import 'package:library_ai/Pages/ai_features/what_to_watch_next_dialog.dart';
 import 'package:library_ai/models/movie_widget/streak_widget.dart';
 import 'package:library_ai/l10n/app_localizations.dart';
 import 'package:library_ai/services/utility_services/offline_action_guard.dart';
+import 'package:library_ai/Pages/collections/collections_grid_view.dart';
 
 class LibraryGrid extends StatefulWidget {
   final AppMode mode;
@@ -47,6 +48,7 @@ class _LibraryGridState extends State<LibraryGrid> {
 
   bool _isSelectionMode = false;
   bool _aiWhatToWatchNextMode = false;
+  bool _showCollections = false; // NUOVO STATO PER MOSTRARE LE RACCOLTE
   final Set<dynamic> _selectedItems = {};
   bool _isBulkActionLoading = false;
 
@@ -54,9 +56,18 @@ class _LibraryGridState extends State<LibraryGrid> {
     final l10n = AppLocalizations.of(context);
     if (widget.mode == AppMode.books) return [l10n?.libFilterAll ?? 'Tutti'];
     if (widget.status == 'favorites') {
-      return [l10n?.libFilterAll ?? 'Tutti', l10n?.libFilterMovies ?? 'Film', l10n?.libFilterTvSeries ?? 'Serie TV', l10n?.libFilterActors ?? 'Attori'];
+      return [
+        l10n?.libFilterAll ?? 'Tutti',
+        l10n?.libFilterMovies ?? 'Film',
+        l10n?.libFilterTvSeries ?? 'Serie TV',
+        l10n?.libFilterActors ?? 'Attori',
+      ];
     }
-    return [l10n?.libFilterAll ?? 'Tutti', l10n?.libFilterMovies ?? 'Film', l10n?.libFilterTvSeries ?? 'Serie TV'];
+    return [
+      l10n?.libFilterAll ?? 'Tutti',
+      l10n?.libFilterMovies ?? 'Film',
+      l10n?.libFilterTvSeries ?? 'Serie TV',
+    ];
   }
 
   @override
@@ -72,6 +83,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       _initStream();
       _isSelectionMode = false;
       _aiWhatToWatchNextMode = false;
+      _showCollections = false;
       _selectedItems.clear();
     }
   }
@@ -230,73 +242,83 @@ class _LibraryGridState extends State<LibraryGrid> {
       builder: (context, optimisticMap, child) {
         return Stack(
           children: [
-            Column(
-              children: [
-                _buildSearchAndFilterHeader(),
-                Expanded(
-                  child: StreamBuilder<List<dynamic>>(
-                    stream: _dataStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting &&
-                          !snapshot.hasData) {
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                          ),
-                        );
-                      }
-
-                      final allItems = snapshot.data ?? [];
-                      // PASSIAMO LA MAPPA AL FILTRO
-                      final filteredItems = _applyLocalFilters(
-                        allItems,
-                        optimisticMap,
-                      );
-
-                      if (filteredItems.isEmpty) return _buildEmptyState();
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (widget.status == 'watching' && !_isSelectionMode)
-                            _buildAiWhatToWatchNextButton(),
-                          Expanded(
-                            child: GridView.builder(
-                              padding: const EdgeInsets.only(
-                                top: 10,
-                                left: 15,
-                                right: 15,
-                                bottom: 150,
-                              ),
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: filteredItems.length,
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                childAspectRatio: 0.68,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                              ),
-                              itemBuilder: (context, index) {
-                                return _buildItemCard(context, filteredItems[index]);
-                              },
+            Offstage(
+              offstage: _showCollections,
+              child: Column(
+                children: [
+                  _buildSearchAndFilterHeader(),
+                  Expanded(
+                    child: StreamBuilder<List<dynamic>>(
+                      stream: _dataStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                                ConnectionState.waiting &&
+                            !snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
                             ),
-                          ),
-                        ],
-                      );
-                    },
+                          );
+                        }
+
+                        final allItems = snapshot.data ?? [];
+                        // PASSIAMO LA MAPPA AL FILTRO
+                        final filteredItems = _applyLocalFilters(
+                          allItems,
+                          optimisticMap,
+                        );
+
+                        // AGGIUNGIAMO LA CARD MOCK DELLE RACCOLTE AL PRIMO POSTO
+                        final displayItems = [
+                          'collections_card',
+                          ...filteredItems,
+                        ];
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (widget.status == 'watching' &&
+                                !_isSelectionMode)
+                              _buildAiWhatToWatchNextButton(),
+                            Expanded(
+                              child: GridView.builder(
+                                padding: const EdgeInsets.only(
+                                  top: 10,
+                                  left: 15,
+                                  right: 15,
+                                  bottom: 150,
+                                ),
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: displayItems.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      childAspectRatio: 0.68,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                    ),
+                                itemBuilder: (context, index) {
+                                  return _buildItemCard(
+                                    context,
+                                    displayItems[index],
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             if (_isBulkActionLoading)
               Positioned.fill(
                 child: Container(
                   color: Colors.black54,
                   child: const Center(
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                    ),
+                    child: CircularProgressIndicator(color: Colors.white),
                   ),
                 ),
               ),
@@ -308,6 +330,18 @@ class _LibraryGridState extends State<LibraryGrid> {
                 left: 20,
                 right: 20,
                 child: _buildBulkActionBar(),
+              ),
+            if (_showCollections)
+              Positioned.fill(
+                child: Container(
+                  color: const Color(
+                    0xFF09090B,
+                  ), // Sfondo per coprire ciò che sta dietro
+                  child: CollectionsGridView(
+                    onBackToLibrary: () =>
+                        setState(() => _showCollections = false),
+                  ),
+                ),
               ),
           ],
         );
@@ -347,9 +381,15 @@ class _LibraryGridState extends State<LibraryGrid> {
       final l10n = AppLocalizations.of(context);
       if (_selectedFilter != (l10n?.libFilterAll ?? 'Tutti')) {
         final type = _extractType(item);
-        if (_selectedFilter == (l10n?.libFilterMovies ?? 'Film') && type != 'movie') return false;
-        if (_selectedFilter == (l10n?.libFilterTvSeries ?? 'Serie TV') && type != 'tv') return false;
-        if (_selectedFilter == (l10n?.libFilterActors ?? 'Attori') && type != 'person') return false;
+        if (_selectedFilter == (l10n?.libFilterMovies ?? 'Film') &&
+            type != 'movie')
+          return false;
+        if (_selectedFilter == (l10n?.libFilterTvSeries ?? 'Serie TV') &&
+            type != 'tv')
+          return false;
+        if (_selectedFilter == (l10n?.libFilterActors ?? 'Attori') &&
+            type != 'person')
+          return false;
       }
       return true;
     }).toList();
@@ -397,10 +437,14 @@ class _LibraryGridState extends State<LibraryGrid> {
                   });
                 },
                 child: Text(
-                  _isSelectionMode ? AppLocalizations.of(context)!.libCancel : AppLocalizations.of(context)!.libSelect,
+                  _isSelectionMode
+                      ? AppLocalizations.of(context)!.libCancel
+                      : AppLocalizations.of(context)!.libSelect,
                   style: TextStyle(
                     color: _isSelectionMode
-                        ? (_aiWhatToWatchNextMode ? Colors.white : Colors.redAccent)
+                        ? (_aiWhatToWatchNextMode
+                              ? Colors.white
+                              : Colors.white)
                         : Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
@@ -431,7 +475,9 @@ class _LibraryGridState extends State<LibraryGrid> {
                         ),
                       ),
                       selected: isSelected,
-                      selectedColor: _aiWhatToWatchNextMode ? Colors.white : Colors.white,
+                      selectedColor: _aiWhatToWatchNextMode
+                          ? Colors.white
+                          : Colors.white,
                       backgroundColor: Colors.white.withOpacity(0.05),
                       side: BorderSide.none,
                       showCheckmark: false,
@@ -448,6 +494,10 @@ class _LibraryGridState extends State<LibraryGrid> {
   }
 
   Widget _buildItemCard(BuildContext context, dynamic item) {
+    if (item == 'collections_card') {
+      return _buildCollectionsCard(context);
+    }
+
     final user = sl<AuthRepository>().currentUser;
     String imageUrl = "";
     String overlayName = "";
@@ -684,6 +734,113 @@ class _LibraryGridState extends State<LibraryGrid> {
     );
   }
 
+  Widget _buildCollectionsCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _showCollections = true);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: GridView.count(
+                crossAxisCount: 2,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  Image.asset(
+                    'assets/images/covers/cover_1.jpg',
+                    fit: BoxFit.cover,
+                  ),
+                  Image.asset(
+                    'assets/images/covers/cover_2.jpg',
+                    fit: BoxFit.cover,
+                  ),
+                  Image.asset(
+                    'assets/images/covers/cover_3.jpg',
+                    fit: BoxFit.cover,
+                  ),
+                  Image.asset(
+                    'assets/images/covers/cover_4.jpg',
+                    fit: BoxFit.cover,
+                  ),
+                ],
+              ),
+            ),
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  color: Colors.black.withOpacity(
+                    0.5,
+                  ), // Tinta per far leggere il testo
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.8),
+                      Colors.black,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.only(
+                  top: 25,
+                  bottom: 12,
+                  left: 6,
+                  right: 6,
+                ),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.collections_bookmark_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      "LE MIE RACCOLTE",
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 3.0,
+                            color: Colors.black,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBulkActionBar() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -718,7 +875,7 @@ class _LibraryGridState extends State<LibraryGrid> {
       _buildBulkBtn(
         Icons.delete_outline,
         AppLocalizations.of(context)!.libBulkDelete,
-        Colors.redAccent,
+        Colors.white,
         () => _performBulkAction('delete'),
       ),
     );
@@ -737,8 +894,10 @@ class _LibraryGridState extends State<LibraryGrid> {
       buttons.add(
         _buildBulkBtn(
           Icons.check_circle_outline,
-          widget.mode == AppMode.books ? AppLocalizations.of(context)!.libBulkRead : AppLocalizations.of(context)!.libBulkWatched,
-          Colors.greenAccent,
+          widget.mode == AppMode.books
+              ? AppLocalizations.of(context)!.libBulkRead
+              : AppLocalizations.of(context)!.libBulkWatched,
+          Colors.white,
           () => _performBulkAction(
             widget.mode == AppMode.books ? 'read' : 'watched',
           ),
@@ -748,8 +907,10 @@ class _LibraryGridState extends State<LibraryGrid> {
       buttons.add(
         _buildBulkBtn(
           Icons.check_circle_outline,
-          widget.mode == AppMode.books ? AppLocalizations.of(context)!.libBulkRead : AppLocalizations.of(context)!.libBulkWatched,
-          Colors.greenAccent,
+          widget.mode == AppMode.books
+              ? AppLocalizations.of(context)!.libBulkRead
+              : AppLocalizations.of(context)!.libBulkWatched,
+          Colors.white,
           () => _performBulkAction(
             widget.mode == AppMode.books ? 'read' : 'watched',
           ),
@@ -845,11 +1006,18 @@ class _LibraryGridState extends State<LibraryGrid> {
                 children: [
                   const Text(
                     "Cosa guardare dopo?",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   Text(
                     "Scopri cosa guardare dopo che avrai finito il titolo selezionato.",
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -865,7 +1033,14 @@ class _LibraryGridState extends State<LibraryGrid> {
                 children: [
                   Icon(Icons.monetization_on, color: Colors.black, size: 14),
                   SizedBox(width: 4),
-                  Text("2", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
+                  Text(
+                    "2",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),

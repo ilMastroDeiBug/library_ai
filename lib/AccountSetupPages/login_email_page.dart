@@ -39,7 +39,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMsg),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Colors.white,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -55,7 +55,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Inserisci la tua email per recuperare la password."),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: Colors.white,
         ),
       );
       return;
@@ -67,7 +67,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Email di recupero inviata! Controlla la posta."),
-            backgroundColor: Colors.orangeAccent,
+            backgroundColor: Colors.white,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -79,7 +79,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
             content: Text(
               "Errore: ${e.toString().replaceAll('Exception: ', '')}",
             ),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Colors.white,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -145,7 +145,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                         child: const Text(
                           "Password dimenticata?",
                           style: TextStyle(
-                            color: Colors.orangeAccent,
+                            color: Colors.white,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -156,7 +156,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                     _isLoading
                         ? const Center(
                             child: CircularProgressIndicator(
-                              color: Colors.orangeAccent,
+                              color: Colors.white,
                             ),
                           )
                         : Container(
@@ -164,7 +164,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.orangeAccent.withOpacity(0.2),
+                                  color: Colors.white.withOpacity(0.2),
                                   blurRadius: 15,
                                   offset: const Offset(0, 4),
                                 ),
@@ -172,7 +172,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
                             ),
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orangeAccent,
+                                backgroundColor: Colors.white,
                                 foregroundColor: Colors.black87,
                                 minimumSize: const Size(double.infinity, 55),
                                 shape: RoundedRectangleBorder(
@@ -213,7 +213,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-        prefixIcon: Icon(icon, color: Colors.orangeAccent),
+        prefixIcon: Icon(icon, color: Colors.white),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
@@ -235,7 +235,7 @@ class _LoginEmailPageState extends State<LoginEmailPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.orangeAccent, width: 2),
+          borderSide: const BorderSide(color: Colors.white, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,

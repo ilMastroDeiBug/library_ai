@@ -1,33 +1,49 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/ai_repository.dart';
 
 class SupabaseAiRepositoryImpl implements AiRepository {
   final SupabaseClient _supabase;
+  
+  final Map<String, StreamController<int>> _tokenControllers = {};
 
   SupabaseAiRepositoryImpl(this._supabase);
 
   @override
   Stream<int> getUserTokensStream(String userId) async* {
-    // Rendiamo lo stream totalmente robusto contro crash RLS o righe mancanti
-    yield 15; // Valore ottimistico iniziale (o di default se non c'è DB)
+    yield 0;
 
+    final initialTokens = await _fetchTokens(userId);
+    yield initialTokens;
+
+    if (!_tokenControllers.containsKey(userId)) {
+      _tokenControllers[userId] = StreamController<int>.broadcast();
+    }
+    yield* _tokenControllers[userId]!.stream;
+  }
+
+  Future<int> _fetchTokens(String userId) async {
     try {
-      final tokenStream = _supabase
+      final res = await _supabase
           .from('user_ai_profiles')
-          .stream(primaryKey: ['user_id'])
-          .eq('user_id', userId);
-
-      await for (final event in tokenStream) {
-        if (event.isEmpty) {
-          yield 15; // Nessun record = regaliamo 15 token visivi (Edge func li creerà)
-        } else {
-          yield event.first['tokens_balance'] as int;
-        }
+          .select('tokens_balance')
+          .eq('user_id', userId)
+          .maybeSingle();
+      
+      if (res != null && res['tokens_balance'] != null) {
+        return res['tokens_balance'] as int;
       }
-    } catch (error) {
-      print("Errore critico nello stream token (RLS?): $error");
-      // Se il DB crasha o blocca la lettura, manteniamo il default
-      yield 15;
+    } catch (e) {
+      debugPrint("Errore fetch token (RLS o inesistente?): $e");
+    }
+    return 0;
+  }
+
+  void _triggerTokenRefresh(String userId) async {
+    final t = await _fetchTokens(userId);
+    if (_tokenControllers.containsKey(userId) && !_tokenControllers[userId]!.isClosed) {
+      _tokenControllers[userId]!.add(t);
     }
   }
 
@@ -38,16 +54,8 @@ class SupabaseAiRepositoryImpl implements AiRepository {
     Map<String, dynamic> payload,
     int tokenCost,
   ) async {
-    // Edge Function Call
-    // NOTA ARCHITETTURALE: Il client passa solo payload e funzione desiderata.
-    // L'Edge Function in Supabase si occupa in un'unica transazione sicura di:
-    // 1. Verificare JWT e user_id (evitando spoofing)
-    // 2. Controllare se l'utente ha token_cost >= available_tokens
-    // 3. Eseguire l'API di OpenAI (tenendo nascosta la SECRET_KEY)
-    // 4. Sottrarre i token
-    // 5. Scrivere i log e restituire il risultato
     final response = await _supabase.functions.invoke(
-      'clever-action', // Edge Function universale per il routing
+      'clever-action',
       body: {
         'action': functionName,
         'payload': payload,
@@ -56,18 +64,37 @@ class SupabaseAiRepositoryImpl implements AiRepository {
     );
 
     if (response.status != 200) {
-      throw Exception('Errore AI: ${response.data}');
+      if (response.status == 402) {
+        throw Exception('Token insufficienti. Attendi il rinnovo settimanale.');
+      }
+      final errorMsg = response.data is Map 
+          ? (response.data['error'] ?? 'Errore sconosciuto')
+          : 'Errore AI: status ${response.status}';
+      throw Exception(errorMsg);
     }
 
-    return response.data['result'] as String;
+    final data = response.data;
+    if (data == null) throw Exception('Risposta AI vuota');
+    if (data is! Map) throw Exception('Risposta AI non valida');
+    if (data['result'] == null) throw Exception(data['error'] ?? 'Risultato AI mancante');
+
+    // Chiamata completata con successo, il server ha scalato i token.
+    // Aggiorniamo i token localmente con 1 singola lettura:
+    _triggerTokenRefresh(userId);
+
+    return data['result'] as String;
   }
 
   @override
   Future<void> syncTokens() async {
     try {
       await _supabase.rpc('refresh_ai_tokens');
+      // Trigger all listeners to refresh
+      for (final userId in _tokenControllers.keys) {
+        _triggerTokenRefresh(userId);
+      }
     } catch (e) {
-      print("Errore durante il sync dei token: $e");
+      debugPrint("Errore durante il sync dei token: $e");
     }
   }
 
@@ -76,14 +103,15 @@ class SupabaseAiRepositoryImpl implements AiRepository {
     try {
       final res = await _supabase
           .from('user_ai_profiles')
-          .select('next_reset_date')
+          .select('last_token_reset')
           .eq('user_id', userId)
           .maybeSingle();
-      if (res != null && res['next_reset_date'] != null) {
-        return DateTime.parse(res['next_reset_date']);
+      if (res != null && res['last_token_reset'] != null) {
+        final lastReset = DateTime.parse(res['last_token_reset']);
+        return lastReset.add(const Duration(days: 7));
       }
     } catch (e) {
-      print("Errore fetch reset date: $e");
+      debugPrint("Errore fetch reset date: $e");
     }
     return null;
   }

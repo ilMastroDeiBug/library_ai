@@ -1,5 +1,4 @@
-import 'dart:ui';
-import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:library_ai/injection_container.dart';
@@ -107,10 +106,11 @@ class StudioAIPage extends StatefulWidget {
 class _StudioAIPageState extends State<StudioAIPage>
     with SingleTickerProviderStateMixin {
   String _userId = '';
-  int _tokens = 15;
+  int _tokens = 0; // FIX #7: Default pessimistico (0, non 15)
   DateTime? _nextResetDate;
 
   late final AnimationController _glowCtrl;
+  StreamSubscription<int>? _tokenSub; // 🟢 FIX #14: Salviamo la subscription
 
   @override
   void initState() {
@@ -135,7 +135,8 @@ class _StudioAIPageState extends State<StudioAIPage>
     await aiRepo.syncTokens();
 
     // Fetch stream for real-time updates
-    sl<GetAiTokensUseCase>().call(_userId).listen((t) {
+    // 🟢 FIX #14: Salvare la subscription per cancellarla nel dispose()
+    _tokenSub = sl<GetAiTokensUseCase>().call(_userId).listen((t) {
       if (mounted) setState(() => _tokens = t);
     });
 
@@ -150,6 +151,7 @@ class _StudioAIPageState extends State<StudioAIPage>
 
   @override
   void dispose() {
+    _tokenSub?.cancel(); // 🟢 FIX #14: Cancella lo stream
     _glowCtrl.dispose();
     super.dispose();
   }
@@ -331,6 +333,9 @@ class _CoversBackgroundState extends State<_CoversBackground>
     (i) => 'assets/images/covers/cover_${i + 1}.jpg',
   )..shuffle();
 
+  // 🟢 FIX #12: Pre-costruire i widget per evitare di ricreare 120+ widget ad ogni frame
+  late final List<List<Widget>> _prebuiltColumns;
+
   @override
   void initState() {
     super.initState();
@@ -338,6 +343,18 @@ class _CoversBackgroundState extends State<_CoversBackground>
       vsync: this,
       duration: const Duration(seconds: 40),
     )..repeat();
+
+    // Pre-costruisci le colonne una sola volta
+    final int itemsPerCol = (_images.length / 4).ceil();
+    _prebuiltColumns = List.generate(4, (colIndex) {
+      final colImages = _images
+          .skip(colIndex * itemsPerCol)
+          .take(itemsPerCol)
+          .toList();
+      final widgets = colImages.map(_buildImage).toList();
+      // Ripetiamo 4 volte per scroll infinito
+      return [...widgets, ...widgets, ...widgets, ...widgets];
+    });
   }
 
   @override
@@ -351,43 +368,26 @@ class _CoversBackgroundState extends State<_CoversBackground>
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, child) {
-        return Stack(
-          children: [
-            Row(
-              children: List.generate(4, (colIndex) {
-                final int itemsPerCol = (_images.length / 4).ceil();
-                final colImages = _images
-                    .skip(colIndex * itemsPerCol)
-                    .take(itemsPerCol)
-                    .toList();
+        return Row(
+          children: List.generate(4, (colIndex) {
+            final double offset =
+                (colIndex % 2 == 0 ? -_ctrl.value : (_ctrl.value - 1)) *
+                1000;
 
-                final double offset =
-                    (colIndex % 2 == 0 ? -_ctrl.value : (_ctrl.value - 1)) *
-                    1000;
-
-                return Expanded(
-                  child: OverflowBox(
-                    maxHeight: double.infinity,
-                    alignment: Alignment.topCenter,
-                    child: Transform.translate(
-                      offset: Offset(0, offset),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ...colImages.map(_buildImage),
-                          ...colImages.map(_buildImage),
-                          ...colImages.map(_buildImage),
-                          ...colImages.map(
-                            _buildImage,
-                          ), // Ripetizioni per scroll infinito
-                        ],
-                      ),
-                    ),
+            return Expanded(
+              child: OverflowBox(
+                maxHeight: double.infinity,
+                alignment: Alignment.topCenter,
+                child: Transform.translate(
+                  offset: Offset(0, offset),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: _prebuiltColumns[colIndex],
                   ),
-                );
-              }),
-            ),
-          ],
+                ),
+              ),
+            );
+          }),
         );
       },
     );

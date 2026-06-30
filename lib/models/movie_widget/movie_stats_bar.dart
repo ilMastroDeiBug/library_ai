@@ -6,7 +6,7 @@ class MovieStatsBar extends StatelessWidget {
   final Movie movie;
 
   // Costante di stile locale
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
 
   const MovieStatsBar({super.key, required this.movie});
 

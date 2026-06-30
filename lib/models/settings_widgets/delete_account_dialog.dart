@@ -69,12 +69,12 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.redAccent.withOpacity(0.1),
+                      color: Colors.white.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.warning_amber_rounded,
-                      color: Colors.redAccent,
+                      color: Colors.white,
                       size: 24,
                     ),
                   ),
@@ -124,11 +124,11 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.redAccent,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(100), // Pill shape
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.redAccent.withOpacity(0.3),
+                            color: Colors.white.withOpacity(0.3),
                             blurRadius: 15,
                             offset: const Offset(0, 4),
                           ),

@@ -318,7 +318,7 @@ class _StatusChip extends StatelessWidget {
       'towatch' ||
       'want_to_read' => ('Da vedere', Colors.white70),
       'reading' => ('Leggendo', Colors.white70),
-      'dropped' => ('Abbandonato', Colors.redAccent),
+      'dropped' => ('Abbandonato', Colors.white),
       _ => (status, Colors.white38),
     };
   }

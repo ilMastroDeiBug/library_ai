@@ -26,7 +26,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const Color _brandColor = Colors.orangeAccent;
+  static const Color _brandColor = Colors.white;
   late PageController _cinemaPageController;
   CinemaType _selectedCinemaType = CinemaType.movies;
 

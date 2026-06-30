@@ -108,8 +108,8 @@ class _TrailerPlayerWidgetState extends State<TrailerPlayerWidget> {
                 controller: _controller!,
                 showVideoProgressIndicator: true,
                 progressColors: const ProgressBarColors(
-                  playedColor: Colors.orangeAccent,
-                  handleColor: Colors.orangeAccent,
+                  playedColor: Colors.white,
+                  handleColor: Colors.white,
                 ),
                 bottomActions: [
                   CurrentPosition(),

@@ -266,7 +266,7 @@ class _GenreResultPageState extends State<GenreResultPage> {
           if (_isLoadingFirstTime)
             const SliverFillRemaining(
               child: Center(
-                child: CircularProgressIndicator(color: Colors.orangeAccent),
+                child: CircularProgressIndicator(color: Colors.white),
               ),
             )
           else if (_items.isEmpty)
@@ -309,7 +309,7 @@ class _GenreResultPageState extends State<GenreResultPage> {
               child: Padding(
                 padding: EdgeInsets.only(top: 20, bottom: 40),
                 child: Center(
-                  child: CircularProgressIndicator(color: Colors.orangeAccent),
+                  child: CircularProgressIndicator(color: Colors.white),
                 ),
               ),
             ),
@@ -381,7 +381,7 @@ class _GridItemCard extends StatelessWidget {
                         child: const Center(
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.orangeAccent,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -447,7 +447,7 @@ class _GridItemCard extends StatelessWidget {
                       color: Colors.black.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: Colors.orangeAccent.withOpacity(0.5),
+                        color: Colors.white.withOpacity(0.5),
                       ),
                     ),
                     child: Row(
@@ -455,7 +455,7 @@ class _GridItemCard extends StatelessWidget {
                       children: [
                         const Icon(
                           Icons.star_rounded,
-                          color: Colors.orangeAccent,
+                          color: Colors.white,
                           size: 10,
                         ),
                         const SizedBox(width: 4),

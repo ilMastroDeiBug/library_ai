@@ -57,7 +57,7 @@ class BookStatsBar extends StatelessWidget {
                       StarRating(
                         rating: book.rating, // Usa .rating (double)
                         size: 16,
-                        color: Colors.amber,
+                        color: Colors.white,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -65,7 +65,7 @@ class BookStatsBar extends StatelessWidget {
                             ? book.rating.toStringAsFixed(1)
                             : "N/D",
                         style: const TextStyle(
-                          color: Colors.amber,
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
