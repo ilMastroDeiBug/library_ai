@@ -39,8 +39,8 @@ class LibraryHeader extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.95), // Più scuro in cima per la status bar
-                  Colors.black.withOpacity(0.50),
+                  Colors.black.withOpacity(0.50), // Più scuro in cima per la status bar
+                  Colors.black.withOpacity(0.10),
                   Colors.transparent, // Sfuma dolcemente verso il contenuto
                 ],
                 stops: const [0.0, 0.5, 1.0],

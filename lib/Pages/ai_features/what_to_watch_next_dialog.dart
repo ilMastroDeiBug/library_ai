@@ -15,21 +15,31 @@ import 'package:library_ai/injection_container.dart';
 import 'package:library_ai/Pages/movie_detail_page.dart';
 
 const _kVibes = [
-  "Rilassante", "Adrenalinica", "Misteriosa", "Strappalacrime", 
-  "Comica", "Dark", "Spensierata", "Cerebrale"
+  "Relaxing",
+  "Adrenaline",
+  "Mysterious",
+  "Tearjerker",
+  "Comedy",
+  "Dark",
+  "Lighthearted",
+  "Cerebral",
 ];
 
 const _kLengths = [
-  "Corta/Mini-serie", "Media (2-3 Stagioni)", "Lunga (4+ Stagioni)", "Film secco"
+  "Short/Mini-series",
+  "Medium (2-3 Seasons)",
+  "Long (4+ Seasons)",
+  "Just a Movie",
 ];
 
 const _kTwists = [
-  "Finali aperti", "Nessun colpo di scena", "Plot twist continui", "Cattivi che vincono"
+  "Open endings",
+  "No plot twists",
+  "Constant plot twists",
+  "Villains win",
 ];
 
-const _kFormats = [
-  "Solo Serie TV", "Solo Film", "Entrambe"
-];
+const _kFormats = ["Only TV Series", "Only Movies", "Both"];
 
 class WhatToWatchNextDialog extends StatefulWidget {
   final dynamic item;
@@ -43,7 +53,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
   final PageController _pageCtrl = PageController();
   late int _currentStep;
   late int _maxSteps;
-  
+
   dynamic _selectedItem;
 
   // Search
@@ -58,7 +68,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
   String _selectedVibe = '';
   String _selectedLength = '';
   String _selectedTwist = '';
-  String _selectedFormat = 'Entrambe'; // Default
+  String _selectedFormat = 'Both'; // Default
   final TextEditingController _customTextCtrl = TextEditingController();
 
   // Result
@@ -90,12 +100,15 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
   Future<void> _loadTrending() async {
     setState(() => _isLoadingTrending = true);
     try {
-      final movies = await sl<GetMoviesByCategoryUseCase>().call('trending').first;
-      final tvs = await sl<GetTvSeriesByCategoryUseCase>().call('trending').first;
-      
-      final combined = [...movies, ...tvs]
-        ..shuffle();
-        
+      final movies = await sl<GetMoviesByCategoryUseCase>()
+          .call('trending')
+          .first;
+      final tvs = await sl<GetTvSeriesByCategoryUseCase>()
+          .call('trending')
+          .first;
+
+      final combined = [...movies, ...tvs]..shuffle();
+
       if (mounted) {
         setState(() {
           _trendingResults = combined;
@@ -108,7 +121,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
   }
 
   String get _mediaTitle {
-    if (_selectedItem == null) return "Sconosciuto";
+    if (_selectedItem == null) return "Unknown";
     if (_selectedItem is TvSeries) return (_selectedItem as TvSeries).name;
     if (_selectedItem is Movie) return (_selectedItem as Movie).title;
     if (_selectedItem is Book) return (_selectedItem as Book).title;
@@ -118,7 +131,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
       try {
         return _selectedItem.name;
       } catch (_) {
-        return "Sconosciuto";
+        return "Unknown";
       }
     }
   }
@@ -135,17 +148,17 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
       }
 
       setState(() => _isSearching = true);
-      
+
       try {
         final movies = await sl<SearchMoviesUseCase>().call(query).first;
         final tvs = await sl<SearchTvSeriesUseCase>().call(query).first;
-        
+
         final combined = [...movies.take(5), ...tvs.take(5)]
-            ..sort((a, b) {
-              final num popA = (a as dynamic).popularity ?? 0.0;
-              final num popB = (b as dynamic).popularity ?? 0.0;
-              return popB.compareTo(popA);
-            });
+          ..sort((a, b) {
+            final num popA = (a as dynamic).popularity ?? 0.0;
+            final num popB = (b as dynamic).popularity ?? 0.0;
+            return popB.compareTo(popA);
+          });
 
         if (mounted) {
           setState(() {
@@ -164,8 +177,11 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
     if (_isLoading) return;
     if (_currentStep < 2) {
       setState(() => _currentStep++);
-      _pageCtrl.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
-      
+      _pageCtrl.nextPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+
       if (_currentStep == 2) {
         _startCalculation();
       }
@@ -180,7 +196,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
 
     try {
       final user = sl<AuthRepository>().currentUser;
-      if (user == null) throw Exception("Non autenticato");
+      if (user == null) throw Exception("Not authenticated");
 
       final payload = {
         "finished_title": _mediaTitle,
@@ -200,7 +216,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
 
       final decoded = jsonDecode(jsonResult);
       final rawSuggestions = decoded['suggestions'] ?? [];
-      
+
       List<dynamic> validSuggestions = [];
       for (var s in rawSuggestions) {
         final title = s['title'];
@@ -242,7 +258,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
 
       if (mounted) {
         setState(() {
-          _aiMessage = decoded['ai_message'] ?? "Ecco cosa guardare dopo.";
+          _aiMessage = decoded['ai_message'] ?? "Here is what to watch next.";
           _suggestions = validSuggestions;
           _isLoading = false;
         });
@@ -250,7 +266,8 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = "Errore durante il calcolo: ${e.toString().replaceAll('Exception: ', '')}";
+          _errorMessage =
+              "Error during calculation: ${e.toString().replaceAll('Exception: ', '')}";
           _isLoading = false;
         });
       }
@@ -260,7 +277,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
   void _openMedia(dynamic mediaJson) {
     final isTv = mediaJson['media_type'] == 'tv';
     final id = mediaJson['id'] ?? 0;
-    final title = mediaJson['title'] ?? 'Sconosciuto';
+    final title = mediaJson['title'] ?? 'Unknown';
     final posterPath = mediaJson['poster_path'] ?? '';
 
     dynamic mediaObj;
@@ -317,11 +334,14 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
           filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
           child: Container(
             width: double.infinity,
-            height: 700, 
+            height: 700,
             decoration: BoxDecoration(
               color: const Color(0xFF09090B).withOpacity(0.85),
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.15),
+                width: 1.5,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.white.withOpacity(0.05),
@@ -340,10 +360,14 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.auto_awesome, color: Colors.white, size: 24),
+                          Icon(
+                            Icons.auto_awesome,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                           SizedBox(width: 12),
                           Text(
-                            "Cosa guardare dopo?",
+                            "What to watch next?",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -355,12 +379,15 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white54,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                
+
                 // Progress Bar
                 Container(
                   height: 2,
@@ -406,8 +433,13 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
       child: Column(
         children: [
           const Text(
-            "Che cos'hai appena finito di guardare?",
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+            "What did you just finish watching?",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.5,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -416,7 +448,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
             onChanged: _onSearchChanged,
             style: const TextStyle(color: Colors.white, fontSize: 16),
             decoration: InputDecoration(
-              hintText: "Cerca un film o una serie TV...",
+              hintText: "Search for a movie or TV series...",
               hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
               prefixIcon: const Icon(Icons.search, color: Colors.white54),
               filled: true,
@@ -430,74 +462,99 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
           const SizedBox(height: 16),
           Expanded(
             child: _isSearching || _isLoadingTrending
-                ? const Center(child: CircularProgressIndicator(color: Colors.white))
-                : (_searchCtrl.text.isEmpty ? _trendingResults : _searchResults).isEmpty
-                    ? const Center(
-                        child: Text(
-                          "Nessun risultato trovato",
-                          style: TextStyle(color: Colors.white30, fontSize: 14),
-                        ),
-                      )
-                    : GridView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: (_searchCtrl.text.isEmpty ? _trendingResults : _searchResults).length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                : (_searchCtrl.text.isEmpty ? _trendingResults : _searchResults)
+                      .isEmpty
+                ? const Center(
+                    child: Text(
+                      "No results found",
+                      style: TextStyle(color: Colors.white30, fontSize: 14),
+                    ),
+                  )
+                : GridView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount:
+                        (_searchCtrl.text.isEmpty
+                                ? _trendingResults
+                                : _searchResults)
+                            .length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
                           childAspectRatio: 0.65,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                         ),
-                        itemBuilder: (context, index) {
-                          final currentList = _searchCtrl.text.isEmpty ? _trendingResults : _searchResults;
-                          final res = currentList[index];
-                          final bool isTv = res is TvSeries;
-                          final title = isTv ? res.name : (res as Movie).title;
-                          final poster = isTv ? res.fullPosterUrl : (res as Movie).fullPosterUrl;
+                    itemBuilder: (context, index) {
+                      final currentList = _searchCtrl.text.isEmpty
+                          ? _trendingResults
+                          : _searchResults;
+                      final res = currentList[index];
+                      final bool isTv = res is TvSeries;
+                      final title = isTv ? res.name : (res as Movie).title;
+                      final poster = isTv
+                          ? res.fullPosterUrl
+                          : (res as Movie).fullPosterUrl;
 
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedItem = res;
-                              });
-                              _nextStep();
-                            },
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  CachedNetworkImage(
-                                    imageUrl: poster,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (_, __, ___) => Container(
-                                      color: Colors.white.withOpacity(0.1),
-                                      child: const Icon(Icons.movie, color: Colors.white24),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 0, left: 0, right: 0,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.bottomCenter,
-                                          end: Alignment.topCenter,
-                                          colors: [Colors.black.withOpacity(0.8), Colors.transparent],
-                                        ),
-                                      ),
-                                      child: Text(
-                                        title,
-                                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                        maxLines: 2, overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedItem = res;
+                          });
+                          _nextStep();
                         },
-                      ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              CachedNetworkImage(
+                                imageUrl: poster,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => Container(
+                                  color: Colors.white.withOpacity(0.1),
+                                  child: const Icon(
+                                    Icons.movie,
+                                    color: Colors.white24,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [
+                                        Colors.black.withOpacity(0.8),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                  child: Text(
+                                    title,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -512,11 +569,19 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
           RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -0.5),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.5,
+              ),
               children: [
-                const TextSpan(text: "Stai per finire "),
-                TextSpan(text: '"$_mediaTitle"', style: const TextStyle(fontWeight: FontWeight.w800)),
-                const TextSpan(text: ". Cosa vorresti dalla prossima visione?"),
+                const TextSpan(text: "You are about to finish "),
+                TextSpan(
+                  text: '"$_mediaTitle"',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const TextSpan(text: ". What are you looking for next?"),
               ],
             ),
           ),
@@ -527,39 +592,110 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Formato Desiderato", style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Desired Format",
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: _kFormats.map((f) => _buildChip(f, _selectedFormat, (val) => setState(() => _selectedFormat = val))).toList(),
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _kFormats
+                        .map(
+                          (f) => _buildChip(
+                            f,
+                            _selectedFormat,
+                            (val) => setState(() => _selectedFormat = val),
+                          ),
+                        )
+                        .toList(),
                   ),
                   const SizedBox(height: 20),
 
-                  const Text("La Vibe", style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: _kVibes.map((v) => _buildChip(v, _selectedVibe, (val) => setState(() => _selectedVibe = val))).toList(),
+                  const Text(
+                    "The Vibe",
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  
-                  const Text("La Lunghezza", style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: _kLengths.map((l) => _buildChip(l, _selectedLength, (val) => setState(() => _selectedLength = val))).toList(),
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _kVibes
+                        .map(
+                          (v) => _buildChip(
+                            v,
+                            _selectedVibe,
+                            (val) => setState(() => _selectedVibe = val),
+                          ),
+                        )
+                        .toList(),
                   ),
                   const SizedBox(height: 20),
 
-                  const Text("Dinamica", style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Length",
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: _kTwists.map((t) => _buildChip(t, _selectedTwist, (val) => setState(() => _selectedTwist = val))).toList(),
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _kLengths
+                        .map(
+                          (l) => _buildChip(
+                            l,
+                            _selectedLength,
+                            (val) => setState(() => _selectedLength = val),
+                          ),
+                        )
+                        .toList(),
                   ),
                   const SizedBox(height: 20),
 
-                  const Text("Tocchi personali (Opzionale)", style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Dynamics",
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _kTwists
+                        .map(
+                          (t) => _buildChip(
+                            t,
+                            _selectedTwist,
+                            (val) => setState(() => _selectedTwist = val),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    "Personal touch (Optional)",
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _customTextCtrl,
@@ -567,8 +703,11 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
                     maxLines: 3,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: "Es: Vorrei qualcosa ambientato nello spazio...",
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                      hintText:
+                          "e.g.: I'd like something set in space...",
+                      hintStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.3),
+                      ),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.05),
                       border: OutlineInputBorder(
@@ -583,13 +722,23 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
           ),
           const SizedBox(height: 16),
           // 🟡 FIX #9: Validare anche _selectedTwist
-          _buildNextButton("Suggerisci Titoli", disabled: _selectedVibe.isEmpty || _selectedLength.isEmpty || _selectedTwist.isEmpty),
+          _buildNextButton(
+            "Suggest Titles",
+            disabled:
+                _selectedVibe.isEmpty ||
+                _selectedLength.isEmpty ||
+                _selectedTwist.isEmpty,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildChip(String label, String groupValue, Function(String) onSelect) {
+  Widget _buildChip(
+    String label,
+    String groupValue,
+    Function(String) onSelect,
+  ) {
     final isSelected = groupValue == label;
     return GestureDetector(
       onTap: () => onSelect(label),
@@ -599,7 +748,9 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(100),
-          border: Border.all(color: isSelected ? Colors.white : Colors.white.withOpacity(0.1)),
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.1),
+          ),
         ),
         child: Text(
           label,
@@ -622,14 +773,21 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
             const CircularProgressIndicator(color: Colors.white),
             const SizedBox(height: 24),
             const Text(
-              "Sto interrogando l'Oracolo...",
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+              "Generating your titles...",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              "L'IA sta cercando le tue prossime ossessioni.",
-              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
-            )
+              "The AI is finding your next obsessions.",
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 14,
+              ),
+            ),
           ],
         ),
       );
@@ -652,8 +810,11 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
               const SizedBox(height: 32),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Chiudi", style: TextStyle(color: Colors.white)),
-              )
+                child: const Text(
+                  "Close",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
             ],
           ),
         ),
@@ -697,7 +858,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
         // Footer (Chiudi)
         Padding(
           padding: const EdgeInsets.all(24),
-          child: _buildNextButton("Fantastico, Chiudi", isClose: true),
+          child: _buildNextButton("Awesome, Close", isClose: true),
         ),
       ],
     );
@@ -725,7 +886,8 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
                 width: 80,
                 height: 120,
                 errorWidget: (context, url, error) => Container(
-                  width: 80, height: 120,
+                  width: 80,
+                  height: 120,
                   color: Colors.white.withOpacity(0.1),
                   child: const Icon(Icons.movie, color: Colors.white54),
                 ),
@@ -738,7 +900,7 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    s['title'] ?? 'Sconosciuto',
+                    s['title'] ?? 'Unknown',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -751,13 +913,16 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      s['media_type'] == 'tv' ? 'SERIE TV' : 'FILM',
+                      s['media_type'] == 'tv' ? 'TV SERIES' : 'MOVIE',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 10,
@@ -785,16 +950,24 @@ class _WhatToWatchNextDialogState extends State<WhatToWatchNextDialog> {
     );
   }
 
-  Widget _buildNextButton(String label, {bool disabled = false, bool isClose = false}) {
+  Widget _buildNextButton(
+    String label, {
+    bool disabled = false,
+    bool isClose = false,
+  }) {
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: disabled ? Colors.white.withOpacity(0.1) : Colors.white,
+          backgroundColor: disabled
+              ? Colors.white.withOpacity(0.1)
+              : Colors.white,
           foregroundColor: disabled ? Colors.white54 : Colors.black,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
         onPressed: disabled
             ? null

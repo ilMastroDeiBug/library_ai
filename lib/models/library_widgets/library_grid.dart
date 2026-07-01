@@ -277,8 +277,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (widget.status == 'watching' &&
-                                !_isSelectionMode)
+                            if (widget.status == 'watching')
                               _buildAiWhatToWatchNextButton(),
                             Expanded(
                               child: GridView.builder(
@@ -626,6 +625,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                     child: CachedNetworkImage(
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
+                      memCacheWidth: 300,
                       placeholder: (context, url) => const Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
@@ -813,7 +813,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      "LE MIE RACCOLTE",
+                      "MY COLLECTIONS",
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -1005,7 +1005,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    "Cosa guardare dopo?",
+                    "What to watch next?",
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1013,7 +1013,7 @@ class _LibraryGridState extends State<LibraryGrid> {
                     ),
                   ),
                   Text(
-                    "Scopri cosa guardare dopo che avrai finito il titolo selezionato.",
+                    "Discover what to watch after you finish the selected title.",
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 12,

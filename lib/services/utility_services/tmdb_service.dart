@@ -74,11 +74,12 @@ class TmdbService {
   }
 
   Future<Movie?> searchMovieByTitleAndYear(String title, [String? year]) async {
-    String urlStr = '$_baseUrl/search/movie?query=${Uri.encodeQueryComponent(title)}&language=$_language&page=1';
+    String urlStr =
+        '$_baseUrl/search/movie?query=${Uri.encodeQueryComponent(title)}&language=$_language&page=1';
     if (year != null && year.isNotEmpty) {
       urlStr += '&primary_release_year=$year';
     }
-    
+
     try {
       final response = await _client.get(Uri.parse(urlStr), headers: _headers);
       if (response.statusCode == 200) {
@@ -149,7 +150,6 @@ class TmdbService {
     }
   }
 
-  // --- FIX: RECUPERO DETTAGLI CON LE STAGIONI ---
   Future<TvSeries> getTvSeriesDetails(int seriesId) async {
     final languageCode = sl<LanguageService>().currentLanguage;
     // FIX: Niente $_apiKey, passiamo gli headers protetti di TmdbService
@@ -164,10 +164,28 @@ class TmdbService {
         jsonMap,
       ); // Questo mappa correttamente le "seasons"
     } else {
-      throw Exception(
-        'Impossibile recuperare i dettagli della Serie TV da TMDB',
-      );
+      throw Exception('Errore fetch dettagli tv: ${response.statusCode}');
     }
+  }
+
+  Future<List<String>> fetchMediaImages(
+    int mediaId, {
+    bool isTv = false,
+  }) async {
+    final type = isTv ? 'tv' : 'movie';
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/$type/$mediaId/images'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final backdrops = data['backdrops'] as List? ?? [];
+      return backdrops
+          .map((e) => 'https://image.tmdb.org/t/p/original${e['file_path']}')
+          .toList();
+    }
+    return [];
   }
 
   // --- ATTORI / PERSONE ---

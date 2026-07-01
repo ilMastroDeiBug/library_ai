@@ -8,6 +8,10 @@ class CascadingBackground extends StatelessWidget {
   final int speed4;
   final int indexOffset; // Start covers from a different index to look distinct
 
+  final double topOpacity;
+  final double middleOpacity;
+  final double bottomOpacity;
+
   const CascadingBackground({
     super.key,
     this.speed1 = 80,
@@ -15,6 +19,9 @@ class CascadingBackground extends StatelessWidget {
     this.speed3 = 90,
     this.speed4 = 75,
     this.indexOffset = 0,
+    this.topOpacity = 0.8,
+    this.middleOpacity = 0.4,
+    this.bottomOpacity = 1.0,
   });
 
   @override
@@ -47,20 +54,17 @@ class CascadingBackground extends StatelessWidget {
         ),
 
         Positioned.fill(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF0A0A0C).withOpacity(0.8),
-                    const Color(0xFF0A0A0C).withOpacity(0.4),
-                    const Color(0xFF0A0A0C).withOpacity(1.0),
-                  ],
-                  stops: const [0.0, 0.4, 0.8],
-                ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF0A0A0C).withOpacity(topOpacity),
+                  const Color(0xFF0A0A0C).withOpacity(middleOpacity),
+                  const Color(0xFF0A0A0C).withOpacity(bottomOpacity),
+                ],
+                stops: const [0.0, 0.4, 0.8],
               ),
             ),
           ),

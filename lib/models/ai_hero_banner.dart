@@ -28,8 +28,15 @@ const int _kInfiniteStart = 10000;
 class AiHeroBanner extends StatefulWidget {
   final List<dynamic> items;
   final Function(dynamic) onItemTap;
+  /// If false, hides the "Maggiori info" CTA button (e.g. on detail page)
+  final bool showCta;
 
-  const AiHeroBanner({super.key, required this.items, required this.onItemTap});
+  const AiHeroBanner({
+    super.key,
+    required this.items,
+    required this.onItemTap,
+    this.showCta = true,
+  });
 
   @override
   State<AiHeroBanner> createState() => _AiHeroBannerState();
@@ -191,10 +198,15 @@ class _AiHeroBannerState extends State<AiHeroBanner>
 
     return SizedBox(
       height: cardHeight,
-      child: GestureDetector(
-        onPanDown: (_) => _stopAutoScroll(),
-        onPanCancel: _startAutoScroll,
-        onPanEnd: (_) => _startAutoScroll(),
+      // Use Listener (not GestureDetector) so we can pause auto-scroll on
+      // any pointer-down without competing in the gesture arena.  This lets
+      // the PageView's HorizontalDragGestureRecognizer and the parent
+      // CustomScrollView's VerticalDragGestureRecognizer compete fairly, so
+      // horizontal swipes are correctly routed to the PageView.
+      child: Listener(
+        onPointerDown: (_) => _stopAutoScroll(),
+        onPointerUp: (_) => _startAutoScroll(),
+        onPointerCancel: (_) => _startAutoScroll(),
         child: Stack(
           children: [
             // ── PageView con peek laterale ──────────────────────────────────
@@ -343,6 +355,7 @@ class _AiHeroBannerState extends State<AiHeroBanner>
                                 isActive: actual == _realIndex,
                                 fadeAnim: _textFade,
                                 onTap: () => widget.onItemTap(item),
+                                showCta: widget.showCta,
                               ),
                             ),
                           ],
@@ -392,12 +405,14 @@ class _CardText extends StatelessWidget {
   final bool isActive;
   final Animation<double> fadeAnim;
   final VoidCallback onTap;
+  final bool showCta;
 
   const _CardText({
     required this.data,
     required this.isActive,
     required this.fadeAnim,
     required this.onTap,
+    this.showCta = true,
   });
 
   @override
@@ -436,10 +451,11 @@ class _CardText extends StatelessWidget {
           const SizedBox(height: 14),
 
           // CTA
-          _CtaButton(
-            label: AppLocalizations.of(context)!.heroBannerMoreInfo,
-            onTap: onTap,
-          ),
+          if (showCta)
+            _CtaButton(
+              label: AppLocalizations.of(context)!.heroBannerMoreInfo,
+              onTap: onTap,
+            ),
         ],
       ),
     );

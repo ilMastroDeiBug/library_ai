@@ -59,6 +59,9 @@ class _LibraryPageState extends State<LibraryPage> {
                   speed2: 110,
                   speed3: 130,
                   speed4: 115,
+                  topOpacity: 0.3, // Meno scuro sopra
+                  middleOpacity: 0.1, // Quasi trasparente in mezzo
+                  bottomOpacity: 0.4, // Meno scuro sotto
                 ),
               ),
             ),
